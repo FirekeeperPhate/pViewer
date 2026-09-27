@@ -72,7 +72,7 @@ public class ImageDecoderTests
     [Fact]
     public void GarbageGivesFriendlyError()
     {
-        var ex = Assert.Throws<ImageDecodeException>(() => ImageDecoder.Decode([1, 2, 3, 4], "rotto.heic", true));
+        var ex = Assert.Throws<ImageDecodeException>(() => ImageDecoder.Decode([1, 2, 3, 4], "broken.heic", true));
         Assert.Contains("HEIF", ex.Message);
     }
 
@@ -241,7 +241,7 @@ public class BatchProcessorTests
         File.WriteAllBytes(tmp.File("a.png"), TestImages.Png(8, 4));
         File.WriteAllBytes(tmp.File("b.jpg"), TestImages.JpegWithOrientation(8, 4, 6));
         using var src = FolderSource.Open(tmp.Path);
-        string output = Path.Combine(tmp.Path, "Convertite");
+        string output = Path.Combine(tmp.Path, "Converted");
         var job = new BatchJob(BatchOperation.Convert, output, 0, 0, 0, ".webp", 80, 10, AutoOrient: true);
 
         var first = await BatchProcessor.RunAsync(src, job, null, CancellationToken.None);
@@ -259,7 +259,7 @@ public class BatchProcessorTests
     public async Task ResizesArchivePagesIntoFolder()
     {
         using var tmp = new TempFolder();
-        string zip = tmp.File("fumetto.cbz");
+        string zip = tmp.File("comic.cbz");
         TestImages.Zip(zip, ("01.png", TestImages.Png(100, 50)), ("02.png", TestImages.Png(60, 60)));
         using var src = ArchiveSource.Open(zip);
         string output = Path.Combine(tmp.Path, "out");

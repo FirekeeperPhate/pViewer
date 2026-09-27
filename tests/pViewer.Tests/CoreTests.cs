@@ -114,7 +114,7 @@ public class ArchiveSourceTests
             ("pages/p2.png", TestImages.Png(2, 5)),
             ("pages/p1.png", TestImages.Png(1, 5)),
             ("__MACOSX/pages/._p1.png", new byte[] { 1, 2, 3 }),
-            ("readme.txt", "ciao"u8.ToArray()),
+            ("readme.txt", "hello"u8.ToArray()),
             ("extra.zip", inner));
 
         using var src = ArchiveSource.Open(zip);
@@ -180,16 +180,16 @@ public class BatchRenamerTests
     public void RenamesInOrderEvenWhenNamesSwap()
     {
         using var tmp = new TempFolder();
-        // "foto-2" must become "foto-1" and vice versa: the temporary-name pass is needed.
-        File.WriteAllText(tmp.File("foto-2.jpg"), "A");
-        File.WriteAllText(tmp.File("foto-1.jpg"), "B");
-        var files = new List<string> { tmp.File("foto-2.jpg"), tmp.File("foto-1.jpg") };
+        // "photo-2" must become "photo-1" and vice versa: the temporary-name pass is needed.
+        File.WriteAllText(tmp.File("photo-2.jpg"), "A");
+        File.WriteAllText(tmp.File("photo-1.jpg"), "B");
+        var files = new List<string> { tmp.File("photo-2.jpg"), tmp.File("photo-1.jpg") };
 
-        var map = BatchRenamer.Rename(files, new BatchRenameOptions("foto", 1, 1));
+        var map = BatchRenamer.Rename(files, new BatchRenameOptions("photo", 1, 1));
 
-        Assert.Equal("A", File.ReadAllText(tmp.File("foto-1.jpg")));
-        Assert.Equal("B", File.ReadAllText(tmp.File("foto-2.jpg")));
-        Assert.Equal(tmp.File("foto-1.jpg"), map[tmp.File("foto-2.jpg")]);
+        Assert.Equal("A", File.ReadAllText(tmp.File("photo-1.jpg")));
+        Assert.Equal("B", File.ReadAllText(tmp.File("photo-2.jpg")));
+        Assert.Equal(tmp.File("photo-1.jpg"), map[tmp.File("photo-2.jpg")]);
         Assert.Equal(2, Directory.GetFiles(tmp.Path).Length);
     }
 
@@ -198,7 +198,7 @@ public class BatchRenamerTests
     {
         using var tmp = new TempFolder();
         File.WriteAllText(tmp.File("x.png"), "A");
-        File.WriteAllText(tmp.File("img-01.png"), "estraneo");
+        File.WriteAllText(tmp.File("img-01.png"), "unrelated");
         Assert.Throws<IOException>(() => BatchRenamer.Rename([tmp.File("x.png")], new BatchRenameOptions("img", 1, 2)));
         Assert.Equal("A", File.ReadAllText(tmp.File("x.png")));
     }
