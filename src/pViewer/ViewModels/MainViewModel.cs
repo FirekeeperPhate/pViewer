@@ -163,6 +163,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 string folder = Path.GetDirectoryName(path)!;
                 Settings.LastFolder = folder;
                 var source = FolderSource.Open(folder);
+                StartupTrace.Mark("folder listed");
                 int index = source.IndexOf(path);
                 if (index < 0) index = 0; // hidden file or changed list: start from the beginning
                 Layout = PageLayout.Single;

@@ -130,3 +130,24 @@ public class Regression5Tests
         Assert.Equal(800, ImageBridge.EstimateBytes(rgba64));
     }
 }
+
+public class StartupPreloadTests
+{
+    [Fact]
+    public async Task PageCacheTakesTheImageDecodedAtStartup()
+    {
+        using var tmp = new TempFolder();
+        File.WriteAllBytes(tmp.File("a.png"), TestImages.Png(4, 4));
+        File.WriteAllBytes(tmp.File("b.png"), TestImages.Png(6, 6));
+        pViewer.Services.StartupPreload.Start(tmp.File("b.png"), autoOrient: true);
+
+        using var folder = pViewer.Core.Sources.FolderSource.Open(tmp.Path);
+        using var cache = new pViewer.Services.PageCache(folder, autoOrient: true);
+        int index = folder.IndexOf(tmp.File("b.png"));
+        Assert.True(pViewer.Services.StartupPreload.TryTake(tmp.File("x.png"), true, out _, out _) == false);
+        var entry = cache.Get(index);
+        Assert.Equal(6, (await entry.Image).PixelWidth);
+        // Taken once: a second request (or another option) reads the file normally.
+        Assert.False(pViewer.Services.StartupPreload.TryTake(tmp.File("b.png"), true, out _, out _));
+    }
+}

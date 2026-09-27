@@ -14,13 +14,13 @@
     <Product>pViewer</Product>
     <Authors>Phate</Authors>
     <Copyright>Copyright (C) 2013-2026 Phate</Copyright>
-    <!-- ThemeMode (tema Fluent) è ancora marcato sperimentale in WPF -->
+    <!-- ThemeMode (the Fluent theme) is still marked experimental in WPF -->
     <NoWarn>$(NoWarn);WPF0001</NoWarn>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- ImageSharp 4 richiede una chiave di licenza in build: restiamo sulla 3.1 (Six Labors Split License) -->
+    <!-- ImageSharp 4 requires a license key at build time: stay on 3.1 (Six Labors Split License) -->
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="SharpCompress" Version="0.50.4" />
     <PackageReference Include="MetadataExtractor" Version="2.9.3" />

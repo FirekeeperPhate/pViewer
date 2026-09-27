@@ -1,13 +1,35 @@
 using System.Windows;
 using System.Windows.Threading;
+using pViewer.Core;
 using pViewer.Services;
 
 namespace pViewer;
 
 public partial class App : Application
 {
+    private readonly Task<AppSettings> _startupSettings;
+
+    public App()
+    {
+        StartupTrace.Mark("app created");
+        // While WPF loads the theme (App.xaml), read the settings and start decoding the image
+        // passed on the command line (double-click in Explorer) in the background.
+        string[] args = Environment.GetCommandLineArgs();
+        _startupSettings = Task.Run(() =>
+        {
+            var settings = SettingsStore.Load();
+            if (args.Length > 1 && ImageFormats.IsImage(args[1]) && File.Exists(args[1]))
+            {
+                try { StartupPreload.Start(args[1], settings.AutoRotateExif); }
+                catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { } // the normal open reports it
+            }
+            return settings;
+        });
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
+        StartupTrace.Mark("startup");
         base.OnStartup(e);
         // The UI is English-only: numbers and input parsing follow the same language.
         var culture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
@@ -18,13 +40,31 @@ public partial class App : Application
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         TaskScheduler.UnobservedTaskException += (_, args) => args.SetObserved();
 
-        var settings = SettingsStore.Load();
+        var settings = _startupSettings.GetAwaiter().GetResult();
+        StartupTrace.Mark("settings");
         ApplyTheme(settings.Theme);
+        StartupTrace.Mark("theme");
 
+        if (StartupTrace.Enabled) settings.Window = null; // off-screen, see below
         var window = new MainWindow(settings);
+        StartupTrace.Mark("window created");
+        if (StartupTrace.Enabled)
+        {
+            window.WindowStartupLocation = WindowStartupLocation.Manual;
+            window.Left = -20000;
+            window.ShowActivated = false;
+            window.ContentRendered += (_, _) => StartupTrace.Mark("window drawn");
+        }
         MainWindow = window;
         window.Show();
-        if (e.Args.Length > 0) _ = window.OpenAsync(e.Args[0]);
+        StartupTrace.Mark("window shown");
+        if (e.Args.Length > 0) _ = OpenFromCommandLineAsync(window, e.Args[0]);
+    }
+
+    private static async Task OpenFromCommandLineAsync(MainWindow window, string path)
+    {
+        try { await window.OpenAsync(path); }
+        finally { StartupPreload.Discard(); } // not taken (e.g. the file is hidden from the list): free it
     }
 
     public static void ApplyTheme(AppTheme theme)

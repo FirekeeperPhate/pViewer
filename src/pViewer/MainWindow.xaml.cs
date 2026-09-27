@@ -23,7 +23,25 @@ public partial class MainWindow : Window, IMainView
 {
     private readonly MainViewModel _vm;
     private readonly AppSettings _settings;
-    private readonly ContextMenu _mainMenu;
+    private ContextMenu? _mainMenu;
+
+    private ContextMenu MainMenu
+    {
+        get
+        {
+            if (_mainMenu is not null) return _mainMenu;
+            var menu = (ContextMenu)Resources["MainMenu"];
+            menu.Opened += (_, _) =>
+            {
+                // Names inside a resource do not generate fields: look them up in the menu's logical tree.
+                if (LogicalTreeHelper.FindLogicalNode(menu, "ToolbarMenuItem") is MenuItem toolbar)
+                    toolbar.IsChecked = _settings.ShowToolbar;
+                if (LogicalTreeHelper.FindLogicalNode(menu, "StatusBarMenuItem") is MenuItem status)
+                    status.IsChecked = _settings.ShowStatusBar;
+            };
+            return _mainMenu = menu;
+        }
+    }
 
     private bool _fullscreen;
     private WindowState _restoreState;
@@ -55,16 +73,8 @@ public partial class MainWindow : Window, IMainView
         _vm = new MainViewModel(this, settings);
         DataContext = _vm;
 
-        _mainMenu = (ContextMenu)Resources["MainMenu"];
-        Viewer.ContextMenu = _mainMenu;
-        _mainMenu.Opened += (_, _) =>
-        {
-            // Names inside a resource do not generate fields: look them up in the menu's logical tree.
-            if (LogicalTreeHelper.FindLogicalNode(_mainMenu, "ToolbarMenuItem") is MenuItem toolbar)
-                toolbar.IsChecked = _settings.ShowToolbar;
-            if (LogicalTreeHelper.FindLogicalNode(_mainMenu, "StatusBarMenuItem") is MenuItem status)
-                status.IsChecked = _settings.ShowStatusBar;
-        };
+        // The big image menu is built once the first image is on screen, not before.
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () => Viewer.ContextMenu = MainMenu);
 
         Viewer.SelectionCompleted += async (_, e) => await _vm.OnSelectionAsync(e.Kind, e.Rect);
         Viewer.TextRequested += (_, p) =>
@@ -494,7 +504,7 @@ public partial class MainWindow : Window, IMainView
     private void LayoutButton_Click(object sender, RoutedEventArgs e) =>
         OpenMenuBelow((FrameworkElement)sender, (ContextMenu)Resources["LayoutMenu"]);
 
-    private void MoreButton_Click(object sender, RoutedEventArgs e) => OpenMenuBelow((FrameworkElement)sender, _mainMenu);
+    private void MoreButton_Click(object sender, RoutedEventArgs e) => OpenMenuBelow((FrameworkElement)sender, MainMenu);
 
     private void SlideshowButton_Click(object sender, RoutedEventArgs e) =>
         _vm.StartSlideshowCommand.Execute(_settings.SlideshowSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
@@ -522,8 +532,11 @@ public partial class MainWindow : Window, IMainView
 
     // ---- IMainView ----
 
-    public void ShowPages(IReadOnlyList<BitmapSource> pages, bool preserveView, IReadOnlyList<ImageAnimation?>? animations = null) =>
+    public void ShowPages(IReadOnlyList<BitmapSource> pages, bool preserveView, IReadOnlyList<ImageAnimation?>? animations = null)
+    {
         Viewer.SetPages(pages, preserveView, null, animations);
+        StartupTrace.ImageShown();
+    }
 
     public void ShowPreview(BitmapSource thumbnail, int fullWidth, int fullHeight) =>
         Viewer.SetPages([thumbnail], false, new Size(fullWidth, fullHeight));

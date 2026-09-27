@@ -53,6 +53,13 @@ public sealed class PageCache : IDisposable
             // Each page has its own cancellation, so pages passed while scrolling fast are dropped.
             var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
             var token = cancellation.Token;
+            // The file opened from Explorer, already read and decoded while the window was being built.
+            if (StartupPreload.TryTake(_source.Pages[index].FilePath, _autoOrient, out var preBytes, out var preImage))
+            {
+                var preloaded = new Entry { Bytes = preBytes, Image = preImage, Cancellation = cancellation };
+                _entries[index] = preloaded;
+                return preloaded;
+            }
             Task<byte[]> bytes;
             try { bytes = _source.ReadAsync(index, token); }
             catch (Exception ex) { bytes = Task.FromException<byte[]>(ex); } // a source that throws synchronously
