@@ -12,6 +12,7 @@ Riscrittura completa in .NET 10 e WPF (tema Fluent), mantenendo funzioni e scorc
 - Tinta/saturazione, seppia, anteprima dal vivo degli effetti con confronto con l'originale.
 - Viste "riempi", "adatta alla larghezza" (con scorrimento a rotella) e "adatta all'altezza".
 - Zoom al 100% reale anche con scalatura dello schermo, pixel netti oltre il 250%.
+- GIF, WebP e APNG animati (tasto P per pausa/riprendi).
 - Formati WebP, HEIC, AVIF, JPEG XL, RAW (con i codec di Windows), TGA, QOI; salvataggio in WebP e JPEG XR.
 - Il salvataggio conserva i dati EXIF delle foto (data, fotocamera, GPS) e azzera l'orientamento.
 - Canc sposta nel Cestino (configurabile); la rinomina in serie non sovrascrive mai altri file.

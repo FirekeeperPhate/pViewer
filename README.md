@@ -9,7 +9,7 @@ pViewer 1.x (WinForms, .NET Framework 4.0).
 - **Visualizzazione veloce**: precaricamento delle immagini vicine, anteprima immediata dalla
   miniatura EXIF delle foto grandi, rotazione automatica secondo l'orientamento EXIF,
   ordinamento come in Esplora risorse.
-- **Formati**: JPEG, PNG, GIF, BMP, TIFF, ICO, JPEG XR, WebP, TGA, QOI, PBM e, con le estensioni
+- **Formati**: GIF, WebP e PNG animati (P mette in pausa), JPEG, PNG, GIF, BMP, TIFF, ICO, JPEG XR, WebP, TGA, QOI, PBM e, con le estensioni
   di Windows, HEIC/HEIF, AVIF, JPEG XL e RAW.
 - **Fumetti e manga**: apre zip/cbz, rar/cbr, 7z/cb7 (anche annidati) leggendo le pagine in
   memoria, senza cartelle temporanee. Modalità a due pagine **Manga** (destra → sinistra) e

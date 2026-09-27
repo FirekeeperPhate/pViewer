@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using ISImage = SixLabors.ImageSharp.Image;
@@ -15,18 +16,40 @@ public sealed class LoadedImage
     /// <summary>Metadati originali (solo JPEG), per conservarli quando si salva.</summary>
     public BitmapMetadata? JpegMetadata { get; init; }
 
+    /// <summary>Fotogrammi di GIF, WebP o PNG animati (null per le immagini statiche).</summary>
+    public ImageAnimation? Animation { get; init; }
+
     public string FormatName { get; init; } = "";
     public long FileSize { get; init; }
     public int PixelWidth => Bitmap.PixelWidth;
     public int PixelHeight => Bitmap.PixelHeight;
 }
 
+/// <summary>Fotogrammi già composti (a piena dimensione) con la durata di ciascuno.</summary>
+public sealed record ImageAnimation(IReadOnlyList<BitmapSource> Frames, IReadOnlyList<TimeSpan> Delays);
+
 public sealed class ImageDecodeException(string message, Exception? inner) : Exception(message, inner);
 
 public static class ImageDecoder
 {
+    /// <summary>Oltre questa memoria si mostra solo il primo fotogramma dell'animazione.</summary>
+    public const long MaxAnimationBytes = 768L * 1024 * 1024;
+
     public static LoadedImage Decode(byte[] data, string name, bool autoOrient)
     {
+        if (MayBeAnimated(data))
+        {
+            try
+            {
+                var animated = TryDecodeAnimation(data);
+                if (animated is not null) return animated;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                // File animato non leggibile da ImageSharp: si prova come immagine statica.
+            }
+        }
+
         Exception? firstError = null;
         foreach (var options in new[] { BitmapCreateOptions.PreservePixelFormat,
                                         BitmapCreateOptions.PreservePixelFormat | BitmapCreateOptions.IgnoreColorProfile })
@@ -55,6 +78,57 @@ public static class ImageDecoder
         };
         return $"Impossibile aprire «{Path.GetFileName(name)}».\n{hint}";
     }
+
+    /// <summary>Riconosce dai primi byte i formati che possono contenere animazioni (GIF, WebP, PNG/APNG).</summary>
+    private static bool MayBeAnimated(byte[] d) =>
+        (d.Length > 6 && d[0] == 'G' && d[1] == 'I' && d[2] == 'F' && d[3] == '8')
+        || (d.Length > 12 && d[0] == 'R' && d[1] == 'I' && d[2] == 'F' && d[3] == 'F' && d[8] == 'W' && d[9] == 'E' && d[10] == 'B' && d[11] == 'P')
+        || (d.Length > 8 && d[0] == 0x89 && d[1] == 'P' && d[2] == 'N' && d[3] == 'G');
+
+    /// <returns>null se il file ha un solo fotogramma o se l'animazione occuperebbe troppa memoria.</returns>
+    private static LoadedImage? TryDecodeAnimation(byte[] data)
+    {
+        var info = ISImage.Identify(data);
+        int frameCount = info.FrameMetadataCollection.Count;
+        if (frameCount < 2 || (long)info.Width * info.Height * 4 * frameCount > MaxAnimationBytes) return null;
+
+        using var img = ISImage.Load<Bgra32>(data);
+        var format = img.Metadata.DecodedImageFormat;
+        var frames = new List<BitmapSource>(img.Frames.Count);
+        var delays = new List<TimeSpan>(img.Frames.Count);
+        var buffer = new byte[img.Width * img.Height * 4];
+        foreach (var frame in img.Frames)
+        {
+            frame.CopyPixelDataTo(buffer);
+            var bmp = BitmapSource.Create(img.Width, img.Height, 96, 96, PixelFormats.Bgra32, null, buffer, img.Width * 4);
+            bmp.Freeze();
+            frames.Add(bmp);
+            delays.Add(FrameDelay(frame, format));
+        }
+        return new LoadedImage
+        {
+            Bitmap = frames[0],
+            Animation = new ImageAnimation(frames, delays),
+            FormatName = format?.Name ?? "",
+            FileSize = data.LongLength,
+        };
+    }
+
+    private static TimeSpan FrameDelay(SixLabors.ImageSharp.ImageFrame frame, SixLabors.ImageSharp.Formats.IImageFormat? format)
+    {
+        double ms = format switch
+        {
+            SixLabors.ImageSharp.Formats.Gif.GifFormat => frame.Metadata.GetGifMetadata().FrameDelay * 10.0,
+            SixLabors.ImageSharp.Formats.Webp.WebpFormat => frame.Metadata.GetWebpMetadata().FrameDelay,
+            SixLabors.ImageSharp.Formats.Png.PngFormat => RationalMs(frame.Metadata.GetPngMetadata().FrameDelay),
+            _ => 100,
+        };
+        // Come i browser: durate quasi nulle diventano 100 ms (molte GIF usano 0 o 1 centesimo).
+        return TimeSpan.FromMilliseconds(ms < 20 ? 100 : ms);
+    }
+
+    private static double RationalMs(SixLabors.ImageSharp.Rational r) =>
+        r.Denominator == 0 ? 0 : r.Numerator * 1000.0 / r.Denominator;
 
     private static LoadedImage DecodeWic(byte[] data, bool autoOrient, BitmapCreateOptions options)
     {

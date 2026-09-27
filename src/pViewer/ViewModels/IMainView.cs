@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Media.Imaging;
 using pViewer.Controls;
 using pViewer.Core.Sources;
+using pViewer.Imaging;
 using pViewer.Services;
 
 namespace pViewer.ViewModels;
@@ -19,7 +20,7 @@ public sealed record MetadataGroup(string Name, IReadOnlyList<KeyValuePair<strin
 /// <summary>Ciò che il ViewModel chiede alla finestra (dialoghi e visualizzatore).</summary>
 public interface IMainView
 {
-    void ShowPages(IReadOnlyList<BitmapSource> pages, bool preserveView);
+    void ShowPages(IReadOnlyList<BitmapSource> pages, bool preserveView, IReadOnlyList<ImageAnimation?>? animations = null);
     void ShowPreview(BitmapSource thumbnail, int fullWidth, int fullHeight);
     void ClearPages();
 

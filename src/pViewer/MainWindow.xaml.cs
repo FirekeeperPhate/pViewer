@@ -9,6 +9,7 @@ using Microsoft.Win32;
 using pViewer.Controls;
 using pViewer.Core;
 using pViewer.Core.Sources;
+using pViewer.Imaging;
 using pViewer.Services;
 using pViewer.ViewModels;
 using pViewer.Views;
@@ -209,6 +210,7 @@ public partial class MainWindow : Window, IMainView
             case Key.R when none: _vm.ToggleRedEyeToolCommand.Execute(null); break;
             case Key.Tab when none: _vm.FillLastRectangleCommand.Execute(null); break;
             case Key.I when none: _vm.ShowMetadataCommand.Execute(null); break;
+            case Key.P when none: Viewer.ToggleAnimationPause(); break;
             case Key.F1 when none: Help_Click(this, new RoutedEventArgs()); break;
 
             default: e.Handled = false; break;
@@ -367,7 +369,8 @@ public partial class MainWindow : Window, IMainView
 
     // ---- IMainView ----
 
-    public void ShowPages(IReadOnlyList<BitmapSource> pages, bool preserveView) => Viewer.SetPages(pages, preserveView);
+    public void ShowPages(IReadOnlyList<BitmapSource> pages, bool preserveView, IReadOnlyList<ImageAnimation?>? animations = null) =>
+        Viewer.SetPages(pages, preserveView, null, animations);
 
     public void ShowPreview(BitmapSource thumbnail, int fullWidth, int fullHeight) =>
         Viewer.SetPages([thumbnail], false, new Size(fullWidth, fullHeight));

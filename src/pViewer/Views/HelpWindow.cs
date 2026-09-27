@@ -29,6 +29,7 @@ public sealed class HelpWindow : Window
             ("Alt+Invio", "Ingrandisci / ripristina la finestra"),
             ("W", "Sfondo bianco"),
             ("T", "Mostra / nascondi la barra strumenti"),
+            ("P", "Pausa / riprendi le animazioni (GIF, WebP, APNG)"),
             ("Esc", "Esce da schermo intero o presentazione, altrimenti chiude"),
         ]),
         ("Modifica", [

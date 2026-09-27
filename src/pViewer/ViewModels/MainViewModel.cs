@@ -257,7 +257,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IsLoading = false;
         _visible = loaded;
         HasImage = true;
-        _view.ShowPages(loaded.Select(l => l.Bitmap).ToList(), preserveView: false);
+        _view.ShowPages(loaded.Select(l => l.Bitmap).ToList(), preserveView: false, loaded.Select(l => l.Animation).ToList());
         UpdateInfo();
         PrefetchAround();
     }
@@ -325,6 +325,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             parts.Add($"{v[0].PixelWidth} × {v[0].PixelHeight}");
             if (!string.IsNullOrEmpty(v[0].FormatName)) parts.Add(v[0].FormatName);
+            if (v[0].Animation is { } anim)
+                parts.Add($"{anim.Frames.Count} fotogrammi, {anim.Delays.Sum(d => d.TotalSeconds):0.#} s");
             parts.Add(FormatSize(v[0].FileSize));
         }
         int first = indices.Min() + 1, last = indices.Max() + 1;
@@ -492,6 +494,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_visible.Length == 1)
         {
             _edit = new EditSession(_visible[0].Bitmap);
+            if (_visible[0].Animation is not null)
+                Toast("Le modifiche valgono per il primo fotogramma: l'animazione non verrà salvata");
         }
         else
         {
@@ -535,16 +539,22 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void Undo()
     {
         if (_edit is null || !_edit.Undo()) return;
-        _view.ShowPages([_edit.Current], preserveView: true);
-        UpdateEditFlags();
-        UpdateInfo();
+        ShowEditCurrent();
     }
 
     [RelayCommand]
     private void Redo()
     {
         if (_edit is null || !_edit.Redo()) return;
-        _view.ShowPages([_edit.Current], preserveView: true);
+        ShowEditCurrent();
+    }
+
+    /// <summary>Mostra lo stato di modifica corrente; tornati all'originale di un'animazione, la riavvia.</summary>
+    private void ShowEditCurrent()
+    {
+        var current = _edit!.Current;
+        var animation = !_detached && _visible is { Length: 1 } v && ReferenceEquals(current, v[0].Bitmap) ? v[0].Animation : null;
+        _view.ShowPages([current], preserveView: true, animation is null ? null : [animation]);
         UpdateEditFlags();
         UpdateInfo();
     }
@@ -777,6 +787,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return false;
         }
         bool ok = await WriteAsync(bitmap, path);
+        if (ok && _edit is null && _visible?.Any(v => v.Animation is not null) == true)
+            Toast($"Salvato: {Path.GetFileName(path)} (solo il primo fotogramma dell'animazione)");
         if (ok && _source is FolderSource folder &&
             string.Equals(Path.GetDirectoryName(path), folder.Location, StringComparison.OrdinalIgnoreCase))
         {

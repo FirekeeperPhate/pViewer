@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using pViewer.Imaging;
@@ -117,10 +118,13 @@ public sealed class ImageViewer : Border
 
     /// <param name="preserveView">Mantiene zoom e posizione se le dimensioni non cambiano (es. dopo una modifica).</param>
     /// <param name="logicalSize">Dimensione da usare al posto di quella reale (anteprima a bassa risoluzione).</param>
-    public void SetPages(IReadOnlyList<BitmapSource> pages, bool preserveView = false, Size? logicalSize = null)
+    /// <param name="animations">Per ogni pagina, i fotogrammi da animare (null = immagine statica).</param>
+    public void SetPages(IReadOnlyList<BitmapSource> pages, bool preserveView = false, Size? logicalSize = null,
+                         IReadOnlyList<ImageAnimation?>? animations = null)
     {
         var oldSize = _contentSize;
         _pages = pages;
+        StopAnimations();
         foreach (var img in _images) _content.Children.Remove(img);
         _images.Clear();
 
@@ -136,6 +140,8 @@ public sealed class ImageViewer : Border
             Canvas.SetTop(img, (height - PageHeight(page)) / 2);
             _content.Children.Insert(insertAt++, img);
             _images.Add(img);
+            if (animations is not null && insertAt - 1 < animations.Count && animations[insertAt - 1] is { } anim)
+                StartAnimation(img, anim);
             x += PageWidth(page);
         }
         _contentSize = new Size(x, height);
@@ -155,6 +161,50 @@ public sealed class ImageViewer : Border
     }
 
     public void Clear() => SetPages([]);
+
+    // ---- Animazioni (GIF, WebP, APNG) ----
+
+    private readonly List<(Image Image, AnimationClock Clock)> _animations = [];
+
+    public bool HasAnimation => _animations.Count > 0;
+    public bool IsAnimationPaused { get; private set; }
+
+    private void StartAnimation(Image image, ImageAnimation animation)
+    {
+        var keyFrames = new ObjectAnimationUsingKeyFrames { RepeatBehavior = RepeatBehavior.Forever };
+        var time = TimeSpan.Zero;
+        for (int i = 0; i < animation.Frames.Count; i++)
+        {
+            keyFrames.KeyFrames.Add(new DiscreteObjectKeyFrame(animation.Frames[i], KeyTime.FromTimeSpan(time)));
+            time += animation.Delays[i];
+        }
+        keyFrames.Duration = new Duration(time);
+        var clock = keyFrames.CreateClock();
+        image.ApplyAnimationClock(Image.SourceProperty, clock);
+        if (IsAnimationPaused) clock.Controller?.Pause();
+        _animations.Add((image, clock));
+    }
+
+    private void StopAnimations()
+    {
+        foreach (var (image, clock) in _animations)
+        {
+            clock.Controller?.Stop();
+            image.ApplyAnimationClock(Image.SourceProperty, null);
+        }
+        _animations.Clear();
+    }
+
+    /// <summary>Mette in pausa o riprende le animazioni (tasto P).</summary>
+    public void ToggleAnimationPause()
+    {
+        IsAnimationPaused = !IsAnimationPaused;
+        foreach (var (_, clock) in _animations)
+        {
+            if (IsAnimationPaused) clock.Controller?.Pause();
+            else clock.Controller?.Resume();
+        }
+    }
 
     // ---- Zoom e pan ----
 
