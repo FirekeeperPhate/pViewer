@@ -32,7 +32,7 @@ public static class ImageFormats
             string all = string.Join(";", Images.Concat(Archives).Select(e => "*" + e));
             string img = string.Join(";", Images.Select(e => "*" + e));
             string arc = string.Join(";", Archives.Select(e => "*" + e));
-            return $"Tutti i file supportati|{all}|Immagini|{img}|Archivi e fumetti|{arc}|Tutti i file|*.*";
+            return $"All supported files|{all}|Images|{img}|Archives and comics|{arc}|All files|*.*";
         }
     }
 

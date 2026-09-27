@@ -378,14 +378,14 @@ public partial class MainWindow : Window, IMainView
     public void ClearPages() => Viewer.Clear();
 
     public MessageBoxResult Ask(string message, string title, MessageBoxButton buttons, MessageBoxImage icon = MessageBoxImage.Question) =>
-        MessageBox.Show(this, message, title, buttons, icon);
+        MessageDialog.Show(this, message, title, buttons, icon);
 
     public void ShowError(string message) =>
-        MessageBox.Show(this, message, "pViewer", MessageBoxButton.OK, MessageBoxImage.Warning);
+        MessageDialog.Show(this, message, "pViewer", MessageBoxButton.OK, MessageBoxImage.Warning);
 
     public string? PickOpenFile(string? initialDirectory)
     {
-        var dlg = new OpenFileDialog { Title = "Apri", Filter = ImageFormats.OpenDialogFilter };
+        var dlg = new OpenFileDialog { Title = "Open", Filter = ImageFormats.OpenDialogFilter };
         if (initialDirectory is not null && Directory.Exists(initialDirectory)) dlg.InitialDirectory = initialDirectory;
         return dlg.ShowDialog(this) == true ? dlg.FileName : null;
     }
@@ -394,7 +394,7 @@ public partial class MainWindow : Window, IMainView
     {
         var dlg = new SaveFileDialog
         {
-            Title = "Salva con nome",
+            Title = "Save as",
             Filter = ImageFormats.SaveDialogFilter,
             FileName = Path.GetFileNameWithoutExtension(fileName),
             OverwritePrompt = true,

@@ -29,13 +29,13 @@ public static class BatchProcessor
 {
     public static string DefaultFolderName(BatchOperation op) => op switch
     {
-        BatchOperation.Resize => "Ridimensionate",
-        BatchOperation.RotateRight or BatchOperation.RotateLeft => "Ruotate",
-        BatchOperation.FlipHorizontal or BatchOperation.FlipVertical => "Riflesse",
-        BatchOperation.Convert => "Convertite",
-        BatchOperation.Grayscale => "Scala di grigi",
-        BatchOperation.Invert => "Negativo",
-        _ => "Con bordo",
+        BatchOperation.Resize => "Resized",
+        BatchOperation.RotateRight or BatchOperation.RotateLeft => "Rotated",
+        BatchOperation.FlipHorizontal or BatchOperation.FlipVertical => "Flipped",
+        BatchOperation.Convert => "Converted",
+        BatchOperation.Grayscale => "Grayscale",
+        BatchOperation.Invert => "Inverted",
+        _ => "Bordered",
     };
 
     public static Task<BatchResult> RunAsync(IImageSource source, BatchJob job, IProgress<BatchProgress>? progress, CancellationToken ct) =>

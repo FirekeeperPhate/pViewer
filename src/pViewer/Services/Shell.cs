@@ -67,7 +67,7 @@ public static class Shell
         };
         int result = SHFileOperation(ref op);
         if (result != 0 || op.fAnyOperationsAborted)
-            throw new IOException($"Impossibile spostare il file nel Cestino (codice {result}).");
+            throw new IOException($"Cannot move the file to the Recycle Bin (code {result}).");
     }
 
     public static void ShowProperties(string path, IntPtr owner)
@@ -98,7 +98,7 @@ public static class Shell
     {
         const uint SPI_SETDESKWALLPAPER = 0x14, SPIF_UPDATEINIFILE = 0x01, SPIF_SENDWININICHANGE = 0x02;
         if (!SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, path, SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE))
-            throw new IOException("Windows non ha accettato l'immagine come sfondo.");
+            throw new IOException("Windows did not accept the image as background.");
     }
 
     /// <summary>Cartella per i file di lavoro dell'app (es. copia dello sfondo).</summary>

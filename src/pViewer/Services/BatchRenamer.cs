@@ -17,7 +17,7 @@ public static class BatchRenamer
     public static Dictionary<string, string> Rename(IReadOnlyList<string> files, BatchRenameOptions options)
     {
         if (string.IsNullOrWhiteSpace(options.BaseName) || options.BaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-            throw new ArgumentException("Nome base non valido.");
+            throw new ArgumentException("Invalid base name.");
 
         var plan = files.Select((f, i) => (Old: f, New: Path.Combine(Path.GetDirectoryName(f)!,
             TargetName(options, i, Path.GetExtension(f).ToLowerInvariant())))).ToList();
@@ -25,7 +25,7 @@ public static class BatchRenamer
         var sources = new HashSet<string>(files, StringComparer.OrdinalIgnoreCase);
         var clash = plan.FirstOrDefault(p => File.Exists(p.New) && !sources.Contains(p.New));
         if (clash.New is not null)
-            throw new IOException($"Esiste già «{Path.GetFileName(clash.New)}», che non fa parte dell'elenco.");
+            throw new IOException($"«{Path.GetFileName(clash.New)}» already exists and is not part of the list.");
 
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var temps = new List<(string Old, string Temp, string New)>();

@@ -9,6 +9,12 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        // The UI is English-only: numbers and input parsing follow the same language.
+        var culture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+        System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;
+        System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;
+        Thread.CurrentThread.CurrentCulture = culture;
+        Thread.CurrentThread.CurrentUICulture = culture;
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         TaskScheduler.UnobservedTaskException += (_, args) => args.SetObserved();
 
@@ -34,7 +40,7 @@ public partial class App : Application
     private static void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         // Un errore imprevisto non deve chiudere il programma (e far perdere modifiche non salvate).
-        MessageBox.Show(Current.MainWindow, $"Si è verificato un errore imprevisto:\n\n{e.Exception.Message}",
+        pViewer.Views.MessageDialog.Show(Current.MainWindow, $"An unexpected error occurred:\n\n{e.Exception.Message}",
             "pViewer", MessageBoxButton.OK, MessageBoxImage.Error);
         e.Handled = true;
     }

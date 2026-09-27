@@ -16,7 +16,7 @@
     <Copyright>Copyright (C) 2013-2026 Phate</Copyright>
     <!-- ThemeMode (tema Fluent) è ancora marcato sperimentale in WPF -->
     <NoWarn>$(NoWarn);WPF0001</NoWarn>
-    <SatelliteResourceLanguages>it;en</SatelliteResourceLanguages>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>

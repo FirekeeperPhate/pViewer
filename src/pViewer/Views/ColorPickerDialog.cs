@@ -23,7 +23,7 @@ public sealed class ColorPickerDialog : Window
 
     public ColorPickerDialog(Color initial)
     {
-        Title = "Colore";
+        Title = "Color";
         SizeToContent = SizeToContent.WidthAndHeight;
         ResizeMode = ResizeMode.NoResize;
         ShowInTaskbar = false;
@@ -54,14 +54,14 @@ public sealed class ColorPickerDialog : Window
         ok.SetResourceReference(StyleProperty, "AccentButtonStyle");
         ok.Click += (_, _) =>
         {
-            if (!TryParse(_hex.Text, out var c)) { _error.Text = "Colore non valido (es. #FF3B30)."; return; }
+            if (!TryParse(_hex.Text, out var c)) { _error.Text = "Invalid color (e.g. #FF3B30)."; return; }
             Result = c;
             DialogResult = true;
         };
-        var cancel = new Button { Content = "Annulla", IsCancel = true, MinWidth = 90, Margin = new Thickness(8, 0, 0, 0) };
+        var cancel = new Button { Content = "Cancel", IsCancel = true, MinWidth = 90, Margin = new Thickness(8, 0, 0, 0) };
 
         var hexRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(3, 12, 0, 0) };
-        hexRow.Children.Add(new TextBlock { Text = "Esadecimale", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) });
+        hexRow.Children.Add(new TextBlock { Text = "Hex", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) });
         hexRow.Children.Add(_hex);
         hexRow.Children.Add(new Border { Width = 10 });
         hexRow.Children.Add(_preview);

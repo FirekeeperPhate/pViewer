@@ -14,8 +14,8 @@ public partial class BatchRenameDialog : Window
     {
         _count = count;
         InitializeComponent();
-        IntroText.Text = $"I {count} file della cartella verranno rinominati nell'ordine in cui li vedi. " +
-                         "L'estensione resta quella originale.";
+        IntroText.Text = $"The {count} files in the folder will be renamed in the order you see them. " +
+                         "Extensions are kept.";
         BaseBox.Text = suggestedBase;
         DigitsBox.Text = Math.Max(2, count.ToString().Length).ToString();
         _ready = true;
@@ -29,9 +29,9 @@ public partial class BatchRenameDialog : Window
     {
         error = null;
         string name = BaseBox.Text.Trim();
-        if (name.Length == 0 || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) error = "Nome base non valido.";
-        else if (!int.TryParse(StartBox.Text, out int start) || start < 0) error = "Il primo numero deve essere 0 o più.";
-        else if (!int.TryParse(DigitsBox.Text, out int digits) || digits < 1 || digits > 9) error = "Cifre: da 1 a 9.";
+        if (name.Length == 0 || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) error = "Invalid base name.";
+        else if (!int.TryParse(StartBox.Text, out int start) || start < 0) error = "The first number must be 0 or more.";
+        else if (!int.TryParse(DigitsBox.Text, out int digits) || digits < 1 || digits > 9) error = "Digits: 1 to 9.";
         else return new BatchRenameOptions(name, start, digits);
         return null;
     }

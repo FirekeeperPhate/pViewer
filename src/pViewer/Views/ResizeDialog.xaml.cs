@@ -15,7 +15,7 @@ public partial class ResizeDialog : Window
         _origW = width;
         _origH = height;
         InitializeComponent();
-        OriginalText.Text = $"Dimensioni attuali: {width} × {height} px";
+        OriginalText.Text = $"Current size: {width} × {height} px";
         Set(WidthBox, width);
         Set(HeightBox, height);
         Set(PercentBox, 100);
@@ -61,7 +61,7 @@ public partial class ResizeDialog : Window
         if (!TryRead(WidthBox, out double w) || !TryRead(HeightBox, out double h)
             || Math.Round(w) < 1 || Math.Round(h) < 1 || w > MaxSide || h > MaxSide)
         {
-            ErrorText.Text = $"Inserisci dimensioni tra 1 e {MaxSide} pixel.";
+            ErrorText.Text = $"Enter a size between 1 and {MaxSide} pixels.";
             ErrorText.Visibility = Visibility.Visible;
             return;
         }

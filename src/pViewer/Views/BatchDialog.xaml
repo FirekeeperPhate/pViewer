@@ -1,14 +1,14 @@
 <Window x:Class="pViewer.Views.BatchDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Elaborazione in serie" Width="560" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False"
+        Title="Batch processing" Width="560" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner">
     <StackPanel Margin="20">
         <TextBlock x:Name="SourceText" TextWrapping="Wrap" Opacity="0.8" />
-        <TextBlock Text="Gli originali non vengono modificati: i risultati vanno in una cartella a parte e i file già presenti non vengono sovrascritti."
+        <TextBlock Text="Originals are never modified: results go to a separate folder and existing files are never overwritten."
                    TextWrapping="Wrap" Opacity="0.6" FontSize="12" Margin="0,4,0,14" />
 
-        <TextBlock Text="Operazione" FontWeight="SemiBold" Margin="0,0,0,4" />
+        <TextBlock Text="Operation" FontWeight="SemiBold" Margin="0,0,0,4" />
         <ComboBox x:Name="OperationBox" SelectionChanged="OperationBox_SelectionChanged" />
 
         <!-- Ridimensiona -->
@@ -17,19 +17,19 @@
                 <RadioButton x:Name="Pct25" Content="25%" GroupName="size" Margin="0,0,16,0" />
                 <RadioButton x:Name="Pct50" Content="50%" GroupName="size" IsChecked="True" Margin="0,0,16,0" />
                 <RadioButton x:Name="Pct75" Content="75%" GroupName="size" Margin="0,0,16,0" />
-                <RadioButton x:Name="PctMax" Content="Al massimo" GroupName="size" />
+                <RadioButton x:Name="PctMax" Content="At most" GroupName="size" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0" IsEnabled="{Binding IsChecked, ElementName=PctMax}">
                 <TextBox x:Name="MaxWidthBox" Width="90" Text="1920" />
                 <TextBlock Text="×" VerticalAlignment="Center" Margin="8,0" />
                 <TextBox x:Name="MaxHeightBox" Width="90" Text="1080" />
-                <TextBlock Text="px (proporzioni mantenute, mai ingrandite)" VerticalAlignment="Center" Margin="8,0,0,0" Opacity="0.7" />
+                <TextBlock Text="px (aspect ratio kept, never enlarged)" VerticalAlignment="Center" Margin="8,0,0,0" Opacity="0.7" />
             </StackPanel>
         </StackPanel>
 
         <!-- Converti -->
         <StackPanel x:Name="ConvertPanel" Orientation="Horizontal" Margin="0,12,0,0">
-            <TextBlock Text="Formato" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <TextBlock Text="Format" VerticalAlignment="Center" Margin="0,0,12,0" />
             <ComboBox x:Name="FormatBox" Width="140" SelectedIndex="0">
                 <ComboBoxItem Content="JPEG" Tag=".jpg" />
                 <ComboBoxItem Content="PNG" Tag=".png" />
@@ -42,14 +42,14 @@
 
         <!-- Bordo -->
         <StackPanel x:Name="BorderPanel" Orientation="Horizontal" Margin="0,12,0,0">
-            <TextBlock Text="Spessore" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <TextBlock Text="Thickness" VerticalAlignment="Center" Margin="0,0,12,0" />
             <TextBox x:Name="BorderBox" Width="80" />
             <TextBlock Text="px" VerticalAlignment="Center" Margin="8,0,0,0" />
         </StackPanel>
 
-        <TextBlock Text="Cartella di destinazione" FontWeight="SemiBold" Margin="0,16,0,4" />
+        <TextBlock Text="Destination folder" FontWeight="SemiBold" Margin="0,16,0,4" />
         <DockPanel>
-            <Button DockPanel.Dock="Right" Content="Sfoglia…" Margin="8,0,0,0" Click="Browse_Click" />
+            <Button DockPanel.Dock="Right" Content="Browse…" Margin="8,0,0,0" Click="Browse_Click" />
             <TextBox x:Name="OutputBox" TextChanged="OutputBox_TextChanged" />
         </DockPanel>
 
@@ -57,9 +57,9 @@
         <TextBlock x:Name="StatusText" TextWrapping="Wrap" Margin="0,6,0,0" Opacity="0.85" MinHeight="18" />
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-            <Button x:Name="OpenFolderButton" Content="Apri cartella" MinWidth="100" Visibility="Collapsed" Click="OpenFolder_Click" />
-            <Button x:Name="StartButton" Content="Avvia" IsDefault="True" MinWidth="100" Margin="8,0,0,0" Click="Start_Click" Style="{DynamicResource AccentButtonStyle}" />
-            <Button x:Name="CloseButton" Content="Chiudi" IsCancel="True" MinWidth="100" Margin="8,0,0,0" Click="Close_Click" />
+            <Button x:Name="OpenFolderButton" Content="Open folder" MinWidth="100" Visibility="Collapsed" Click="OpenFolder_Click" />
+            <Button x:Name="StartButton" Content="Start" IsDefault="True" MinWidth="100" Margin="8,0,0,0" Click="Start_Click" Style="{DynamicResource AccentButtonStyle}" />
+            <Button x:Name="CloseButton" Content="Close" IsCancel="True" MinWidth="100" Margin="8,0,0,0" Click="Close_Click" />
         </StackPanel>
     </StackPanel>
 </Window>

@@ -5,11 +5,11 @@
         WindowStartupLocation="CenterOwner">
     <DockPanel Margin="16">
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-            <Button DockPanel.Dock="Right" Content="Copia tutto" Margin="8,0,0,0" Click="Copy_Click" />
-            <TextBox x:Name="FilterBox" TextChanged="FilterBox_TextChanged" ToolTip="Filtra per nome o valore" />
+            <Button DockPanel.Dock="Right" Content="Copy all" Margin="8,0,0,0" Click="Copy_Click" />
+            <TextBox x:Name="FilterBox" TextChanged="FilterBox_TextChanged" ToolTip="Filter by name or value" />
         </DockPanel>
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button Content="Chiudi" IsCancel="True" IsDefault="True" MinWidth="90" />
+            <Button Content="Close" IsCancel="True" IsDefault="True" MinWidth="90" />
         </StackPanel>
         <ListView x:Name="List" VirtualizingPanel.IsVirtualizingWhenGrouping="True">
             <ListView.GroupStyle>
@@ -23,8 +23,8 @@
             </ListView.GroupStyle>
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Header="Nome" Width="220" DisplayMemberBinding="{Binding Name}" />
-                    <GridViewColumn Header="Valore" Width="360" DisplayMemberBinding="{Binding Value}" />
+                    <GridViewColumn Header="Name" Width="220" DisplayMemberBinding="{Binding Name}" />
+                    <GridViewColumn Header="Value" Width="360" DisplayMemberBinding="{Binding Value}" />
                 </GridView>
             </ListView.View>
         </ListView>

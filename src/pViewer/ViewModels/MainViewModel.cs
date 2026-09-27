@@ -113,7 +113,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 }
                 var archives = ArchiveSource.Siblings(Path.Combine(path, "x.zip")).Where(File.Exists).ToList();
                 if (archives.Count > 0) { await OpenArchiveAsync(archives[0], false, keepLayout: false); return; }
-                _view.ShowError("La cartella non contiene immagini né archivi.");
+                _view.ShowError("The folder contains no images or archives.");
             }
             else if (File.Exists(path) && ImageFormats.IsArchive(path))
             {
@@ -129,7 +129,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 {
                     if (!ImageFormats.IsImage(path))
                     {
-                        _view.ShowError($"«{Path.GetFileName(path)}» non è un formato supportato.");
+                        _view.ShowError($"«{Path.GetFileName(path)}» is not a supported format.");
                         source.Dispose();
                         return;
                     }
@@ -139,7 +139,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             }
             else
             {
-                _view.ShowError($"Percorso non trovato:\n{path}");
+                _view.ShowError($"Path not found:\n{path}");
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -160,7 +160,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             IsLoading = false;
-            _view.ShowError($"Impossibile aprire l'archivio «{Path.GetFileName(path)}».\n{ex.Message}");
+            _view.ShowError($"Cannot open the archive «{Path.GetFileName(path)}».\n{ex.Message}");
             return;
         }
         Settings.LastFolder = Path.GetDirectoryName(path);
@@ -246,7 +246,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 HasImage = false;
                 _view.ClearPages();
                 ErrorText = ex is ImageDecodeException ? ex.Message
-                    : $"Impossibile aprire «{_source.Pages[indices[0]].Name}».\n{ex.Message}";
+                    : $"Cannot open «{_source.Pages[indices[0]].Name}».\n{ex.Message}";
                 UpdateInfo();
                 PrefetchAround();
                 return;
@@ -306,7 +306,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_source is null || _nav.Count == 0)
         {
             Title = "pViewer";
-            StatusName = _source is null ? "" : "Nessuna immagine";
+            StatusName = _source is null ? "" : "No images";
             StatusInfo = "";
             return;
         }
@@ -326,7 +326,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             parts.Add($"{v[0].PixelWidth} × {v[0].PixelHeight}");
             if (!string.IsNullOrEmpty(v[0].FormatName)) parts.Add(v[0].FormatName);
             if (v[0].Animation is { } anim)
-                parts.Add($"{anim.Frames.Count} fotogrammi, {anim.Delays.Sum(d => d.TotalSeconds):0.#} s");
+                parts.Add($"{anim.Frames.Count} frames, {anim.Delays.Sum(d => d.TotalSeconds):0.#} s");
             parts.Add(FormatSize(v[0].FileSize));
         }
         int first = indices.Min() + 1, last = indices.Max() + 1;
@@ -390,11 +390,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 await ShowCurrentAsync();
                 break;
             case NavigationResult.NextContainer:
-                Toast($"Volume successivo: {Path.GetFileName(_archiveSiblings[_archiveIndex + 1])}");
+                Toast($"Next volume: {Path.GetFileName(_archiveSiblings[_archiveIndex + 1])}");
                 await OpenArchiveAsync(_archiveSiblings[_archiveIndex + 1], startAtEnd: false, keepLayout: true);
                 break;
             case NavigationResult.PreviousContainer:
-                Toast($"Volume precedente: {Path.GetFileName(_archiveSiblings[_archiveIndex - 1])}");
+                Toast($"Previous volume: {Path.GetFileName(_archiveSiblings[_archiveIndex - 1])}");
                 await OpenArchiveAsync(_archiveSiblings[_archiveIndex - 1], startAtEnd: true, keepLayout: true);
                 break;
         }
@@ -448,9 +448,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (!HasImage || _source is null) return;
         if (seconds <= 0)
         {
-            string? text = _view.AskText("Presentazione", "Secondi tra un'immagine e l'altra:",
+            string? text = _view.AskText("Slideshow", "Seconds between images:",
                 Settings.SlideshowSeconds.ToString("0.#"),
-                s => double.TryParse(s, out double v) && v >= 0.5 && v <= 3600 ? null : "Inserisci un numero tra 0,5 e 3600.");
+                s => double.TryParse(s, out double v) && v >= 0.5 && v <= 3600 ? null : "Enter a number between 0.5 and 3600.");
             if (text is null) return;
             seconds = double.Parse(text);
             Settings.SlideshowSeconds = seconds;
@@ -459,7 +459,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _slideshowTimer.Start();
         IsSlideshowRunning = true;
         if (!_view.IsFullscreen) _view.SetFullscreen(true);
-        Toast($"Presentazione ogni {seconds:0.#} s — Esc o clic per fermare");
+        Toast($"Slideshow every {seconds:0.#} s — Esc or click to stop");
     }
 
     public void StopSlideshow()
@@ -495,15 +495,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             _edit = new EditSession(_visible[0].Bitmap);
             if (_visible[0].Animation is not null)
-                Toast("Le modifiche valgono per il primo fotogramma: l'animazione non verrà salvata");
+                Toast("Edits apply to the first frame: the animation will not be saved");
         }
         else
         {
             var composed = ImageOps.Compose(_visible.Select(v => v.Bitmap).ToList(), Colors.White);
             _edit = new EditSession(composed);
             _detached = true;
-            _detachedName = "Pagine unite";
-            Toast("Le due pagine sono state unite in un'unica immagine");
+            _detachedName = "Joined pages";
+            Toast("The two pages have been joined into a single image");
         }
         return _edit;
     }
@@ -527,7 +527,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            _view.ShowError($"Operazione non riuscita.\n{ex.Message}");
+            _view.ShowError($"The operation failed.\n{ex.Message}");
         }
         finally
         {
@@ -597,8 +597,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (!HasImage) return;
         Tool = Tool == ViewerTool.RedEye ? ViewerTool.None : ViewerTool.RedEye;
         Toast(Tool == ViewerTool.RedEye
-            ? "Occhi rossi: trascina un rettangolo attorno a ogni occhio (R o Esc per uscire)"
-            : "Correzione occhi rossi disattivata");
+            ? "Red-eye: drag a rectangle around each eye (R or Esc to exit)"
+            : "Red-eye correction off");
     }
 
     private Int32Rect? _lastRectangle;
@@ -657,17 +657,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (session is null) return;
         EffectDefinition effect = name switch
         {
-            "BrightnessContrast" => new("Luminosità e contrasto",
-                [new("Luminosità", -100, 100, 0), new("Contrasto", -100, 100, 0)],
+            "BrightnessContrast" => new("Brightness and contrast",
+                [new("Brightness", -100, 100, 0), new("Contrast", -100, 100, 0)],
                 (b, v, _) => ImageOps.BrightnessContrast(b, v[0], v[1])),
-            "Sharpen" => new("Nitidezza",
-                [new("Intensità", 0, 10, 1.5, 0.1)],
+            "Sharpen" => new("Sharpen",
+                [new("Amount", 0, 10, 1.5, 0.1)],
                 (b, v, s) => ImageOps.Sharpen(b, v[0] * s)),
-            "Blur" => new("Sfocatura",
-                [new("Raggio", 0, 40, 3, 0.5, " px")],
+            "Blur" => new("Blur",
+                [new("Radius", 0, 40, 3, 0.5, " px")],
                 (b, v, s) => ImageOps.Blur(b, v[0] * s)),
-            "HueSaturation" => new("Tinta e saturazione",
-                [new("Tinta", -180, 180, 0, 1, "°"), new("Saturazione", -100, 100, 0)],
+            "HueSaturation" => new("Hue and saturation",
+                [new("Hue", -180, 180, 0, 1, "°"), new("Saturation", -100, 100, 0)],
                 (b, v, _) => ImageOps.HueSaturation(b, v[0], v[1])),
             _ => throw new ArgumentOutOfRangeException(nameof(name)),
         };
@@ -686,11 +686,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             Clipboard.SetImage(bmp);
-            Toast("Immagine copiata negli appunti");
+            Toast("Image copied to the clipboard");
         }
         catch (Exception ex)
         {
-            _view.ShowError($"Impossibile copiare negli appunti.\n{ex.Message}");
+            _view.ShowError($"Cannot copy to the clipboard.\n{ex.Message}");
         }
     }
 
@@ -707,7 +707,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             var bitmap = ClipboardImage.Get();
             if (bitmap is null)
             {
-                Toast("Gli appunti non contengono immagini");
+                Toast("The clipboard contains no image");
                 return;
             }
             if (!await ConfirmDiscardEditsAsync()) return;
@@ -718,7 +718,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _visible = null;
             _edit = new EditSession(bitmap);
             _detached = true;
-            _detachedName = "Immagine dagli appunti";
+            _detachedName = "Clipboard image";
             HasImage = true;
             _view.ShowPages([bitmap], preserveView: false);
             UpdateEditFlags();
@@ -726,7 +726,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            _view.ShowError($"Impossibile leggere gli appunti.\n{ex.Message}");
+            _view.ShowError($"Cannot read the clipboard.\n{ex.Message}");
         }
     }
 
@@ -751,13 +751,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_detached || path is null || !IsSingleFilePage || !ImageFormats.CanSave(path)) return await SaveAsCoreAsync();
         if (_edit is null || !_edit.IsModified)
         {
-            Toast("Nessuna modifica da salvare");
+            Toast("Nothing to save");
             return true;
         }
         if (Settings.ConfirmOverwrite)
         {
-            var answer = _view.Ask($"Sovrascrivere «{Path.GetFileName(path)}» con le modifiche?\n\n«No» per salvare con un altro nome.",
-                "Salva", MessageBoxButton.YesNoCancel);
+            var answer = _view.Ask($"Overwrite «{Path.GetFileName(path)}» with your changes?\n\nChoose «No» to save under another name.",
+                "Save", MessageBoxButton.YesNoCancel);
             if (answer == MessageBoxResult.Cancel) return false;
             if (answer == MessageBoxResult.No) return await SaveAsCoreAsync();
         }
@@ -783,12 +783,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (path is null) return false;
         if (!ImageFormats.CanSave(path))
         {
-            _view.ShowError("Formato non supportato per il salvataggio: usa jpg, png, webp, bmp, gif, tif o jxr.");
+            _view.ShowError("Unsupported format for saving: use jpg, png, webp, bmp, gif, tif or jxr.");
             return false;
         }
         bool ok = await WriteAsync(bitmap, path);
         if (ok && _edit is null && _visible?.Any(v => v.Animation is not null) == true)
-            Toast($"Salvato: {Path.GetFileName(path)} (solo il primo fotogramma dell'animazione)");
+            Toast($"Saved: {Path.GetFileName(path)} (first frame of the animation only)");
         if (ok && _source is FolderSource folder &&
             string.Equals(Path.GetDirectoryName(path), folder.Location, StringComparison.OrdinalIgnoreCase))
         {
@@ -809,12 +809,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _edit?.MarkSaved();
             UpdateEditFlags();
             UpdateInfo();
-            Toast($"Salvato: {Path.GetFileName(path)}");
+            Toast($"Saved: {Path.GetFileName(path)}");
             return true;
         }
         catch (Exception ex)
         {
-            _view.ShowError($"Salvataggio non riuscito.\n{ex.Message}");
+            _view.ShowError($"Saving failed.\n{ex.Message}");
             return false;
         }
         finally
@@ -827,7 +827,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public async Task<bool> ConfirmDiscardEditsAsync()
     {
         if (_edit is null || !_edit.IsModified || !Settings.ConfirmDiscardEdits) return true;
-        var answer = _view.Ask("L'immagine ha modifiche non salvate. Salvarle?", "Modifiche non salvate",
+        var answer = _view.Ask("The image has unsaved changes. Save them?", "Unsaved changes",
             MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
         return answer switch
         {
@@ -862,13 +862,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         string? path = CurrentFilePath;
         if (!IsSingleFilePage || path is null)
         {
-            _view.ShowError("Si può eliminare solo un file immagine visualizzato da solo (non una coppia di pagine, un archivio o un'immagine dagli appunti).");
+            _view.ShowError("Only an image file shown on its own can be deleted (not a page pair, an archive or a clipboard image).");
             return;
         }
         if (Settings.ConfirmDelete)
         {
-            string where = Settings.DeleteToRecycleBin ? "Spostare nel Cestino" : "Eliminare definitivamente";
-            if (_view.Ask($"{where} «{Path.GetFileName(path)}»?", "Elimina", MessageBoxButton.YesNo,
+            string where = Settings.DeleteToRecycleBin ? "Move to the Recycle Bin" : "Permanently delete";
+            if (_view.Ask($"{where} «{Path.GetFileName(path)}»?", "Delete", MessageBoxButton.YesNo,
                     Settings.DeleteToRecycleBin ? MessageBoxImage.Question : MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
         }
@@ -878,13 +878,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            _view.ShowError($"Impossibile eliminare il file.\n{ex.Message}");
+            _view.ShowError($"Cannot delete the file.\n{ex.Message}");
             return;
         }
         int position = _nav.Position;
         var fresh = FolderSource.Open(_source!.Location);
         await SetSourceAsync(fresh, Math.Min(position, Math.Max(0, fresh.Pages.Count - 1)), null);
-        Toast(Settings.DeleteToRecycleBin ? "Spostato nel Cestino" : "File eliminato");
+        Toast(Settings.DeleteToRecycleBin ? "Moved to the Recycle Bin" : "File deleted");
     }
 
     [RelayCommand(AllowConcurrentExecutions = true)]
@@ -895,13 +895,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (!await ConfirmDiscardEditsAsync()) return;
         string dir = Path.GetDirectoryName(path)!;
         string ext = Path.GetExtension(path);
-        string? name = _view.AskText("Rinomina", "Nuovo nome:", Path.GetFileNameWithoutExtension(path), s =>
+        string? name = _view.AskText("Rename", "New name:", Path.GetFileNameWithoutExtension(path), s =>
         {
             s = s.Trim();
-            if (s.Length == 0 || s.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) return "Nome non valido.";
+            if (s.Length == 0 || s.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) return "Invalid name.";
             string target = Path.Combine(dir, s + ext);
             if (File.Exists(target) && !string.Equals(target, path, StringComparison.OrdinalIgnoreCase))
-                return "Esiste già un file con questo nome.";
+                return "A file with this name already exists.";
             return null;
         });
         if (name is null) return;
@@ -913,7 +913,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            _view.ShowError($"Impossibile rinominare il file.\n{ex.Message}");
+            _view.ShowError($"Cannot rename the file.\n{ex.Message}");
             return;
         }
         var fresh = FolderSource.Open(dir);
@@ -935,13 +935,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            _view.ShowError($"Rinomina non riuscita.\n{ex.Message}");
+            _view.ShowError($"Renaming failed.\n{ex.Message}");
             renamed = [];
         }
         var fresh = FolderSource.Open(folder.Location);
         int index = current is not null && renamed.TryGetValue(current, out var np) ? fresh.IndexOf(np) : _nav.Position;
         await SetSourceAsync(fresh, Math.Max(0, index), null);
-        if (renamed.Count > 0) Toast($"Rinominati {renamed.Count} file");
+        if (renamed.Count > 0) Toast($"Renamed {renamed.Count} files");
     }
 
     [RelayCommand]
@@ -988,11 +988,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 await StaTask.Run(() => { ImageSaver.Save(bmp, target, 95); return true; });
             }
             Shell.SetWallpaper(path);
-            Toast("Sfondo del desktop impostato");
+            Toast("Desktop background set");
         }
         catch (Exception ex)
         {
-            _view.ShowError($"Impossibile impostare lo sfondo.\n{ex.Message}");
+            _view.ShowError($"Cannot set the desktop background.\n{ex.Message}");
         }
     }
 
@@ -1007,14 +1007,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             var groups = await Task.Run(() => MetadataService.Read(bytes));
             if (groups.Count == 0)
             {
-                Toast("Nessun metadato trovato");
+                Toast("No metadata found");
                 return;
             }
             _view.ShowMetadata(Path.GetFileName(_source!.Pages[index].Name), groups);
         }
         catch (Exception ex)
         {
-            _view.ShowError($"Impossibile leggere i metadati.\n{ex.Message}");
+            _view.ShowError($"Cannot read the metadata.\n{ex.Message}");
         }
     }
 

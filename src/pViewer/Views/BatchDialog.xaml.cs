@@ -11,16 +11,16 @@ public partial class BatchDialog : Window
 {
     private static readonly (BatchOperation Op, string Label)[] Operations =
     [
-        (BatchOperation.Resize, "Ridimensiona"),
-        (BatchOperation.RotateRight, "Ruota a destra"),
-        (BatchOperation.RotateLeft, "Ruota a sinistra"),
-        (BatchOperation.FlipHorizontal, "Rifletti orizzontalmente"),
-        (BatchOperation.FlipVertical, "Rifletti verticalmente"),
-        (BatchOperation.Convert, "Converti formato"),
-        (BatchOperation.Grayscale, "Scala di grigi"),
-        (BatchOperation.Invert, "Negativo"),
-        (BatchOperation.BlackBorder, "Aggiungi bordo nero"),
-        (BatchOperation.WhiteBorder, "Aggiungi bordo bianco"),
+        (BatchOperation.Resize, "Resize"),
+        (BatchOperation.RotateRight, "Rotate right"),
+        (BatchOperation.RotateLeft, "Rotate left"),
+        (BatchOperation.FlipHorizontal, "Flip horizontally"),
+        (BatchOperation.FlipVertical, "Flip vertically"),
+        (BatchOperation.Convert, "Convert format"),
+        (BatchOperation.Grayscale, "Grayscale"),
+        (BatchOperation.Invert, "Invert"),
+        (BatchOperation.BlackBorder, "Add black border"),
+        (BatchOperation.WhiteBorder, "Add white border"),
     ];
 
     private readonly IImageSource _source;
@@ -34,8 +34,8 @@ public partial class BatchDialog : Window
         _source = source;
         _settings = settings;
         InitializeComponent();
-        string kind = source.IsArchive ? "archivio" : "cartella";
-        SourceText.Text = $"Origine ({kind}): {source.Location}\n{source.Pages.Count} immagini";
+        string kind = source.IsArchive ? "archive" : "folder";
+        SourceText.Text = $"Source ({kind}): {source.Location}\n{source.Pages.Count} images";
         foreach (var (_, label) in Operations) OperationBox.Items.Add(label);
         BorderBox.Text = settings.BorderThickness.ToString();
         OperationBox.SelectedIndex = 0;
@@ -76,7 +76,7 @@ public partial class BatchDialog : Window
 
     private void Browse_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = new OpenFolderDialog { Title = "Cartella di destinazione" };
+        var dlg = new OpenFolderDialog { Title = "Destination folder" };
         string? parent = Path.GetDirectoryName(OutputBox.Text);
         if (parent is not null && Directory.Exists(parent)) dlg.InitialDirectory = parent;
         if (dlg.ShowDialog(this) == true) OutputBox.Text = dlg.FolderName;
@@ -88,7 +88,7 @@ public partial class BatchDialog : Window
         string output = OutputBox.Text.Trim();
         if (output.Length == 0 || !Path.IsPathFullyQualified(output))
         {
-            error = "Indica una cartella di destinazione completa (es. C:\\Foto\\Ridotte).";
+            error = "Enter a full destination folder path (e.g. C:\\Photos\\Resized).";
             return null;
         }
         var op = SelectedOperation;
@@ -100,14 +100,14 @@ public partial class BatchDialog : Window
             else if (Pct75.IsChecked == true) percent = 75;
             else if (!int.TryParse(MaxWidthBox.Text, out maxW) || !int.TryParse(MaxHeightBox.Text, out maxH) || maxW < 1 || maxH < 1)
             {
-                error = "Larghezza e altezza massime devono essere numeri positivi.";
+                error = "Maximum width and height must be positive numbers.";
                 return null;
             }
         }
         if (op is BatchOperation.BlackBorder or BatchOperation.WhiteBorder &&
             (!int.TryParse(BorderBox.Text, out border) || border < 1 || border > 2000))
         {
-            error = "Spessore del bordo: da 1 a 2000 pixel.";
+            error = "Border thickness: 1 to 2000 pixels.";
             return null;
         }
         string? ext = op == BatchOperation.Convert ? (string)((ComboBoxItem)FormatBox.SelectedItem).Tag : null;
@@ -126,22 +126,22 @@ public partial class BatchDialog : Window
         _cts = new CancellationTokenSource();
         StartButton.IsEnabled = false;
         OpenFolderButton.Visibility = Visibility.Collapsed;
-        CloseButton.Content = "Interrompi";
+        CloseButton.Content = "Stop";
         ProgressBar.Maximum = _source.Pages.Count;
         ProgressBar.Value = 0;
         var progress = new Progress<BatchProgress>(p =>
         {
             ProgressBar.Value = p.Done;
-            StatusText.Text = p.Current.Length > 0 ? $"{p.Done + 1} di {p.Total}: {p.Current}" : "";
+            StatusText.Text = p.Current.Length > 0 ? $"{p.Done + 1} of {p.Total}: {p.Current}" : "";
         });
 
         try
         {
             var result = await BatchProcessor.RunAsync(_source, job, progress, _cts.Token);
-            var parts = new List<string> { $"{result.Written} immagini salvate" };
-            if (result.Skipped > 0) parts.Add($"{result.Skipped} saltate perché già presenti");
-            if (result.Errors.Count > 0) parts.Add($"{result.Errors.Count} errori");
-            string text = (result.Cancelled ? "Interrotto: " : "Fatto: ") + string.Join(", ", parts) + ".";
+            var parts = new List<string> { $"{result.Written} images saved" };
+            if (result.Skipped > 0) parts.Add($"{result.Skipped} skipped because they already exist");
+            if (result.Errors.Count > 0) parts.Add($"{result.Errors.Count} errors");
+            string text = (result.Cancelled ? "Stopped: " : "Done: ") + string.Join(", ", parts) + ".";
             if (result.Errors.Count > 0) text += "\n" + string.Join("\n", result.Errors.Take(5));
             StatusText.Text = text;
             if (result.Written > 0) OpenFolderButton.Visibility = Visibility.Visible;
@@ -149,14 +149,14 @@ public partial class BatchDialog : Window
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"Errore: {ex.Message}";
+            StatusText.Text = $"Error: {ex.Message}";
         }
         finally
         {
             _cts.Dispose();
             _cts = null;
             StartButton.IsEnabled = true;
-            CloseButton.Content = "Chiudi";
+            CloseButton.Content = "Close";
         }
     }
 
@@ -173,7 +173,7 @@ public partial class BatchDialog : Window
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
-        // Durante l'elaborazione "Chiudi"/Esc interrompe invece di chiudere.
+        // Durante l'elaborazione "Close"/Esc interrompe invece di chiudere.
         if (_cts is not null)
         {
             _cts.Cancel();

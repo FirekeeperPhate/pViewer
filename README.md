@@ -29,7 +29,7 @@ pViewer 1.x (WinForms, .NET Framework 4.0).
 - **Portabile**: le impostazioni stanno in `settings.json` accanto all'eseguibile (se la cartella
   non è scrivibile si usa `%AppData%\pViewer`).
 
-Tutte le scorciatoie sono nella guida dell'app (F1).
+L’interfaccia è in inglese. Tutte le scorciatoie sono nella guida dell’app (F1).
 
 ## Compilare
 

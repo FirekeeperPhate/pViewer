@@ -509,7 +509,7 @@ public sealed class ImageViewer : Border
             Background = new SolidColorBrush(Color.FromArgb(50, 0, 0, 0)),
             BorderBrush = new SolidColorBrush(Color.FromArgb(160, 255, 255, 255)),
             Cursor = Cursors.SizeAll,
-            ToolTip = "Trascina il bordo per spostare · Ctrl+Invio conferma · Esc annulla",
+            ToolTip = "Drag the border to move · Ctrl+Enter to apply · Esc to cancel",
         };
         _textFrame.MouseLeftButtonDown += (_, e) =>
         {
@@ -562,12 +562,12 @@ public sealed class ImageViewer : Border
     private ContextMenu CreateTextContextMenu()
     {
         var menu = new ContextMenu();
-        var style = new MenuItem { Header = "Carattere e colore…" };
+        var style = new MenuItem { Header = "Font and color…" };
         style.Click += (_, _) => TextStyleRequested?.Invoke(this, EventArgs.Empty);
-        var paste = new MenuItem { Header = "Incolla", Command = ApplicationCommands.Paste, InputGestureText = "Ctrl+V" };
-        var confirm = new MenuItem { Header = "Scrivi sull'immagine", InputGestureText = "Ctrl+Invio" };
+        var paste = new MenuItem { Header = "Paste", Command = ApplicationCommands.Paste, InputGestureText = "Ctrl+V" };
+        var confirm = new MenuItem { Header = "Write on the image", InputGestureText = "Ctrl+Enter" };
         confirm.Click += (_, _) => CommitTextEdit();
-        var cancel = new MenuItem { Header = "Annulla", InputGestureText = "Esc" };
+        var cancel = new MenuItem { Header = "Cancel", InputGestureText = "Esc" };
         cancel.Click += (_, _) => CancelTextEdit();
         menu.Items.Add(style);
         menu.Items.Add(paste);

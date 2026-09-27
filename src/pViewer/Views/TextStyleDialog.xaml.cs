@@ -65,13 +65,13 @@ public partial class TextStyleDialog : Window
     {
         if (!double.TryParse(SizeBox.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out double size) || size < 1 || size > 2000)
         {
-            ErrorText.Text = "Dimensione: da 1 a 2000 pixel.";
+            ErrorText.Text = "Size: 1 to 2000 pixels.";
             return;
         }
         string font = FontBox.Text.Trim();
         if (font.Length == 0)
         {
-            ErrorText.Text = "Scegli un carattere.";
+            ErrorText.Text = "Choose a font.";
             return;
         }
         Result = new TextStyle(font, size, BoldBox.IsChecked == true, ItalicBox.IsChecked == true, _color);

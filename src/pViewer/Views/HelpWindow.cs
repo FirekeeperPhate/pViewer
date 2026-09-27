@@ -9,56 +9,56 @@ public sealed class HelpWindow : Window
 {
     private static readonly (string Section, (string Keys, string Action)[] Items)[] Shortcuts =
     [
-        ("Navigazione", [
-            ("→  Spazio  E  PagSu", "Immagine successiva"),
-            ("←  Q  PagGiù", "Immagine precedente"),
-            ("Home  /  Fine", "Prima / ultima immagine"),
-            ("M  /  C", "Modalità manga / comic (due pagine)"),
-            ("F12  /  Maiusc+F12", "Sposta la coppia avanti / indietro di una pagina"),
-            ("Ctrl+O", "Apri file, cartella o archivio"),
-            ("Trascina un file", "Apre immagini, cartelle e archivi"),
+        ("Navigation", [
+            ("→  Space  E  PgUp", "Next image"),
+            ("←  Q  PgDn", "Previous image"),
+            ("Home  /  End", "First / last image"),
+            ("M  /  C", "Manga / comic mode (two pages)"),
+            ("F12  /  Shift+F12", "Shift the page pair forward / back by one page"),
+            ("Ctrl+O", "Open a file, folder or archive"),
+            ("Drop a file", "Opens images, folders and archives"),
         ]),
-        ("Vista", [
-            ("Rotella  /  +  −", "Zoom (verso il puntatore con la rotella)"),
-            ("Trascina", "Sposta l'immagine ingrandita"),
-            ("A", "Dimensioni reali ↔ vista preferita"),
-            ("Ctrl+0  /  Tn 5", "Ripristina la vista"),
-            ("Ctrl+1", "Zoom al 100%"),
-            ("Tn 4 8 6 2", "Sposta la vista"),
-            ("F11  /  doppio clic", "Schermo intero"),
-            ("Alt+Invio", "Ingrandisci / ripristina la finestra"),
-            ("W", "Sfondo bianco"),
-            ("T", "Mostra / nascondi la barra strumenti"),
-            ("P", "Pausa / riprendi le animazioni (GIF, WebP, APNG)"),
-            ("Esc", "Esce da schermo intero o presentazione, altrimenti chiude"),
+        ("View", [
+            ("Wheel  /  +  −", "Zoom (towards the pointer with the wheel)"),
+            ("Drag", "Pan the zoomed image"),
+            ("A", "Actual size ↔ preferred view"),
+            ("Ctrl+0  /  Num 5", "Reset the view"),
+            ("Ctrl+1", "Zoom to 100%"),
+            ("Num 4 8 6 2", "Pan the view"),
+            ("F11  /  double-click", "Full screen"),
+            ("Alt+Enter", "Maximize / restore the window"),
+            ("W", "White background"),
+            ("T", "Show / hide the toolbar"),
+            ("P", "Pause / resume animations (GIF, WebP, APNG)"),
+            ("Esc", "Leaves full screen or the slideshow, otherwise closes"),
         ]),
-        ("Modifica", [
-            ("↑  /  ↓", "Ruota a destra / a sinistra"),
-            ("Alt+↑  /  Alt+↓", "Rifletti orizzontalmente / verticalmente"),
-            ("Ctrl+trascina", "Ritaglia"),
-            ("Alt+trascina", "Disegna un rettangolo"),
-            ("Tab", "Riempie l'ultimo rettangolo (per oscurare dati)"),
-            ("Maiusc+clic", "Scrivi un testo (Ctrl+Invio conferma, Esc annulla)"),
-            ("R", "Correzione occhi rossi (trascina attorno all'occhio)"),
-            ("Ctrl+R", "Ridimensiona"),
-            ("Ctrl+I  /  Ctrl+G", "Negativo / scala di grigi"),
-            ("Ctrl+Z  /  Ctrl+Y", "Annulla / ripeti"),
-            ("F5", "Ricarica l'originale (scarta le modifiche)"),
+        ("Edit", [
+            ("↑  /  ↓", "Rotate right / left"),
+            ("Alt+↑  /  Alt+↓", "Flip horizontally / vertically"),
+            ("Ctrl+drag", "Crop"),
+            ("Alt+drag", "Draw a rectangle"),
+            ("Tab", "Fill the last rectangle (to hide sensitive data)"),
+            ("Shift+click", "Write text (Ctrl+Enter to apply, Esc to cancel)"),
+            ("R", "Red-eye correction (drag around the eye)"),
+            ("Ctrl+R", "Resize"),
+            ("Ctrl+I  /  Ctrl+G", "Invert / grayscale"),
+            ("Ctrl+Z  /  Ctrl+Y", "Undo / redo"),
+            ("F5", "Reload the original (discards changes)"),
         ]),
         ("File", [
-            ("Ctrl+S", "Salva"),
-            ("Ctrl+Maiusc+S", "Salva con nome"),
-            ("F2", "Rinomina"),
-            ("Canc", "Elimina (nel Cestino)"),
-            ("Ctrl+C  /  Ctrl+V", "Copia l'immagine / incolla dagli appunti"),
-            ("I", "Dati EXIF e metadati"),
-            ("Ctrl+W  /  Ctrl+Q", "Chiudi pViewer"),
+            ("Ctrl+S", "Save"),
+            ("Ctrl+Shift+S", "Save as"),
+            ("F2", "Rename"),
+            ("Del", "Delete (to the Recycle Bin)"),
+            ("Ctrl+C  /  Ctrl+V", "Copy the image / paste from the clipboard"),
+            ("I", "EXIF and metadata"),
+            ("Ctrl+W  /  Ctrl+Q", "Close pViewer"),
         ]),
     ];
 
     public HelpWindow()
     {
-        Title = "Scorciatoie da tastiera";
+        Title = "Keyboard shortcuts";
         Width = 620;
         Height = 700;
         MinWidth = 400;

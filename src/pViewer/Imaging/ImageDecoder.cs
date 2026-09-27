@@ -69,14 +69,14 @@ public static class ImageDecoder
         string ext = Path.GetExtension(name).ToLowerInvariant();
         string hint = ext switch
         {
-            ".heic" or ".heif" => "Installa «Estensioni per immagini HEIF» dal Microsoft Store.",
-            ".avif" => "Installa «Estensione video AV1» dal Microsoft Store.",
-            ".jxl" => "Installa «Estensione immagine JPEG XL» dal Microsoft Store.",
+            ".heic" or ".heif" => "Install «HEIF Image Extensions» from the Microsoft Store.",
+            ".avif" => "Install «AV1 Video Extension» from the Microsoft Store.",
+            ".jxl" => "Install «JPEG XL Image Extension» from the Microsoft Store.",
             ".dng" or ".cr2" or ".cr3" or ".nef" or ".arw" or ".orf" or ".rw2" or ".raf"
-                => "Installa «Estensione per immagini RAW» dal Microsoft Store.",
-            _ => "Il file potrebbe essere danneggiato o in un formato non supportato.",
+                => "Install «Raw Image Extension» from the Microsoft Store.",
+            _ => "The file may be damaged or in an unsupported format.",
         };
-        return $"Impossibile aprire «{Path.GetFileName(name)}».\n{hint}";
+        return $"Cannot open «{Path.GetFileName(name)}».\n{hint}";
     }
 
     /// <summary>Riconosce dai primi byte i formati che possono contenere animazioni (GIF, WebP, PNG/APNG).</summary>

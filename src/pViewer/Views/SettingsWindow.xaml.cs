@@ -18,7 +18,7 @@ public partial class SettingsWindow : Window
     {
         _settings = settings;
         InitializeComponent();
-        PathText.Text = $"File delle impostazioni: {SettingsStore.FilePath}";
+        PathText.Text = $"Settings file: {SettingsStore.FilePath}";
         Load(settings);
     }
 
@@ -78,18 +78,18 @@ public partial class SettingsWindow : Window
     {
         if (!int.TryParse(RectThicknessBox.Text, out int rect) || rect < 1 || rect > 500)
         {
-            ErrorText.Text = "Spessore del rettangolo: da 1 a 500 pixel.";
+            ErrorText.Text = "Rectangle thickness: 1 to 500 pixels.";
             return;
         }
         if (!int.TryParse(BorderThicknessBox.Text, out int border) || border < 1 || border > 2000)
         {
-            ErrorText.Text = "Spessore del bordo: da 1 a 2000 pixel.";
+            ErrorText.Text = "Border thickness: 1 to 2000 pixels.";
             return;
         }
         if (!double.TryParse(SlideshowBox.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out double seconds)
             || seconds < 0.5 || seconds > 3600)
         {
-            ErrorText.Text = "Presentazione: da 0,5 a 3600 secondi.";
+            ErrorText.Text = "Slideshow: 0.5 to 3600 seconds.";
             return;
         }
 

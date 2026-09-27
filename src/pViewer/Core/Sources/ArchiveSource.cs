@@ -50,7 +50,7 @@ public sealed class ArchiveSource : IImageSource
             root = ArchiveFactory.OpenArchive(path, new ReaderOptions());
             owned.Add(root);
             if (SafeIsEncrypted(root))
-                throw new InvalidDataException("L'archivio è protetto da password: non supportato.");
+                throw new InvalidDataException("The archive is password protected: not supported.");
             Collect(root, "", slots, owned, 0);
         }
         catch
@@ -62,7 +62,7 @@ public sealed class ArchiveSource : IImageSource
         if (slots.Count == 0)
         {
             foreach (var d in owned) d.Dispose();
-            throw new InvalidDataException("L'archivio non contiene immagini.");
+            throw new InvalidDataException("The archive contains no images.");
         }
 
         slots.Sort((a, b) => NaturalComparer.Instance.Compare(a.Name, b.Name));
@@ -140,7 +140,7 @@ public sealed class ArchiveSource : IImageSource
                     }
                 }
                 foreach (var slot in byKey.Values)
-                    slot.Preload!.TrySetException(new FileNotFoundException("Voce non trovata nell'archivio.", slot.Name));
+                    slot.Preload!.TrySetException(new FileNotFoundException("Entry not found in the archive.", slot.Name));
             }
             catch (Exception ex)
             {

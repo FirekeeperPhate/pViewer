@@ -63,7 +63,7 @@ public static class ImageSaver
             ".gif" => new GifBitmapEncoder(),
             ".tif" or ".tiff" => new TiffBitmapEncoder(),
             ".jxr" or ".wdp" => new WmpBitmapEncoder(),
-            _ => throw new NotSupportedException($"Formato di salvataggio non supportato: {ext}"),
+            _ => throw new NotSupportedException($"Unsupported save format: {ext}"),
         };
         encoder.Frames.Add(BitmapFrame.Create(source, null, meta, null));
         using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);

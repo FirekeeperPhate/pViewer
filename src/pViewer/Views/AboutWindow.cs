@@ -12,7 +12,7 @@ public sealed class AboutWindow : Window
 {
     public AboutWindow()
     {
-        Title = "Informazioni su pViewer";
+        Title = "About pViewer";
         Width = 460;
         SizeToContent = SizeToContent.Height;
         ResizeMode = ResizeMode.NoResize;
@@ -27,20 +27,20 @@ public sealed class AboutWindow : Window
             Width = 64, Height = 64, HorizontalAlignment = HorizontalAlignment.Left,
         });
         panel.Children.Add(new TextBlock { Text = "pViewer", FontSize = 26, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 12, 0, 0) });
-        panel.Children.Add(new TextBlock { Text = $"Versione {version?.ToString(3)}", Opacity = 0.7 });
+        panel.Children.Add(new TextBlock { Text = $"Version {version?.ToString(3)}", Opacity = 0.7 });
         panel.Children.Add(new TextBlock
         {
-            Text = "Visualizzatore e piccolo editor di immagini, con lettura di fumetti e manga da archivi.",
+            Text = "Image viewer and small editor, with comic and manga reading straight from archives.",
             TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 14, 0, 0),
         });
         panel.Children.Add(new TextBlock
         {
-            Text = "Copyright © 2013-2026 Phate. Distribuito con licenza GNU GPL v3.",
+            Text = "Copyright © 2013-2026 Phate. Released under the GNU GPL v3.",
             TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 0), Opacity = 0.8,
         });
 
         var credits = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 14, 0, 0), Opacity = 0.7, FontSize = 12 };
-        credits.Inlines.Add(new Run("Usa: "));
+        credits.Inlines.Add(new Run("Uses: "));
         AddLink(credits, "ImageSharp", "https://github.com/SixLabors/ImageSharp");
         credits.Inlines.Add(new Run(" (Six Labors Split License), "));
         AddLink(credits, "SharpCompress", "https://github.com/adamhathcock/sharpcompress");

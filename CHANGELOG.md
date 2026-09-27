@@ -18,6 +18,7 @@ Riscrittura completa in .NET 10 e WPF (tema Fluent), mantenendo funzioni e scorc
 - Canc sposta nel Cestino (configurabile); la rinomina in serie non sovrascrive mai altri file.
 - Elaborazione in serie anche delle pagine di un archivio, con avanzamento e interruzione.
 - Impostazioni in `settings.json` (anche la posizione della finestra: niente più registro).
+- Interfaccia interamente in inglese, con dialoghi di conferma che seguono il tema scuro/chiaro.
 
 **Rimosso**
 - Invio alla cartella Public di Dropbox (servizio chiuso da Dropbox nel 2017).
