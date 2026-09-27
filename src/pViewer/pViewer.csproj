@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>pViewer</RootNamespace>
+    <AssemblyName>pViewer</AssemblyName>
+    <ApplicationIcon>Assets\pv.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>2.0.0</Version>
+    <Product>pViewer</Product>
+    <Authors>Phate</Authors>
+    <Copyright>Copyright (C) 2013-2026 Phate</Copyright>
+    <!-- ThemeMode (tema Fluent) è ancora marcato sperimentale in WPF -->
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
+    <SatelliteResourceLanguages>it;en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ImageSharp 4 richiede una chiave di licenza in build: restiamo sulla 3.1 (Six Labors Split License) -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <PackageReference Include="SharpCompress" Version="0.50.4" />
+    <PackageReference Include="MetadataExtractor" Version="2.9.3" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\pv.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="pViewer.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,35 @@
+<Window x:Class="pViewer.Views.BatchRenameDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Rinomina tutti i file" Width="440" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="20">
+        <TextBlock x:Name="IntroText" TextWrapping="Wrap" Opacity="0.8" Margin="0,0,0,12" />
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="8" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="8" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock Text="Nome base" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <TextBox x:Name="BaseBox" Grid.Column="1" TextChanged="Input_Changed" />
+            <TextBlock Grid.Row="2" Text="Primo numero" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <TextBox x:Name="StartBox" Grid.Row="2" Grid.Column="1" Text="1" TextChanged="Input_Changed" />
+            <TextBlock Grid.Row="4" Text="Cifre" VerticalAlignment="Center" Margin="0,0,12,0" />
+            <TextBox x:Name="DigitsBox" Grid.Row="4" Grid.Column="1" TextChanged="Input_Changed" />
+        </Grid>
+        <TextBlock Text="Anteprima" FontWeight="SemiBold" Margin="0,16,0,4" />
+        <TextBlock x:Name="PreviewText" Opacity="0.8" FontFamily="Consolas" />
+        <TextBlock x:Name="ErrorText" Foreground="#FFFF6B5E" TextWrapping="Wrap" Margin="0,6,0,0" Visibility="Collapsed" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+            <Button x:Name="OkButton" Content="Rinomina" IsDefault="True" MinWidth="90" Click="Ok_Click" Style="{DynamicResource AccentButtonStyle}" />
+            <Button Content="Annulla" IsCancel="True" MinWidth="90" Margin="8,0,0,0" />
+        </StackPanel>
+    </StackPanel>
+</Window>

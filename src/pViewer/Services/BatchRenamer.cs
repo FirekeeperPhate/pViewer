@@ -1,0 +1,59 @@
+using pViewer.ViewModels;
+
+namespace pViewer.Services;
+
+public static class BatchRenamer
+{
+    /// <summary>Nome finale del file n-esimo: «base-001.jpg».</summary>
+    public static string TargetName(BatchRenameOptions o, int index, string extension) =>
+        $"{o.BaseName}-{(o.Start + index).ToString().PadLeft(o.Digits, '0')}{extension}";
+
+    /// <summary>
+    /// Rinomina i file nell'ordine dato. Lavora in due passaggi (prima nomi temporanei, poi quelli
+    /// finali) così uno scambio di nomi fra file dell'elenco non genera conflitti.
+    /// Non sovrascrive mai file esterni all'elenco.
+    /// </summary>
+    /// <returns>Mappa vecchio percorso → nuovo percorso dei file rinominati.</returns>
+    public static Dictionary<string, string> Rename(IReadOnlyList<string> files, BatchRenameOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.BaseName) || options.BaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            throw new ArgumentException("Nome base non valido.");
+
+        var plan = files.Select((f, i) => (Old: f, New: Path.Combine(Path.GetDirectoryName(f)!,
+            TargetName(options, i, Path.GetExtension(f).ToLowerInvariant())))).ToList();
+
+        var sources = new HashSet<string>(files, StringComparer.OrdinalIgnoreCase);
+        var clash = plan.FirstOrDefault(p => File.Exists(p.New) && !sources.Contains(p.New));
+        if (clash.New is not null)
+            throw new IOException($"Esiste già «{Path.GetFileName(clash.New)}», che non fa parte dell'elenco.");
+
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var temps = new List<(string Old, string Temp, string New)>();
+        try
+        {
+            foreach (var (oldPath, newPath) in plan)
+            {
+                if (string.Equals(oldPath, newPath, StringComparison.Ordinal)) continue;
+                string temp = Path.Combine(Path.GetDirectoryName(oldPath)!, $".pvren_{Guid.NewGuid():N}{Path.GetExtension(oldPath)}");
+                File.Move(oldPath, temp);
+                temps.Add((oldPath, temp, newPath));
+            }
+            foreach (var (oldPath, temp, newPath) in temps)
+            {
+                File.Move(temp, newPath);
+                result[oldPath] = newPath;
+            }
+        }
+        catch
+        {
+            // Rimette a posto i file rimasti col nome temporaneo.
+            foreach (var (oldPath, temp, _) in temps)
+            {
+                if (!File.Exists(temp)) continue;
+                try { File.Move(temp, File.Exists(oldPath) ? temp : oldPath); } catch (IOException) { }
+            }
+            throw;
+        }
+        return result;
+    }
+}

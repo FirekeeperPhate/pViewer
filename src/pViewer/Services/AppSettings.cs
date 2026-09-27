@@ -1,0 +1,129 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using pViewer.Core;
+
+namespace pViewer.Services;
+
+public enum ViewMode
+{
+    /// <summary>Riduce le immagini più grandi della finestra, le piccole restano al 100%.</summary>
+    ShrinkToFit,
+    /// <summary>Adatta alla finestra, ingrandendo anche le piccole.</summary>
+    Fit,
+    /// <summary>Riempie la finestra (può tagliare i bordi).</summary>
+    Fill,
+    FitWidth,
+    FitHeight,
+    /// <summary>Un pixel dell'immagine = un pixel dello schermo.</summary>
+    ActualSize,
+}
+
+public enum AppTheme { Dark, Light, System }
+
+public sealed class WindowPlacement
+{
+    public double Left { get; set; }
+    public double Top { get; set; }
+    public double Width { get; set; }
+    public double Height { get; set; }
+    public bool Maximized { get; set; }
+}
+
+public sealed class AppSettings
+{
+    public AppTheme Theme { get; set; } = AppTheme.Dark;
+    public ViewMode ViewMode { get; set; } = ViewMode.ShrinkToFit;
+    public bool AutoRotateExif { get; set; } = true;
+    public bool ConfirmDelete { get; set; } = true;
+    public bool DeleteToRecycleBin { get; set; } = true;
+    public bool ConfirmOverwrite { get; set; } = true;
+    public bool ConfirmDiscardEdits { get; set; } = true;
+    public int JpegQuality { get; set; } = 90;
+    public PageLayout ArchiveLayout { get; set; } = PageLayout.Single;
+    public bool ShowToolbar { get; set; } = true;
+    public bool ShowStatusBar { get; set; } = true;
+    public bool PixelatedZoom { get; set; } = true;
+    public string CropColor { get; set; } = "#FFFF3B30";
+    public string RectangleColor { get; set; } = "#FFFF3B30";
+    public int RectangleThickness { get; set; } = 5;
+    public int BorderThickness { get; set; } = 10;
+    public string TextFontFamily { get; set; } = "Segoe UI";
+    public double TextFontSize { get; set; } = 48;
+    public bool TextBold { get; set; }
+    public bool TextItalic { get; set; }
+    public string TextColor { get; set; } = "#FFFF3B30";
+    public double SlideshowSeconds { get; set; } = 5;
+    public string? LastFolder { get; set; }
+    public WindowPlacement? Window { get; set; }
+}
+
+/// <summary>
+/// Le impostazioni stanno in settings.json accanto all'eseguibile (modalità portabile, come il
+/// vecchio settings.ini). Se la cartella non è scrivibile si ripiega su %AppData%\pViewer.
+/// </summary>
+public static class SettingsStore
+{
+    private static readonly JsonSerializerOptions Json = new()
+    {
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() },
+    };
+
+    private static string? _path;
+
+    public static string FilePath => _path ??= ResolvePath();
+
+    private static string ResolvePath()
+    {
+        string portable = Path.Combine(AppContext.BaseDirectory, "settings.json");
+        if (File.Exists(portable) || IsWritable(AppContext.BaseDirectory)) return portable;
+        string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "pViewer");
+        Directory.CreateDirectory(appData);
+        return Path.Combine(appData, "settings.json");
+    }
+
+    private static bool IsWritable(string dir)
+    {
+        try
+        {
+            string probe = Path.Combine(dir, $".pviewer_probe_{Environment.ProcessId}");
+            File.WriteAllText(probe, "");
+            File.Delete(probe);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    public static AppSettings Load(string? path = null)
+    {
+        path ??= FilePath;
+        try
+        {
+            if (File.Exists(path))
+                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Json) ?? new AppSettings();
+        }
+        catch (Exception)
+        {
+            // File illeggibile: si riparte dai valori predefiniti.
+        }
+        return new AppSettings();
+    }
+
+    public static void Save(AppSettings settings, string? path = null)
+    {
+        path ??= FilePath;
+        try
+        {
+            string temp = path + ".tmp";
+            File.WriteAllText(temp, JsonSerializer.Serialize(settings, Json));
+            File.Move(temp, path, overwrite: true);
+        }
+        catch (Exception)
+        {
+            // Supporto in sola lettura: le impostazioni semplicemente non vengono salvate.
+        }
+    }
+}

@@ -1,0 +1,29 @@
+<Window x:Class="pViewer.Views.EffectDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="620" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="20">
+        <Border Background="#FF1C1C1C" CornerRadius="6" Height="400" ClipToBounds="True">
+            <Grid>
+                <Image x:Name="PreviewImage" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
+                <ProgressBar x:Name="Busy" VerticalAlignment="Top" Height="3" IsIndeterminate="True" Visibility="Collapsed" />
+            </Grid>
+        </Border>
+        <Grid x:Name="SlidersGrid" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="64" />
+            </Grid.ColumnDefinitions>
+        </Grid>
+        <DockPanel Margin="0,18,0,0">
+            <CheckBox x:Name="CompareBox" Content="Mostra l'originale" VerticalAlignment="Center" Click="CompareBox_Click" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Reimposta" MinWidth="90" Click="Reset_Click" />
+                <Button Content="Applica" IsDefault="True" MinWidth="90" Margin="8,0,0,0" Click="Ok_Click" Style="{DynamicResource AccentButtonStyle}" />
+                <Button Content="Annulla" IsCancel="True" MinWidth="90" Margin="8,0,0,0" />
+            </StackPanel>
+        </DockPanel>
+    </StackPanel>
+</Window>

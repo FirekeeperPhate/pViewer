@@ -1,0 +1,263 @@
+<Window x:Class="pViewer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:pViewer.Controls"
+        xmlns:vm="clr-namespace:pViewer.ViewModels"
+        xmlns:svc="clr-namespace:pViewer.Services"
+        xmlns:core="clr-namespace:pViewer.Core"
+        Title="{Binding Title}"
+        Width="1180" Height="780" MinWidth="420" MinHeight="300"
+        AllowDrop="True" WindowStartupLocation="CenterScreen"
+        Icon="Assets/pv.ico">
+
+    <Window.Resources>
+        <!-- Menu "Vista", usato sia nel menu contestuale sia dal pulsante della barra -->
+        <ContextMenu x:Key="ViewModeMenu">
+            <MenuItem Header="Adatta se più grande" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ShrinkToFit}"
+                      IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.ShrinkToFit}}" />
+            <MenuItem Header="Adatta alla finestra" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.Fit}"
+                      IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.Fit}}" />
+            <MenuItem Header="Riempi la finestra" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.Fill}"
+                      IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.Fill}}" />
+            <MenuItem Header="Adatta alla larghezza" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.FitWidth}"
+                      IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.FitWidth}}" />
+            <MenuItem Header="Adatta all'altezza" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.FitHeight}"
+                      IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.FitHeight}}" />
+            <MenuItem Header="Dimensioni reali" InputGestureText="A" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ActualSize}"
+                      IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.ActualSize}}" />
+        </ContextMenu>
+
+        <ContextMenu x:Key="LayoutMenu">
+            <MenuItem Header="Pagina singola" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Single}"
+                      IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Single}}" />
+            <MenuItem Header="Manga (destra → sinistra)" InputGestureText="M" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Manga}"
+                      IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Manga}}" />
+            <MenuItem Header="Comic (sinistra → destra)" InputGestureText="C" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Comic}"
+                      IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Comic}}" />
+            <Separator />
+            <MenuItem Header="Sposta avanti di una pagina" InputGestureText="F12" Command="{Binding ShiftPageCommand}" CommandParameter="1" />
+            <MenuItem Header="Sposta indietro di una pagina" InputGestureText="Maiusc+F12" Command="{Binding ShiftPageCommand}" CommandParameter="-1" />
+        </ContextMenu>
+
+        <!-- Menu completo (clic destro) -->
+        <ContextMenu x:Key="MainMenu">
+            <MenuItem Header="Apri…" InputGestureText="Ctrl+O" Command="{Binding OpenCommand}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE8E5;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Salva" InputGestureText="Ctrl+S" Command="{Binding SaveCommand}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE74E;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Salva con nome…" InputGestureText="Ctrl+Maiusc+S" Command="{Binding SaveAsCommand}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE792;" /></MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="Successiva" InputGestureText="→" Command="{Binding NextCommand}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE76C;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Precedente" InputGestureText="←" Command="{Binding PreviousCommand}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE76B;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Pagine">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE89A;" /></MenuItem.Icon>
+                <MenuItem Header="Pagina singola" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Single}"
+                          IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Single}}" />
+                <MenuItem Header="Manga (destra → sinistra)" InputGestureText="M" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Manga}"
+                          IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Manga}}" />
+                <MenuItem Header="Comic (sinistra → destra)" InputGestureText="C" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Comic}"
+                          IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Comic}}" />
+                <Separator />
+                <MenuItem Header="Sposta avanti di una pagina" InputGestureText="F12" Command="{Binding ShiftPageCommand}" CommandParameter="1" />
+                <MenuItem Header="Sposta indietro di una pagina" InputGestureText="Maiusc+F12" Command="{Binding ShiftPageCommand}" CommandParameter="-1" />
+            </MenuItem>
+            <MenuItem Header="Presentazione">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE786;" /></MenuItem.Icon>
+                <MenuItem Header="Ogni 3 secondi" Command="{Binding StartSlideshowCommand}" CommandParameter="3" />
+                <MenuItem Header="Ogni 5 secondi" Command="{Binding StartSlideshowCommand}" CommandParameter="5" />
+                <MenuItem Header="Ogni 10 secondi" Command="{Binding StartSlideshowCommand}" CommandParameter="10" />
+                <MenuItem Header="Personalizzata…" Command="{Binding StartSlideshowCommand}" CommandParameter="0" />
+            </MenuItem>
+            <MenuItem Header="Vista">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE890;" /></MenuItem.Icon>
+                <MenuItem Header="Adatta se più grande" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ShrinkToFit}"
+                          IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.ShrinkToFit}}" />
+                <MenuItem Header="Adatta alla finestra" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.Fit}"
+                          IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.Fit}}" />
+                <MenuItem Header="Riempi la finestra" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.Fill}"
+                          IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.Fill}}" />
+                <MenuItem Header="Adatta alla larghezza" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.FitWidth}"
+                          IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.FitWidth}}" />
+                <MenuItem Header="Adatta all'altezza" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.FitHeight}"
+                          IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.FitHeight}}" />
+                <MenuItem Header="Dimensioni reali" InputGestureText="A" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ActualSize}"
+                          IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.ActualSize}}" />
+                <Separator />
+                <MenuItem Header="Schermo intero" InputGestureText="F11" Click="Fullscreen_Click" />
+                <MenuItem Header="Sfondo bianco" InputGestureText="W" Command="{Binding ToggleWhiteBackgroundCommand}" IsChecked="{Binding WhiteBackground, Mode=OneWay}" />
+                <MenuItem x:Name="ToolbarMenuItem" Header="Barra strumenti" InputGestureText="T" Click="ToggleToolbar_Click" />
+                <MenuItem x:Name="StatusBarMenuItem" Header="Barra di stato" Click="ToggleStatusBar_Click" />
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="Modifica">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE70F;" /></MenuItem.Icon>
+                <MenuItem Header="Annulla" InputGestureText="Ctrl+Z" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" />
+                <MenuItem Header="Ripeti" InputGestureText="Ctrl+Y" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" />
+                <MenuItem Header="Ricarica originale" InputGestureText="F5" Command="{Binding ReloadCommand}" />
+                <Separator />
+                <MenuItem Header="Ruota a destra" InputGestureText="↑" Command="{Binding RotateCommand}" CommandParameter="90" />
+                <MenuItem Header="Ruota a sinistra" InputGestureText="↓" Command="{Binding RotateCommand}" CommandParameter="-90" />
+                <MenuItem Header="Ruota di 180°" Command="{Binding RotateCommand}" CommandParameter="180" />
+                <MenuItem Header="Rifletti orizzontalmente" InputGestureText="Alt+↑" Command="{Binding FlipCommand}" CommandParameter="H" />
+                <MenuItem Header="Rifletti verticalmente" InputGestureText="Alt+↓" Command="{Binding FlipCommand}" CommandParameter="V" />
+                <Separator />
+                <MenuItem Header="Ridimensiona">
+                    <MenuItem Header="25%" Command="{Binding ResizeCommand}" CommandParameter="25" />
+                    <MenuItem Header="50%" Command="{Binding ResizeCommand}" CommandParameter="50" />
+                    <MenuItem Header="75%" Command="{Binding ResizeCommand}" CommandParameter="75" />
+                    <MenuItem Header="Dimensioni personalizzate…" InputGestureText="Ctrl+R" Command="{Binding ResizeCommand}" CommandParameter="0" />
+                </MenuItem>
+                <MenuItem Header="Ritaglia" InputGestureText="Ctrl+trascina" IsEnabled="False" />
+                <MenuItem Header="Rettangolo" InputGestureText="Alt+trascina" IsEnabled="False" />
+                <MenuItem Header="Riempi l'ultimo rettangolo" InputGestureText="Tab" Command="{Binding FillLastRectangleCommand}" />
+                <MenuItem Header="Testo" InputGestureText="Maiusc+clic" IsEnabled="False" />
+                <MenuItem Header="Carattere e colore del testo…" Click="TextStyle_Click" />
+                <MenuItem Header="Correzione occhi rossi" InputGestureText="R" Command="{Binding ToggleRedEyeToolCommand}" />
+                <MenuItem Header="Aggiungi bordo nero" Command="{Binding AddBorderCommand}" CommandParameter="Black" />
+                <MenuItem Header="Aggiungi bordo bianco" Command="{Binding AddBorderCommand}" CommandParameter="White" />
+                <Separator />
+                <MenuItem Header="Copia immagine" InputGestureText="Ctrl+C" Command="{Binding CopyCommand}" />
+                <MenuItem Header="Incolla" InputGestureText="Ctrl+V" Command="{Binding PasteCommand}" />
+            </MenuItem>
+            <MenuItem Header="Effetti">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE790;" /></MenuItem.Icon>
+                <MenuItem Header="Luminosità e contrasto…" Command="{Binding EffectCommand}" CommandParameter="BrightnessContrast" />
+                <MenuItem Header="Tinta e saturazione…" Command="{Binding EffectCommand}" CommandParameter="HueSaturation" />
+                <MenuItem Header="Nitidezza…" Command="{Binding EffectCommand}" CommandParameter="Sharpen" />
+                <MenuItem Header="Sfocatura…" Command="{Binding EffectCommand}" CommandParameter="Blur" />
+                <Separator />
+                <MenuItem Header="Negativo" InputGestureText="Ctrl+I" Command="{Binding InvertCommand}" />
+                <MenuItem Header="Scala di grigi" InputGestureText="Ctrl+G" Command="{Binding GrayscaleCommand}" />
+                <MenuItem Header="Seppia" Command="{Binding SepiaCommand}" />
+                <MenuItem Header="Bianco e nero (1 bit)" Command="{Binding BlackWhiteCommand}" />
+            </MenuItem>
+            <MenuItem Header="File">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE8B7;" /></MenuItem.Icon>
+                <MenuItem Header="Apri con…" Command="{Binding OpenWithCommand}" />
+                <MenuItem Header="Rinomina…" InputGestureText="F2" Command="{Binding RenameCommand}" />
+                <MenuItem Header="Elimina" InputGestureText="Canc" Command="{Binding DeleteCommand}" />
+                <Separator />
+                <MenuItem Header="Mostra in Esplora risorse" Command="{Binding ShowInExplorerCommand}" />
+                <MenuItem Header="Proprietà del file" Command="{Binding ShowPropertiesCommand}" />
+                <MenuItem Header="Dati EXIF e metadati…" InputGestureText="I" Command="{Binding ShowMetadataCommand}" />
+                <MenuItem Header="Imposta come sfondo del desktop" Command="{Binding SetWallpaperCommand}" />
+                <Separator />
+                <MenuItem Header="Elaborazione in serie (ridimensiona, ruota, converti…)" Command="{Binding BatchCommand}" />
+                <MenuItem Header="Rinomina tutti i file…" Command="{Binding BatchRenameCommand}" />
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="Impostazioni…" Command="{Binding OpenSettingsCommand}">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE713;" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Aiuto">
+                <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE897;" /></MenuItem.Icon>
+                <MenuItem Header="Scorciatoie da tastiera" InputGestureText="F1" Click="Help_Click" />
+                <MenuItem Header="Informazioni su pViewer" Click="About_Click" />
+            </MenuItem>
+            <MenuItem Header="Esci" InputGestureText="Esc" Click="Exit_Click" />
+        </ContextMenu>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Barra strumenti -->
+        <Border x:Name="Toolbar" Grid.Row="0" Padding="6,4" BorderThickness="0,0,0,1" BorderBrush="#30808080">
+            <DockPanel LastChildFill="False">
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE8E5;" ToolTip="Apri (Ctrl+O)" Command="{Binding OpenCommand}" />
+                    <Border Style="{StaticResource ToolSeparator}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE76B;" ToolTip="Precedente (←)" Command="{Binding PreviousCommand}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE76C;" ToolTip="Successiva (→, Spazio)" Command="{Binding NextCommand}" />
+                    <Border Style="{StaticResource ToolSeparator}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE71F;" ToolTip="Riduci (−)" Click="ZoomOut_Click" />
+                    <Button x:Name="ZoomButton" Style="{StaticResource ToolButton}" FontFamily="Segoe UI" FontSize="12" MinWidth="52"
+                            Content="{Binding ZoomText}" ToolTip="Modalità di vista" Click="ViewModeButton_Click" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE8A3;" ToolTip="Ingrandisci (+)" Click="ZoomIn_Click" />
+                    <Border Style="{StaticResource ToolSeparator}" />
+                    <Button Style="{StaticResource ToolButton}" ToolTip="Ruota a sinistra (↓)" Command="{Binding RotateCommand}" CommandParameter="-90">
+                        <TextBlock Text="&#xE7AD;" RenderTransformOrigin="0.5,0.5">
+                            <TextBlock.RenderTransform><ScaleTransform ScaleX="-1" /></TextBlock.RenderTransform>
+                        </TextBlock>
+                    </Button>
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE7AD;" ToolTip="Ruota a destra (↑)" Command="{Binding RotateCommand}" CommandParameter="90" />
+                    <Button x:Name="LayoutButton" Style="{StaticResource ToolButton}" Content="&#xE89A;" ToolTip="Pagine: singola, manga, comic" Click="LayoutButton_Click" />
+                    <Border Style="{StaticResource ToolSeparator}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE7A7;" ToolTip="Annulla (Ctrl+Z)" Command="{Binding UndoCommand}" Opacity="{Binding CanUndo, Converter={StaticResource BoolToOpacity}}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE7A6;" ToolTip="Ripeti (Ctrl+Y)" Command="{Binding RedoCommand}" Opacity="{Binding CanRedo, Converter={StaticResource BoolToOpacity}}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE74E;" ToolTip="Salva (Ctrl+S)" Command="{Binding SaveCommand}" />
+                    <Button Content="&#xE7B3;" ToolTip="Correzione occhi rossi (R)" Command="{Binding ToggleRedEyeToolCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ToolButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Tool}" Value="{x:Static controls:ViewerTool.RedEye}">
+                                        <Setter Property="Background" Value="#70FF3B30" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE786;" ToolTip="Presentazione" Click="SlideshowButton_Click" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE740;" ToolTip="Schermo intero (F11)" Click="Fullscreen_Click" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE713;" ToolTip="Impostazioni" Command="{Binding OpenSettingsCommand}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE712;" ToolTip="Tutti i comandi (clic destro sull'immagine)" Click="MoreButton_Click" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Area immagine -->
+        <Grid Grid.Row="1">
+            <controls:ImageViewer x:Name="Viewer" ViewMode="{Binding ViewMode}" Background="#FF1C1C1C" />
+
+            <!-- Benvenuto -->
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False"
+                        Visibility="{Binding ShowWelcome, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Text="&#xEB9F;" FontFamily="{StaticResource IconFont}" FontSize="56" Opacity="0.35" HorizontalAlignment="Center" />
+                <TextBlock Text="pViewer" FontSize="28" FontWeight="SemiBold" Opacity="0.8" HorizontalAlignment="Center" Margin="0,14,0,6" />
+                <TextBlock Text="Trascina qui un'immagine, una cartella o un archivio (zip, rar, 7z, cbz, cbr)" Opacity="0.6" HorizontalAlignment="Center" />
+                <TextBlock Text="Doppio clic o Ctrl+O per aprire · Ctrl+V incolla dagli appunti · F1 per le scorciatoie" Opacity="0.45" HorizontalAlignment="Center" Margin="0,4,0,0" />
+            </StackPanel>
+
+            <!-- Errore di apertura -->
+            <Border VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24,18" CornerRadius="8" Background="#C0202020" MaxWidth="560"
+                    IsHitTestVisible="False" Visibility="{Binding ErrorText, Converter={StaticResource NullToVisibility}}">
+                <StackPanel>
+                    <TextBlock Text="&#xE783;" FontFamily="{StaticResource IconFont}" FontSize="32" Foreground="#FFFF8A80" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding ErrorText}" Foreground="White" TextWrapping="Wrap" TextAlignment="Center" Margin="0,10,0,0" />
+                </StackPanel>
+            </Border>
+
+            <ProgressBar VerticalAlignment="Top" Height="3" IsIndeterminate="True" IsHitTestVisible="False" x:Name="Progress" Visibility="Collapsed" />
+
+            <!-- Notifiche brevi -->
+            <Border VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,28" Padding="16,9" CornerRadius="6"
+                    Background="#E0303030" IsHitTestVisible="False"
+                    Visibility="{Binding ToastText, Converter={StaticResource NullToVisibility}}">
+                <TextBlock Text="{Binding ToastText}" Foreground="White" TextWrapping="Wrap" MaxWidth="700" />
+            </Border>
+        </Grid>
+
+        <!-- Barra di stato -->
+        <Border x:Name="StatusBar" Grid.Row="2" Padding="10,4" BorderThickness="0,1,0,0" BorderBrush="#30808080">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding ZoomText}" Opacity="0.75" Margin="16,0,0,0" />
+                <TextBlock DockPanel.Dock="Right" Text="{Binding StatusInfo}" Opacity="0.75" Margin="16,0,0,0" />
+                <TextBlock Text="{Binding StatusName}" TextTrimming="CharacterEllipsis" Opacity="0.9" />
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>
