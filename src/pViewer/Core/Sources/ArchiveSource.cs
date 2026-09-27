@@ -4,10 +4,10 @@ using SharpCompress.Readers;
 namespace pViewer.Core.Sources;
 
 /// <summary>
-/// Immagini contenute in un archivio (zip/cbz, rar/cbr, 7z/cb7), lette direttamente in memoria:
-/// niente cartella temporanea su disco. Gli archivi annidati vengono "appiattiti".
-/// Per gli archivi solidi l'accesso casuale costerebbe una decompressione dall'inizio del blocco
-/// a ogni pagina, quindi vengono letti una volta sola in sequenza, in background.
+/// Images inside an archive (zip/cbz, rar/cbr, 7z/cb7), read straight into memory:
+/// no temporary folder on disk. Nested archives are "flattened".
+/// For solid archives random access would cost a decompression from the start of the block
+/// for every page, so they are read once, sequentially, in the background.
 /// </summary>
 public sealed class ArchiveSource : IImageSource
 {
@@ -76,7 +76,7 @@ public sealed class ArchiveSource : IImageSource
 
     private static bool IsJunk(string key)
     {
-        // Metadati di macOS che finiscono spesso negli zip dei fumetti.
+        // macOS metadata that often ends up in comic zips.
         string norm = key.Replace('\\', '/');
         return norm.Contains("__MACOSX/", StringComparison.OrdinalIgnoreCase)
             || Path.GetFileName(norm).StartsWith("._", StringComparison.Ordinal);
@@ -106,7 +106,7 @@ public sealed class ArchiveSource : IImageSource
                 }
                 catch (Exception) when (!owned.Contains(ms))
                 {
-                    ms.Dispose(); // archivio interno illeggibile: lo saltiamo
+                    ms.Dispose(); // unreadable inner archive: skip it
                 }
             }
         }
@@ -161,7 +161,7 @@ public sealed class ArchiveSource : IImageSource
 
         return Task.Run(() =>
         {
-            // Gli archivi di SharpCompress non sono thread-safe.
+            // SharpCompress archives are not thread-safe.
             lock (slot.Archive)
             {
                 ObjectDisposedException.ThrowIf(_disposed, this);
@@ -173,7 +173,7 @@ public sealed class ArchiveSource : IImageSource
         }, ct);
     }
 
-    /// <summary>Archivi nella stessa cartella, in ordine naturale (per passare al volume successivo).</summary>
+    /// <summary>Archives in the same folder, in natural order (to move to the next volume).</summary>
     public static List<string> Siblings(string archivePath)
     {
         string? dir = Path.GetDirectoryName(archivePath);

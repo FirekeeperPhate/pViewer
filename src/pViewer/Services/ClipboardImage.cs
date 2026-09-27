@@ -8,8 +8,8 @@ namespace pViewer.Services;
 public static class ClipboardImage
 {
     /// <summary>
-    /// Legge un'immagine dagli appunti. Preferisce il formato PNG (conserva la trasparenza);
-    /// il DIB standard spesso ha il canale alfa a zero, quindi viene letto come opaco.
+    /// Reads an image from the clipboard. Prefers the PNG format (keeps transparency);
+    /// the standard DIB often has a zero alpha channel, so it is read as opaque.
     /// </summary>
     public static BitmapSource? Get()
     {
@@ -22,7 +22,7 @@ public static class ClipboardImage
                 frame.Freeze();
                 return frame;
             }
-            catch (Exception) { /* si prova col DIB */ }
+            catch (Exception) { /* fall back to the DIB */ }
         }
 
         if (!Clipboard.ContainsImage()) return null;

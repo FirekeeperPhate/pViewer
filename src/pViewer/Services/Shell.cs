@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace pViewer.Services;
 
-/// <summary>Integrazione con Esplora risorse e il desktop di Windows.</summary>
+/// <summary>Integration with File Explorer and the Windows desktop.</summary>
 public static class Shell
 {
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -51,7 +51,7 @@ public static class Shell
     private const uint FO_DELETE = 3;
     private const ushort FOF_SILENT = 0x0004, FOF_NOCONFIRMATION = 0x0010, FOF_ALLOWUNDO = 0x0040, FOF_NOERRORUI = 0x0400;
 
-    /// <summary>Elimina un file, spostandolo nel Cestino se richiesto.</summary>
+    /// <summary>Deletes a file, moving it to the Recycle Bin if requested.</summary>
     public static void DeleteFile(string path, bool toRecycleBin)
     {
         if (!toRecycleBin)
@@ -101,7 +101,7 @@ public static class Shell
             throw new IOException("Windows did not accept the image as background.");
     }
 
-    /// <summary>Cartella per i file di lavoro dell'app (es. copia dello sfondo).</summary>
+    /// <summary>Folder for the app's working files (e.g. the wallpaper copy).</summary>
     public static string LocalDataFolder
     {
         get

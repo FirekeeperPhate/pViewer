@@ -4,8 +4,8 @@ using pViewer.Imaging;
 namespace pViewer.Services;
 
 /// <summary>
-/// Carica le pagine di una sorgente in background e tiene in memoria quelle vicine alla
-/// posizione corrente, così avanti/indietro sono istantanei.
+/// Loads the pages of a source in the background and keeps the ones near the
+/// current position in memory, so next/previous are instant.
 /// </summary>
 public sealed class PageCache : IDisposable
 {
@@ -40,7 +40,7 @@ public sealed class PageCache : IDisposable
             var image = bytes.ContinueWith(
                 t => ImageDecoder.Decode(t.GetAwaiter().GetResult(), name, _autoOrient),
                 token, TaskContinuationOptions.RunContinuationsAsynchronously, TaskScheduler.Default);
-            // Le eccezioni dei precaricamenti mai richiesti non devono restare "non osservate".
+            // Exceptions of preloads that were never requested must not stay "unobserved".
             _ = image.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
             var entry = new Entry { Bytes = bytes, Image = image };
             _entries[index] = entry;
@@ -68,7 +68,7 @@ public sealed class PageCache : IDisposable
             if (i >= 0 && i < _source.Pages.Count) Get(i);
     }
 
-    /// <summary>Libera tutto tranne le pagine indicate.</summary>
+    /// <summary>Releases everything except the given pages.</summary>
     public void Trim(IEnumerable<int> keep)
     {
         var set = keep.ToHashSet();

@@ -30,7 +30,7 @@ public partial class MainWindow : Window, IMainView
     {
         _settings = settings;
         InitializeComponent();
-        // Dimensione iniziale proporzionata allo schermo (a 150% di scala 1180×780 non ci sta).
+        // Initial size proportional to the screen (at 150% scaling 1180×780 does not fit).
         var workArea = SystemParameters.WorkArea;
         Width = Math.Min(Width, workArea.Width * 0.85);
         Height = Math.Min(Height, workArea.Height * 0.85);
@@ -41,7 +41,7 @@ public partial class MainWindow : Window, IMainView
         Viewer.ContextMenu = _mainMenu;
         _mainMenu.Opened += (_, _) =>
         {
-            // I nomi dentro una risorsa non generano campi: si cercano nell'albero logico del menu.
+            // Names inside a resource do not generate fields: look them up in the menu's logical tree.
             if (LogicalTreeHelper.FindLogicalNode(_mainMenu, "ToolbarMenuItem") is MenuItem toolbar)
                 toolbar.IsChecked = _settings.ShowToolbar;
             if (LogicalTreeHelper.FindLogicalNode(_mainMenu, "StatusBarMenuItem") is MenuItem status)
@@ -79,7 +79,7 @@ public partial class MainWindow : Window, IMainView
 
     public Task OpenAsync(string path) => _vm.OpenPathAsync(path);
 
-    // ---- Stato e impostazioni ----
+    // ---- State and settings ----
 
     private void Vm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -134,11 +134,11 @@ public partial class MainWindow : Window, IMainView
                                "AppsUseLightTheme", 1) is int v && v != 0,
     };
 
-    // ---- Tastiera ----
+    // ---- Keyboard ----
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        // Mentre si scrive (testo sull'immagine) i tasti vanno alla casella.
+        // While typing (text on the image) keys go to the text box.
         if (Keyboard.FocusedElement is TextBox) return;
 
         Key key = e.Key == Key.System ? e.SystemKey : e.Key;
@@ -225,7 +225,7 @@ public partial class MainWindow : Window, IMainView
         else Close();
     }
 
-    // ---- Schermo intero ----
+    // ---- Full screen ----
 
     public bool IsFullscreen => _fullscreen;
 
@@ -238,7 +238,7 @@ public partial class MainWindow : Window, IMainView
             _restoreState = WindowState;
             WindowStyle = WindowStyle.None;
             ResizeMode = ResizeMode.NoResize;
-            // Passando da Normal a Maximized senza bordi la finestra copre anche la barra delle applicazioni.
+            // Going from Normal to Maximized without borders the window also covers the taskbar.
             if (WindowState == WindowState.Maximized) WindowState = WindowState.Normal;
             WindowState = WindowState.Maximized;
         }
@@ -255,7 +255,7 @@ public partial class MainWindow : Window, IMainView
 
     public IntPtr WindowHandle => new WindowInteropHelper(this).Handle;
 
-    // ---- Posizione della finestra ----
+    // ---- Window position ----
 
     private void RestorePlacement()
     {
@@ -264,7 +264,7 @@ public partial class MainWindow : Window, IMainView
         var screen = new Rect(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
                               SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
         var rect = new Rect(p.Left, p.Top, p.Width, p.Height);
-        if (!screen.IntersectsWith(rect)) return; // monitor scollegato: resta la posizione predefinita
+        if (!screen.IntersectsWith(rect)) return; // disconnected monitor: keep the default position
         WindowStartupLocation = WindowStartupLocation.Manual;
         Left = p.Left;
         Top = p.Top;
@@ -294,7 +294,7 @@ public partial class MainWindow : Window, IMainView
             e.Cancel = true;
             if (!await _vm.ConfirmDiscardEditsAsync()) return;
             _closeConfirmed = true;
-            // Close() dentro Closing verrebbe ignorato: lo si richiama a evento concluso.
+            // Close() inside Closing would be ignored: call it again once the event is over.
             _ = Dispatcher.BeginInvoke(Close);
             return;
         }
@@ -303,7 +303,7 @@ public partial class MainWindow : Window, IMainView
         _vm.Dispose();
     }
 
-    // ---- Trascina e rilascia ----
+    // ---- Drag and drop ----
 
     private void Window_DragOver(object sender, DragEventArgs e)
     {
@@ -320,7 +320,7 @@ public partial class MainWindow : Window, IMainView
         }
     }
 
-    // ---- Pulsanti e menu ----
+    // ---- Buttons and menus ----
 
     private void ZoomIn_Click(object sender, RoutedEventArgs e) => Viewer.ZoomIn();
     private void ZoomOut_Click(object sender, RoutedEventArgs e) => Viewer.ZoomOut();
@@ -399,7 +399,7 @@ public partial class MainWindow : Window, IMainView
             FileName = Path.GetFileNameWithoutExtension(fileName),
             OverwritePrompt = true,
         };
-        // Preseleziona il filtro corrispondente all'estensione originale.
+        // Preselect the filter matching the original extension.
         dlg.FilterIndex = Path.GetExtension(fileName).ToLowerInvariant() switch
         {
             ".png" => 2, ".webp" => 3, ".bmp" => 4, ".gif" => 5, ".tif" or ".tiff" => 6, ".jxr" or ".wdp" => 7, _ => 1,

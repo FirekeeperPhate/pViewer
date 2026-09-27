@@ -26,10 +26,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private List<string> _archiveSiblings = [];
     private int _archiveIndex = -1;
 
-    /// <summary>Pagine caricate attualmente visibili (null se l'immagine è "staccata", es. dagli appunti).</summary>
+    /// <summary>Loaded pages currently visible (null if the image is "detached", e.g. from the clipboard).</summary>
     private LoadedImage[]? _visible;
     private EditSession? _edit;
-    /// <summary>Immagine non legata a un file: incollata, oppure due pagine unite per modificarle.</summary>
+    /// <summary>Image not tied to a file: pasted, or two pages joined to edit them.</summary>
     private bool _detached;
     private string _detachedName = "";
     private int _requestId;
@@ -45,7 +45,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public AppSettings Settings { get; }
 
-    // ---- Stato osservabile ----
+    // ---- Observable state ----
 
     [ObservableProperty] private string _title = "pViewer";
     [ObservableProperty] private string _statusName = "";
@@ -78,11 +78,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private bool IsSingleFilePage =>
         !_detached && _source is FolderSource && _nav.VisibleIndices().Length == 1 && CurrentFilePath is not null;
 
-    /// <summary>File su disco della pagina corrente (null per archivi e immagini staccate).</summary>
+    /// <summary>File on disk of the current page (null for archives and detached images).</summary>
     public string? CurrentFilePath =>
         _detached || _source is null || _nav.Count == 0 ? null : _source.Pages[_nav.Position].FilePath;
 
-    /// <summary>Il file "fisico" legato alla vista: la pagina, oppure l'archivio che la contiene.</summary>
+    /// <summary>The "physical" file behind the view: the page, or the archive containing it.</summary>
     private string? CurrentContainerOrFile => CurrentFilePath ?? (_source is ArchiveSource a && !_detached ? a.Location : null);
 
     public TextStyle CurrentTextStyle => new(Settings.TextFontFamily, Settings.TextFontSize, Settings.TextBold,
@@ -94,7 +94,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         catch (FormatException) { return fallback; }
     }
 
-    // ---- Apertura ----
+    // ---- Opening ----
 
     public async Task OpenPathAsync(string path)
     {
@@ -133,7 +133,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                         source.Dispose();
                         return;
                     }
-                    index = 0; // file nascosto o elenco cambiato: si parte dall'inizio
+                    index = 0; // hidden file or changed list: start from the beginning
                 }
                 await SetSourceAsync(source, index, null);
             }
@@ -200,7 +200,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         UpdateEditFlags();
     }
 
-    /// <summary>Mostra le pagine della posizione corrente, con anteprima immediata se serve.</summary>
+    /// <summary>Shows the pages at the current position, with an instant preview if needed.</summary>
     private async Task ShowCurrentAsync()
     {
         if (_source is null || _cache is null) return;
@@ -276,7 +276,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception)
         {
-            // L'anteprima è solo un'ottimizzazione.
+            // The preview is only an optimization.
         }
     }
 
@@ -288,7 +288,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _cache.Trim(_nav.VisibleIndices().Concat(prefetch));
     }
 
-    // ---- Informazioni ----
+    // ---- Information ----
 
     public void SetZoom(double zoom) => ZoomText = HasImage ? $"{zoom * 100:0}%" : "";
 
@@ -349,7 +349,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _toastTimer.Start();
     }
 
-    // ---- Navigazione ----
+    // ---- Navigation ----
 
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task Next()
@@ -404,14 +404,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task SetLayout(PageLayout layout)
     {
         if (_source is null || !await ConfirmDiscardEditsAsync()) return;
-        // Ripetere il comando della modalità attiva torna alla pagina singola (come i tasti M e C).
+        // Repeating the active mode's command goes back to single page (like the M and C keys).
         if (layout == Layout && layout != PageLayout.Single) layout = PageLayout.Single;
         Layout = layout;
         _nav.Layout = layout;
         await ShowCurrentAsync();
     }
 
-    /// <summary>Sposta la coppia di una pagina (F12), per riallineare le doppie pagine.</summary>
+    /// <summary>Shifts the pair by one page (F12), to realign double-page spreads.</summary>
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task ShiftPage(string deltaText)
     {
@@ -420,7 +420,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_nav.Shift(delta)) await ShowCurrentAsync();
     }
 
-    /// <summary>F5: rilegge la cartella e ricarica l'immagine dal disco, scartando le modifiche.</summary>
+    /// <summary>F5: rescans the folder and reloads the image from disk, discarding the changes.</summary>
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task Reload()
     {
@@ -439,7 +439,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    // ---- Presentazione ----
+    // ---- Slideshow ----
 
     [RelayCommand]
     private void StartSlideshow(string secondsText)
@@ -471,13 +471,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private async void SlideshowTick()
     {
-        // Durante una modifica o con un dialogo aperto la presentazione aspetta.
+        // While editing or with a dialog open the slideshow waits.
         if (IsModified || IsBusy || Application.Current.Windows.OfType<Window>().Any(w => w.IsActive && w != Application.Current.MainWindow))
             return;
         await HandleNavigation(_nav.Next());
     }
 
-    // ---- Modifica ----
+    // ---- Editing ----
 
     private void UpdateEditFlags()
     {
@@ -486,7 +486,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IsModified = _edit?.IsModified ?? false;
     }
 
-    /// <summary>Crea (se serve) la sessione di modifica sull'immagine visibile. Le coppie vengono unite.</summary>
+    /// <summary>Creates (if needed) the edit session on the visible image. Page pairs are joined.</summary>
     private EditSession? EnsureEditSession()
     {
         if (_edit is not null) return _edit;
@@ -549,7 +549,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ShowEditCurrent();
     }
 
-    /// <summary>Mostra lo stato di modifica corrente; tornati all'originale di un'animazione, la riavvia.</summary>
+    /// <summary>Shows the current edit state; back at the original of an animation, restarts it.</summary>
     private void ShowEditCurrent()
     {
         var current = _edit!.Current;
@@ -603,7 +603,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private Int32Rect? _lastRectangle;
 
-    /// <summary>Selezioni fatte col mouse nel visualizzatore.</summary>
+    /// <summary>Selections made with the mouse in the viewer.</summary>
     public async Task OnSelectionAsync(SelectionKind kind, Int32Rect rect)
     {
         switch (kind)
@@ -622,7 +622,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Tab: riempie l'ultimo rettangolo disegnato (utile per oscurare dati negli screenshot).</summary>
+    /// <summary>Tab: fills the last drawn rectangle (handy to hide data in screenshots).</summary>
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task FillLastRectangle()
     {
@@ -633,7 +633,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public Task OnTextCommittedAsync(TextPlacement text) => ApplyEditAsync(b => ImageOps.DrawText(b, text), needsSta: true);
 
-    /// <summary>Apre il dialogo carattere/colore e salva la scelta come predefinita.</summary>
+    /// <summary>Opens the font/color dialog and saves the choice as the default.</summary>
     public TextStyle? ChooseTextStyle()
     {
         var chosen = _view.ShowTextStyleDialog(CurrentTextStyle);
@@ -648,7 +648,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     public bool CanEdit => HasImage && !IsLoading && !IsBusy;
 
-    // ---- Effetti con anteprima ----
+    // ---- Effects with preview ----
 
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task Effect(string name)
@@ -676,7 +676,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         await ApplyEditAsync(b => effect.Apply(b, values, 1.0));
     }
 
-    // ---- Appunti ----
+    // ---- Clipboard ----
 
     [RelayCommand]
     private void Copy()
@@ -730,7 +730,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>L'immagine così come la si vede (con modifiche, o le due pagine unite).</summary>
+    /// <summary>The image as it is seen (with edits, or the two pages joined).</summary>
     private BitmapSource? CurrentBitmapForExport()
     {
         if (_edit is not null) return _edit.Current;
@@ -738,12 +738,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return _visible.Length == 1 ? _visible[0].Bitmap : ImageOps.Compose(_visible.Select(v => v.Bitmap).ToList(), Colors.White);
     }
 
-    // ---- Salvataggio ----
+    // ---- Saving ----
 
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task Save() => await SaveCoreAsync();
 
-    /// <returns>false se l'utente ha annullato o il salvataggio è fallito.</returns>
+    /// <returns>false if the user cancelled or saving failed.</returns>
     private async Task<bool> SaveCoreAsync()
     {
         if (!HasImage) return false;
@@ -823,7 +823,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Chiede cosa fare delle modifiche non salvate. false = l'utente ha annullato.</summary>
+    /// <summary>Asks what to do with unsaved changes. false = the user cancelled.</summary>
     public async Task<bool> ConfirmDiscardEditsAsync()
     {
         if (_edit is null || !_edit.IsModified || !Settings.ConfirmDiscardEdits) return true;
@@ -837,14 +837,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         };
     }
 
-    // ---- Operazioni sui file ----
+    // ---- File operations ----
 
     private void RefreshFolderKeepingPosition()
     {
         if (_source is not FolderSource folder || _cache is null) return;
         string? current = CurrentFilePath;
         var fresh = FolderSource.Open(folder.Location);
-        // Stesso elenco: non serve ricostruire la cache.
+        // Same list: no need to rebuild the cache.
         if (fresh.Pages.Select(p => p.FilePath).SequenceEqual(folder.Pages.Select(p => p.FilePath), StringComparer.OrdinalIgnoreCase))
             return;
         _cache.Dispose();
@@ -1025,7 +1025,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (!_view.ShowSettingsDialog(Settings)) return;
         SettingsStore.Save(Settings);
         ViewMode = Settings.ViewMode;
-        // Cambiata la rotazione automatica: le immagini in cache vanno ridecodificate.
+        // Auto-rotation changed: cached images must be decoded again.
         if (autoOrient != Settings.AutoRotateExif && _source is not null && !_detached)
         {
             _cache?.Dispose();
@@ -1047,7 +1047,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ChangeViewMode(ViewMode mode) => ViewMode = mode;
 
-    /// <summary>A: alterna dimensioni reali e la modalità di vista preferita.</summary>
+    /// <summary>A: toggles between actual size and the preferred view mode.</summary>
     [RelayCommand]
     private void ToggleActualSize() =>
         ViewMode = ViewMode == ViewMode.ActualSize ? Settings.ViewMode : ViewMode.ActualSize;

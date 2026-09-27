@@ -4,8 +4,8 @@ using pViewer.Imaging;
 namespace pViewer.Services;
 
 /// <summary>
-/// Immagine in modifica con cronologia annulla/ripeti. Gli stati sono BitmapSource congelate
-/// (immutabili), quindi ogni passo è solo un riferimento. La memoria è limitata da un budget.
+/// Image being edited, with undo/redo history. States are frozen BitmapSources
+/// (immutable), so each step is just a reference. Memory is capped by a budget.
 /// </summary>
 public sealed class EditSession
 {
@@ -21,11 +21,11 @@ public sealed class EditSession
         Current = original;
     }
 
-    /// <summary>Ultimo stato salvato (all'inizio, l'immagine caricata).</summary>
+    /// <summary>Last saved state (initially, the loaded image).</summary>
     public BitmapSource Saved { get; private set; }
     public BitmapSource Current { get; private set; }
 
-    /// <summary>Vero se ci sono modifiche non salvate.</summary>
+    /// <summary>True if there are unsaved changes.</summary>
     public bool IsModified => !ReferenceEquals(Current, Saved);
 
     public void MarkSaved() => Saved = Current;

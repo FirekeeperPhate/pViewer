@@ -23,10 +23,10 @@ public sealed class SelectionEventArgs(SelectionKind kind, Int32Rect rect) : Eve
 public sealed record TextStyle(string FontFamily, double FontSize, bool Bold, bool Italic, Color Color);
 
 /// <summary>
-/// Visualizzatore con zoom e pan. Il contenuto è espresso in pixel dell'immagine e viene
-/// scalato/spostato con una trasformazione (accelerata dalla GPU): l'immagine non viene mai
-/// ricampionata per mostrarla. Gestisce anche i gesti di modifica:
-/// Ctrl+trascina = ritaglio, Alt+trascina = rettangolo, Maiusc+clic = testo, strumento occhi rossi.
+/// Viewer with zoom and pan. Content is expressed in image pixels and is
+/// scaled/moved by a (GPU accelerated) transform: the image is never
+/// resampled for display. It also handles the editing gestures:
+/// Ctrl+drag = crop, Alt+drag = rectangle, Shift+click = text, red-eye tool.
 /// </summary>
 public sealed class ImageViewer : Border
 {
@@ -45,7 +45,7 @@ public sealed class ImageViewer : Border
     private Vector _offset;
     private bool _userAdjusted;
 
-    // Stato del trascinamento corrente.
+    // Current drag state.
     private enum DragMode { None, Pan, Select, MoveText }
     private DragMode _drag;
     private SelectionKind _selectionKind;
@@ -54,7 +54,7 @@ public sealed class ImageViewer : Border
     private Vector _dragStartOffset;
     private Point _textDragStart;
 
-    // Testo in modifica.
+    // Text being edited.
     private Border? _textFrame;
     private TextBox? _textBox;
     private TextStyle? _textStyle;
@@ -69,7 +69,7 @@ public sealed class ImageViewer : Border
         Child = _host;
     }
 
-    // ---- Proprietà ----
+    // ---- Properties ----
 
     public static readonly DependencyProperty ViewModeProperty = DependencyProperty.Register(
         nameof(ViewMode), typeof(ViewMode), typeof(ImageViewer),
@@ -85,7 +85,7 @@ public sealed class ImageViewer : Border
         nameof(PixelatedZoom), typeof(bool), typeof(ImageViewer),
         new PropertyMetadata(true, (d, _) => ((ImageViewer)d).UpdateScalingMode()));
 
-    /// <summary>Oltre il 250% mostra i pixel netti invece che sfumati.</summary>
+    /// <summary>Beyond 250% shows sharp pixels instead of smoothed ones.</summary>
     public bool PixelatedZoom
     {
         get => (bool)GetValue(PixelatedZoomProperty);
@@ -102,7 +102,7 @@ public sealed class ImageViewer : Border
 
     private double DpiScale => VisualTreeHelper.GetDpi(this).DpiScaleX;
 
-    /// <summary>Pixel dello schermo per pixel dell'immagine (1 = 100%).</summary>
+    /// <summary>Screen pixels per image pixel (1 = 100%).</summary>
     public double Zoom => _scale * DpiScale;
 
     public event EventHandler? ZoomChanged;
@@ -111,14 +111,14 @@ public sealed class ImageViewer : Border
     public event EventHandler<TextPlacement>? TextCommitted;
     public event EventHandler? TextStyleRequested;
     public event EventHandler? DoubleClicked;
-    /// <summary>Qualsiasi clic: serve a fermare la presentazione.</summary>
+    /// <summary>Any click: used to stop the slideshow.</summary>
     public event EventHandler? UserClicked;
 
-    // ---- Contenuto ----
+    // ---- Content ----
 
-    /// <param name="preserveView">Mantiene zoom e posizione se le dimensioni non cambiano (es. dopo una modifica).</param>
-    /// <param name="logicalSize">Dimensione da usare al posto di quella reale (anteprima a bassa risoluzione).</param>
-    /// <param name="animations">Per ogni pagina, i fotogrammi da animare (null = immagine statica).</param>
+    /// <param name="preserveView">Keeps zoom and position if the size does not change (e.g. after an edit).</param>
+    /// <param name="logicalSize">Size to use instead of the real one (low resolution preview).</param>
+    /// <param name="animations">For each page, the frames to animate (null = static image).</param>
     public void SetPages(IReadOnlyList<BitmapSource> pages, bool preserveView = false, Size? logicalSize = null,
                          IReadOnlyList<ImageAnimation?>? animations = null)
     {
@@ -162,7 +162,7 @@ public sealed class ImageViewer : Border
 
     public void Clear() => SetPages([]);
 
-    // ---- Animazioni (GIF, WebP, APNG) ----
+    // ---- Animations (GIF, WebP, APNG) ----
 
     private readonly List<(Image Image, AnimationClock Clock)> _animations = [];
 
@@ -195,7 +195,7 @@ public sealed class ImageViewer : Border
         _animations.Clear();
     }
 
-    /// <summary>Mette in pausa o riprende le animazioni (tasto P).</summary>
+    /// <summary>Pauses or resumes the animations (P key).</summary>
     public void ToggleAnimationPause()
     {
         IsAnimationPaused = !IsAnimationPaused;
@@ -206,7 +206,7 @@ public sealed class ImageViewer : Border
         }
     }
 
-    // ---- Zoom e pan ----
+    // ---- Zoom and pan ----
 
     private double ModeScale(ViewMode mode)
     {
@@ -225,7 +225,7 @@ public sealed class ImageViewer : Border
         };
     }
 
-    /// <summary>Riapplica la modalità di vista (annulla zoom e pan manuali).</summary>
+    /// <summary>Reapplies the view mode (discards manual zoom and pan).</summary>
     public void ResetView()
     {
         _userAdjusted = false;
@@ -258,7 +258,7 @@ public sealed class ImageViewer : Border
     public void ZoomIn() => ZoomAt(ZoomStep, ViewportCenter);
     public void ZoomOut() => ZoomAt(1 / ZoomStep, ViewportCenter);
 
-    /// <summary>Imposta uno zoom assoluto (1 = 100%) mantenendo il centro.</summary>
+    /// <summary>Sets an absolute zoom (1 = 100%) keeping the center.</summary>
     public void SetZoom(double screenZoom) => ZoomAt(screenZoom / DpiScale / _scale, ViewportCenter);
 
     public void Pan(double dx, double dy)
@@ -275,7 +275,7 @@ public sealed class ImageViewer : Border
         double vw = ActualWidth, vh = ActualHeight;
         double x = w <= vw ? (vw - w) / 2 : Math.Clamp(_offset.X, vw - w, 0);
         double y = h <= vh ? (vh - h) / 2 : Math.Clamp(_offset.Y, vh - h, 0);
-        // Allinea ai pixel fisici: al 100% l'immagine resta nitida.
+        // Snap to physical pixels: at 100% the image stays sharp.
         double dpi = DpiScale;
         _offset = new Vector(Math.Round(x * dpi) / dpi, Math.Round(y * dpi) / dpi);
         _transform.Matrix = new Matrix(_scale, 0, 0, _scale, _offset.X, _offset.Y);
@@ -319,7 +319,7 @@ public sealed class ImageViewer : Border
         bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
         bool shift = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
         bool tallerThanView = _contentSize.Height * _scale > ActualHeight + 0.5;
-        // In "adatta alla larghezza" la rotella scorre (strisce lunghe, webtoon); Ctrl+rotella fa sempre zoom.
+        // In "fit width" the wheel scrolls (long strips, webtoons); Ctrl+wheel always zooms.
         if (shift || (!ctrl && ViewMode == ViewMode.FitWidth && !_userAdjusted && tallerThanView))
         {
             double step = e.Delta / 120.0 * ActualHeight / 5;
@@ -397,7 +397,7 @@ public sealed class ImageViewer : Border
         var r = SelectionRect(currentImage);
         if (_selectionKind == SelectionKind.Rectangle)
         {
-            // La penna del rettangolo finale è centrata sul bordo: l'anteprima deve coincidere.
+            // The final rectangle pen is centered on the edge: the preview must match.
             double t = RectangleThickness;
             Canvas.SetLeft(_selection, r.X - t / 2);
             Canvas.SetTop(_selection, r.Y - t / 2);
@@ -481,9 +481,9 @@ public sealed class ImageViewer : Border
         _drag = DragMode.None;
     }
 
-    // ---- Testo sull'immagine ----
+    // ---- Text on the image ----
 
-    /// <summary>Apre una casella di testo sull'immagine; si conferma con Ctrl+Invio, si annulla con Esc.</summary>
+    /// <summary>Opens a text box on the image; Ctrl+Enter applies it, Esc cancels.</summary>
     public void BeginTextEdit(Point imagePoint, TextStyle style)
     {
         CancelTextEdit();
@@ -600,7 +600,7 @@ public sealed class ImageViewer : Border
             CancelTextEdit();
             return;
         }
-        // Posizione esatta del primo carattere, in coordinate dell'immagine.
+        // Exact position of the first character, in image coordinates.
         _textBox.UpdateLayout();
         var charRect = _textBox.GetRectFromCharacterIndex(0);
         var origin = _textBox.TranslatePoint(

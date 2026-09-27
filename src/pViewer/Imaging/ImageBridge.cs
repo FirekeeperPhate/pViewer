@@ -5,7 +5,7 @@ using ISImage = SixLabors.ImageSharp.Image;
 
 namespace pViewer.Imaging;
 
-/// <summary>Conversioni tra BitmapSource (WPF/WIC) e Image&lt;Bgra32&gt; (ImageSharp).</summary>
+/// <summary>Conversions between BitmapSource (WPF/WIC) and Image&lt;Bgra32&gt; (ImageSharp).</summary>
 public static class ImageBridge
 {
     public static SixLabors.ImageSharp.Image<Bgra32> ToImageSharp(BitmapSource source)
@@ -29,7 +29,7 @@ public static class ImageBridge
         return bmp;
     }
 
-    /// <summary>Applica una trasformazione ImageSharp a una BitmapSource.</summary>
+    /// <summary>Applies an ImageSharp transformation to a BitmapSource.</summary>
     public static BitmapSource Process(BitmapSource source, Action<SixLabors.ImageSharp.Image<Bgra32>> process)
     {
         using var img = ToImageSharp(source);
@@ -37,7 +37,7 @@ public static class ImageBridge
         return ToBitmapSource(img);
     }
 
-    /// <summary>Forza la decodifica e congela: sicura da passare fra thread.</summary>
+    /// <summary>Forces decoding and freezes: safe to pass between threads.</summary>
     public static BitmapSource Materialize(BitmapSource source)
     {
         var cached = new CachedBitmap(source, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);

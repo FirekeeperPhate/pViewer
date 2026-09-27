@@ -1,6 +1,6 @@
 namespace pViewer.Core.Sources;
 
-/// <summary>Tutte le immagini di una cartella (non ricorsivo), in ordine naturale.</summary>
+/// <summary>All the images in a folder (not recursive), in natural order.</summary>
 public sealed class FolderSource : IImageSource
 {
     private readonly List<PageInfo> _pages;
@@ -17,7 +17,7 @@ public sealed class FolderSource : IImageSource
 
     public static FolderSource Open(string folder)
     {
-        // DirectoryInfo porta gli attributi con l'enumerazione: niente chiamata extra per file.
+        // DirectoryInfo brings the attributes with the enumeration: no extra call per file.
         var files = new DirectoryInfo(folder).EnumerateFiles()
             .Where(f => ImageFormats.IsImage(f.Name) && (f.Attributes & FileAttributes.Hidden) == 0)
             .Select(f => f.FullName)

@@ -168,12 +168,12 @@ public partial class BatchDialog : Window
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{_lastOutput}\"") { UseShellExecute = false });
     }
 
-    // Il pulsante ha IsCancel: la chiusura la fa WPF, qui basta interrompere un lavoro in corso.
+    // The button has IsCancel: WPF closes the window, here we only stop a running job.
     private void Close_Click(object sender, RoutedEventArgs e) => _cts?.Cancel();
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
-        // Durante l'elaborazione "Close"/Esc interrompe invece di chiudere.
+        // While processing, "Close"/Esc stops the job instead of closing.
         if (_cts is not null)
         {
             _cts.Cancel();

@@ -10,7 +10,7 @@ public class AnimationTests
 {
     private static readonly Rgba32[] Colors = [new(255, 0, 0), new(0, 255, 0), new(0, 0, 255)];
 
-    /// <summary>Tre fotogrammi rosso/verde/blu; ritardi in unità del formato (GIF: centesimi, WebP: ms).</summary>
+    /// <summary>Three red/green/blue frames; delays in the format's unit (GIF: hundredths, WebP: ms).</summary>
     private static Image<Rgba32> ThreeFrames(Action<ImageFrame<Rgba32>, int> setDelay)
     {
         var img = new Image<Rgba32>(8, 6, Colors[0]);
@@ -35,7 +35,7 @@ public class AnimationTests
         Assert.NotNull(loaded.Animation);
         Assert.Equal(3, loaded.Animation!.Frames.Count);
         Assert.Same(loaded.Bitmap, loaded.Animation.Frames[0]);
-        Assert.Equal(TimeSpan.FromMilliseconds(100), loaded.Animation.Delays[0]); // 0 → 100 ms come i browser
+        Assert.Equal(TimeSpan.FromMilliseconds(100), loaded.Animation.Delays[0]); // 0 → 100 ms like browsers
         Assert.Equal(TimeSpan.FromMilliseconds(250), loaded.Animation.Delays[1]);
         Assert.True(Pixels.IsBluish(Pixels.At(loaded.Animation.Frames[2], 3, 3)));
         Assert.Equal("GIF", loaded.FormatName);

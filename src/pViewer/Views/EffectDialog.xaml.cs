@@ -7,7 +7,7 @@ using pViewer.ViewModels;
 
 namespace pViewer.Views;
 
-/// <summary>Dialogo generico per gli effetti: cursori e anteprima in tempo reale su una copia ridotta.</summary>
+/// <summary>Generic effects dialog: sliders and a live preview on a reduced copy.</summary>
 public partial class EffectDialog : Window
 {
     private readonly EffectDefinition _effect;
@@ -83,7 +83,7 @@ public partial class EffectDialog : Window
         }
         catch (Exception)
         {
-            // Anteprima non riuscita: resta quella precedente.
+            // Preview failed: keep the previous one.
         }
         finally
         {

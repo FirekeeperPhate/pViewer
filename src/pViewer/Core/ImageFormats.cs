@@ -1,10 +1,10 @@
 namespace pViewer.Core;
 
-/// <summary>Estensioni riconosciute come immagini e come archivi.</summary>
+/// <summary>Extensions recognized as images and as archives.</summary>
 public static class ImageFormats
 {
-    // Decodificate da WIC (i formati moderni/RAW richiedono i codec di Windows),
-    // con ImageSharp come ripiego per webp/tga/qoi/pbm quando il codec manca.
+    // Decoded by WIC (modern/RAW formats need the Windows codecs),
+    // with ImageSharp as a fallback for webp/tga/qoi/pbm when the codec is missing.
     private static readonly HashSet<string> Images = new(StringComparer.OrdinalIgnoreCase)
     {
         ".jpg", ".jpeg", ".jpe", ".jfif", ".png", ".gif", ".bmp", ".dib", ".tif", ".tiff",
@@ -36,7 +36,7 @@ public static class ImageFormats
         }
     }
 
-    /// <summary>Formati in cui si può salvare.</summary>
+    /// <summary>Formats that can be saved.</summary>
     public const string SaveDialogFilter =
         "JPEG|*.jpg;*.jpeg|PNG|*.png|WebP|*.webp|BMP|*.bmp|GIF|*.gif|TIFF|*.tif;*.tiff|JPEG XR|*.jxr";
 

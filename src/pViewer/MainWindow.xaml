@@ -11,7 +11,7 @@
         Icon="Assets/pv.ico">
 
     <Window.Resources>
-        <!-- Menu "Vista", usato sia nel menu contestuale sia dal pulsante della barra -->
+        <!-- "View" menu, used by both the context menu and the toolbar button -->
         <ContextMenu x:Key="ViewModeMenu">
             <MenuItem Header="Shrink to fit" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ShrinkToFit}"
                       IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.ShrinkToFit}}" />
@@ -39,7 +39,7 @@
             <MenuItem Header="Shift back one page" InputGestureText="Shift+F12" Command="{Binding ShiftPageCommand}" CommandParameter="-1" />
         </ContextMenu>
 
-        <!-- Menu completo (clic destro) -->
+        <!-- Full menu (right click) -->
         <ContextMenu x:Key="MainMenu">
             <MenuItem Header="Open…" InputGestureText="Ctrl+O" Command="{Binding OpenCommand}">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE8E5;" /></MenuItem.Icon>
@@ -173,7 +173,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Barra strumenti -->
+        <!-- Toolbar -->
         <Border x:Name="Toolbar" Grid.Row="0" Padding="6,4" BorderThickness="0,0,0,1" BorderBrush="#30808080">
             <DockPanel LastChildFill="False">
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
@@ -219,11 +219,11 @@
             </DockPanel>
         </Border>
 
-        <!-- Area immagine -->
+        <!-- Image area -->
         <Grid Grid.Row="1">
             <controls:ImageViewer x:Name="Viewer" ViewMode="{Binding ViewMode}" Background="#FF1C1C1C" />
 
-            <!-- Benvenuto -->
+            <!-- Welcome -->
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False"
                         Visibility="{Binding ShowWelcome, Converter={StaticResource BoolToVisibility}}">
                 <TextBlock Text="&#xEB9F;" FontFamily="{StaticResource IconFont}" FontSize="56" Opacity="0.35" HorizontalAlignment="Center" />
@@ -232,7 +232,7 @@
                 <TextBlock Text="Double-click or Ctrl+O to open · Ctrl+V to paste from clipboard · F1 for shortcuts" Opacity="0.45" HorizontalAlignment="Center" Margin="0,4,0,0" />
             </StackPanel>
 
-            <!-- Errore di apertura -->
+            <!-- Open error -->
             <Border VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24,18" CornerRadius="8" Background="#C0202020" MaxWidth="560"
                     IsHitTestVisible="False" Visibility="{Binding ErrorText, Converter={StaticResource NullToVisibility}}">
                 <StackPanel>
@@ -243,7 +243,7 @@
 
             <ProgressBar VerticalAlignment="Top" Height="3" IsIndeterminate="True" IsHitTestVisible="False" x:Name="Progress" Visibility="Collapsed" />
 
-            <!-- Notifiche brevi -->
+            <!-- Short notifications -->
             <Border VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,28" Padding="16,9" CornerRadius="6"
                     Background="#E0303030" IsHitTestVisible="False"
                     Visibility="{Binding ToastText, Converter={StaticResource NullToVisibility}}">
@@ -251,7 +251,7 @@
             </Border>
         </Grid>
 
-        <!-- Barra di stato -->
+        <!-- Status bar -->
         <Border x:Name="StatusBar" Grid.Row="2" Padding="10,4" BorderThickness="0,1,0,0" BorderBrush="#30808080">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Right" Text="{Binding ZoomText}" Opacity="0.75" Margin="16,0,0,0" />

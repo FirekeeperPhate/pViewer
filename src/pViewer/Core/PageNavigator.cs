@@ -2,29 +2,29 @@ namespace pViewer.Core;
 
 public enum PageLayout
 {
-    /// <summary>Una pagina alla volta.</summary>
+    /// <summary>One page at a time.</summary>
     Single,
-    /// <summary>Due pagine, lettura da destra a sinistra.</summary>
+    /// <summary>Two pages, read right to left.</summary>
     Manga,
-    /// <summary>Due pagine, lettura da sinistra a destra.</summary>
+    /// <summary>Two pages, read left to right.</summary>
     Comic,
 }
 
 public enum NavigationResult
 {
     Moved,
-    /// <summary>Si è ricominciato dall'altro capo dell'elenco.</summary>
+    /// <summary>Started over from the other end of the list.</summary>
     Wrapped,
-    /// <summary>Superata l'ultima pagina di un archivio: aprire il volume successivo.</summary>
+    /// <summary>Went past the last page of an archive: open the next volume.</summary>
     NextContainer,
-    /// <summary>Tornati prima della prima pagina di un archivio: aprire il volume precedente.</summary>
+    /// <summary>Went back before the first page of an archive: open the previous volume.</summary>
     PreviousContainer,
     NoChange,
 }
 
 /// <summary>
-/// Posizione nell'elenco delle pagine, con la logica delle coppie manga/comic.
-/// In modalità doppia <see cref="Position"/> è la prima pagina (in ordine di lettura) della coppia.
+/// Position in the page list, with the manga/comic page pair logic.
+/// In two-page mode <see cref="Position"/> is the first page (in reading order) of the pair.
 /// </summary>
 public sealed class PageNavigator
 {
@@ -32,7 +32,7 @@ public sealed class PageNavigator
     public int Position { get; private set; }
     public PageLayout Layout { get; set; } = PageLayout.Single;
 
-    /// <summary>Se vero, oltre i bordi si chiede il volume vicino invece di ricominciare.</summary>
+    /// <summary>If true, going past the ends asks for the adjacent volume instead of wrapping around.</summary>
     public bool HasNextContainer { get; set; }
     public bool HasPreviousContainer { get; set; }
 
@@ -45,7 +45,7 @@ public sealed class PageNavigator
         Position = Count == 0 ? 0 : Math.Clamp(position, 0, Count - 1);
     }
 
-    /// <summary>Indici delle pagine visibili, nell'ordine in cui vanno disegnate da sinistra a destra.</summary>
+    /// <summary>Indices of the visible pages, in the order they are drawn from left to right.</summary>
     public int[] VisibleIndices()
     {
         if (Count == 0) return [];
@@ -53,7 +53,7 @@ public sealed class PageNavigator
         return Layout == PageLayout.Manga ? [Position + 1, Position] : [Position, Position + 1];
     }
 
-    /// <summary>Pagine da precaricare: la vista successiva per prima, poi la precedente.</summary>
+    /// <summary>Pages to preload: the next view first, then the previous one.</summary>
     public int[] PrefetchIndices()
     {
         if (Count == 0) return [];
@@ -89,10 +89,10 @@ public sealed class PageNavigator
 
     public void Last() => Position = LastPosition();
 
-    /// <summary>Posizione che mostra l'ultima vista (l'ultima coppia in modalità doppia).</summary>
+    /// <summary>Position that shows the last view (the last pair in two-page mode).</summary>
     public int LastPosition() => Count == 0 ? 0 : IsDouble ? Math.Max(0, Count - 2) : Count - 1;
 
-    /// <summary>Sposta la coppia di una sola pagina (per riallineare le doppie pagine).</summary>
+    /// <summary>Shifts the pair by a single page (to realign double-page spreads).</summary>
     public bool Shift(int delta)
     {
         int target = Position + delta;

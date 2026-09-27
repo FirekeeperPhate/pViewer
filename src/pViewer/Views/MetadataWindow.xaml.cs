@@ -42,6 +42,6 @@ public partial class MetadataWindow : Window
             sb.AppendLine();
         }
         try { Clipboard.SetText(sb.ToString()); }
-        catch (System.Runtime.InteropServices.COMException) { /* appunti occupati da un altro programma */ }
+        catch (System.Runtime.InteropServices.COMException) { /* clipboard busy with another program */ }
     }
 }

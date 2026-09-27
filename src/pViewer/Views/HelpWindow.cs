@@ -4,7 +4,7 @@ using System.Windows.Media;
 
 namespace pViewer.Views;
 
-/// <summary>Elenco delle scorciatoie da tastiera e dei gesti del mouse.</summary>
+/// <summary>List of keyboard shortcuts and mouse gestures.</summary>
 public sealed class HelpWindow : Window
 {
     private static readonly (string Section, (string Keys, string Action)[] Items)[] Shortcuts =

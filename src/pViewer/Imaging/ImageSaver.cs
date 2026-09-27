@@ -8,9 +8,9 @@ namespace pViewer.Imaging;
 public static class ImageSaver
 {
     /// <summary>
-    /// Salva nel formato indicato dall'estensione. Scrive su un file temporaneo e poi lo sostituisce,
-    /// così un errore a metà non distrugge l'originale. Se l'originale era un JPEG i suoi metadati
-    /// (data di scatto, fotocamera, GPS…) vengono conservati, con l'orientamento azzerato.
+    /// Saves in the format given by the extension. Writes to a temporary file and then replaces,
+    /// so a failure halfway never destroys the original. If the original was a JPEG its metadata
+    /// (date taken, camera, GPS…) is kept, with the orientation reset.
     /// </summary>
     public static void Save(BitmapSource bitmap, string path, int jpegQuality, BitmapMetadata? jpegMetadata = null)
     {
@@ -48,7 +48,7 @@ public static class ImageSaver
         }
         catch (Exception) when (meta is not null)
         {
-            // Metadati non compatibili con l'encoder: si salva senza.
+            // Metadata not compatible with the encoder: save without it.
             Encode(source, path, ext, quality, null);
         }
     }
@@ -76,9 +76,9 @@ public static class ImageSaver
         try
         {
             var meta = original.Clone();
-            // L'immagine è già raddrizzata: l'orientamento va riportato a "normale".
+            // The image is already upright: the orientation goes back to "normal".
             if (meta.ContainsQuery("/app1/ifd/{ushort=274}")) meta.SetQuery("/app1/ifd/{ushort=274}", (ushort)1);
-            // La miniatura EXIF non corrisponderebbe più al contenuto.
+            // The EXIF thumbnail would no longer match the content.
             if (meta.ContainsQuery("/app1/thumb")) meta.RemoveQuery("/app1/thumb");
             return meta;
         }

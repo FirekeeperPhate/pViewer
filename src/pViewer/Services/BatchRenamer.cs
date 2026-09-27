@@ -4,16 +4,16 @@ namespace pViewer.Services;
 
 public static class BatchRenamer
 {
-    /// <summary>Nome finale del file n-esimo: «base-001.jpg».</summary>
+    /// <summary>Final name of the n-th file: «base-001.jpg».</summary>
     public static string TargetName(BatchRenameOptions o, int index, string extension) =>
         $"{o.BaseName}-{(o.Start + index).ToString().PadLeft(o.Digits, '0')}{extension}";
 
     /// <summary>
-    /// Rinomina i file nell'ordine dato. Lavora in due passaggi (prima nomi temporanei, poi quelli
-    /// finali) così uno scambio di nomi fra file dell'elenco non genera conflitti.
-    /// Non sovrascrive mai file esterni all'elenco.
+    /// Renames the files in the given order. Works in two passes (temporary names first, then the
+    /// final ones) so swapping names between files in the list causes no conflicts.
+    /// Never overwrites files outside the list.
     /// </summary>
-    /// <returns>Mappa vecchio percorso → nuovo percorso dei file rinominati.</returns>
+    /// <returns>Map of old path → new path of the renamed files.</returns>
     public static Dictionary<string, string> Rename(IReadOnlyList<string> files, BatchRenameOptions options)
     {
         if (string.IsNullOrWhiteSpace(options.BaseName) || options.BaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
@@ -46,7 +46,7 @@ public static class BatchRenamer
         }
         catch
         {
-            // Rimette a posto i file rimasti col nome temporaneo.
+            // Restore the files left with a temporary name.
             foreach (var (oldPath, temp, _) in temps)
             {
                 if (!File.Exists(temp)) continue;

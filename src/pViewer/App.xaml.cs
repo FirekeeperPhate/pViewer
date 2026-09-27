@@ -39,7 +39,7 @@ public partial class App : Application
 
     private static void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        // Un errore imprevisto non deve chiudere il programma (e far perdere modifiche non salvate).
+        // An unexpected error must not close the app (and lose unsaved changes).
         pViewer.Views.MessageDialog.Show(Current.MainWindow, $"An unexpected error occurred:\n\n{e.Exception.Message}",
             "pViewer", MessageBoxButton.OK, MessageBoxImage.Error);
         e.Handled = true;

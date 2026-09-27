@@ -9,7 +9,7 @@ namespace pViewer.ViewModels;
 
 public sealed record EffectSlider(string Label, double Min, double Max, double Default, double Step = 1, string Unit = "");
 
-/// <summary>Effetto con anteprima. <c>scale</c> è il rapporto anteprima/originale (per raggi e sigma).</summary>
+/// <summary>Effect with preview. <c>scale</c> is the preview/original ratio (for radii and sigma).</summary>
 public sealed record EffectDefinition(
     string Title, IReadOnlyList<EffectSlider> Sliders, Func<BitmapSource, double[], double, BitmapSource> Apply);
 
@@ -17,7 +17,7 @@ public sealed record BatchRenameOptions(string BaseName, int Start, int Digits);
 
 public sealed record MetadataGroup(string Name, IReadOnlyList<KeyValuePair<string, string>> Tags);
 
-/// <summary>Ciò che il ViewModel chiede alla finestra (dialoghi e visualizzatore).</summary>
+/// <summary>What the ViewModel asks of the window (dialogs and viewer).</summary>
 public interface IMainView
 {
     void ShowPages(IReadOnlyList<BitmapSource> pages, bool preserveView, IReadOnlyList<ImageAnimation?>? animations = null);

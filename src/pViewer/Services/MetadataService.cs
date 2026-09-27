@@ -5,7 +5,7 @@ namespace pViewer.Services;
 
 public static class MetadataService
 {
-    /// <summary>Legge EXIF, IPTC, XMP e i dati del formato, raggruppati per sezione.</summary>
+    /// <summary>Reads EXIF, IPTC, XMP and format data, grouped by section.</summary>
     public static IReadOnlyList<MetadataGroup> Read(byte[] data)
     {
         using var ms = new MemoryStream(data, writable: false);

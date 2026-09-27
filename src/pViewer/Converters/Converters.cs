@@ -4,7 +4,7 @@ using System.Windows.Data;
 
 namespace pViewer.Converters;
 
-/// <summary>true se il valore è uguale al parametro (per le voci di menu a scelta singola).</summary>
+/// <summary>true if the value equals the parameter (for single-choice menu items).</summary>
 public sealed class EnumEqualsConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
@@ -23,7 +23,7 @@ public sealed class NullToVisibilityConverter : IValueConverter
         Binding.DoNothing;
 }
 
-/// <summary>Attenua i pulsanti non disponibili senza disabilitarli (il tema Fluent aggiungerebbe uno sfondo).</summary>
+/// <summary>Dims unavailable buttons without disabling them (the Fluent theme would add a background).</summary>
 public sealed class BoolToOpacityConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>

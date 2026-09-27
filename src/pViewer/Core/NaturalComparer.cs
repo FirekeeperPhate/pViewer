@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace pViewer.Core;
 
-/// <summary>Ordinamento "naturale" identico a Esplora risorse (1, 2, 10 invece di 1, 10, 2).</summary>
+/// <summary>"Natural" sort order, same as File Explorer (1, 2, 10 instead of 1, 10, 2).</summary>
 public sealed class NaturalComparer : IComparer<string>
 {
     public static readonly NaturalComparer Instance = new();

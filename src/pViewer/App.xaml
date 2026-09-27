@@ -13,7 +13,7 @@
             <conv:NullToVisibilityConverter x:Key="NullToVisibility" />
             <conv:BoolToOpacityConverter x:Key="BoolToOpacity" />
 
-            <!-- Pulsanti della barra: non prendono il focus, così le frecce restano alla navigazione -->
+            <!-- Toolbar buttons never take focus, so the arrow keys keep navigating -->
             <Style x:Key="ToolButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                 <Setter Property="Focusable" Value="False" />
                 <Setter Property="Background" Value="Transparent" />

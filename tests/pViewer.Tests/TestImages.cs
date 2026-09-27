@@ -5,7 +5,7 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace pViewer.Tests;
 
-/// <summary>Genera immagini e archivi di prova in una cartella temporanea.</summary>
+/// <summary>Generates test images and archives in a temporary folder.</summary>
 internal sealed class TempFolder : IDisposable
 {
     public TempFolder()
@@ -26,7 +26,7 @@ internal sealed class TempFolder : IDisposable
 
 internal static class TestImages
 {
-    /// <summary>Immagine divisa a metà: sinistra rossa, destra blu.</summary>
+    /// <summary>Image split in half: red on the left, blue on the right.</summary>
     public static Image<Rgba32> SplitImage(int width, int height)
     {
         var img = new Image<Rgba32>(width, height, new Rgba32(255, 0, 0));
@@ -49,7 +49,7 @@ internal static class TestImages
         return ms.ToArray();
     }
 
-    /// <summary>JPEG con tag EXIF Orientation e marca della fotocamera.</summary>
+    /// <summary>JPEG with an EXIF Orientation tag and a camera make.</summary>
     public static byte[] JpegWithOrientation(int width, int height, ushort orientation, string make = "TestCam")
     {
         using var img = SplitImage(width, height);
@@ -68,7 +68,7 @@ internal static class TestImages
         foreach (var (name, data) in entries)
         {
             var entry = zip.CreateEntry(name);
-            if (data is null) continue; // cartella
+            if (data is null) continue; // folder
             using var s = entry.Open();
             s.Write(data);
         }

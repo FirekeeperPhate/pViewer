@@ -11,7 +11,7 @@
         <TextBlock Text="Operation" FontWeight="SemiBold" Margin="0,0,0,4" />
         <ComboBox x:Name="OperationBox" SelectionChanged="OperationBox_SelectionChanged" />
 
-        <!-- Ridimensiona -->
+        <!-- Resize -->
         <StackPanel x:Name="ResizePanel" Margin="0,12,0,0">
             <StackPanel Orientation="Horizontal">
                 <RadioButton x:Name="Pct25" Content="25%" GroupName="size" Margin="0,0,16,0" />
@@ -27,7 +27,7 @@
             </StackPanel>
         </StackPanel>
 
-        <!-- Converti -->
+        <!-- Convert -->
         <StackPanel x:Name="ConvertPanel" Orientation="Horizontal" Margin="0,12,0,0">
             <TextBlock Text="Format" VerticalAlignment="Center" Margin="0,0,12,0" />
             <ComboBox x:Name="FormatBox" Width="140" SelectedIndex="0">
@@ -40,7 +40,7 @@
             </ComboBox>
         </StackPanel>
 
-        <!-- Bordo -->
+        <!-- Border -->
         <StackPanel x:Name="BorderPanel" Orientation="Horizontal" Margin="0,12,0,0">
             <TextBlock Text="Thickness" VerticalAlignment="Center" Margin="0,0,12,0" />
             <TextBox x:Name="BorderBox" Width="80" />

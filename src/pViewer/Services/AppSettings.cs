@@ -6,15 +6,15 @@ namespace pViewer.Services;
 
 public enum ViewMode
 {
-    /// <summary>Riduce le immagini più grandi della finestra, le piccole restano al 100%.</summary>
+    /// <summary>Shrinks images larger than the window, small ones stay at 100%.</summary>
     ShrinkToFit,
-    /// <summary>Adatta alla finestra, ingrandendo anche le piccole.</summary>
+    /// <summary>Fits to the window, enlarging small images too.</summary>
     Fit,
-    /// <summary>Riempie la finestra (può tagliare i bordi).</summary>
+    /// <summary>Fills the window (may crop the edges).</summary>
     Fill,
     FitWidth,
     FitHeight,
-    /// <summary>Un pixel dell'immagine = un pixel dello schermo.</summary>
+    /// <summary>One image pixel = one screen pixel.</summary>
     ActualSize,
 }
 
@@ -58,8 +58,8 @@ public sealed class AppSettings
 }
 
 /// <summary>
-/// Le impostazioni stanno in settings.json accanto all'eseguibile (modalità portabile, come il
-/// vecchio settings.ini). Se la cartella non è scrivibile si ripiega su %AppData%\pViewer.
+/// Settings live in settings.json next to the executable (portable mode, like the
+/// old settings.ini). If that folder is not writable, %AppData%\pViewer is used.
 /// </summary>
 public static class SettingsStore
 {
@@ -107,7 +107,7 @@ public static class SettingsStore
         }
         catch (Exception)
         {
-            // File illeggibile: si riparte dai valori predefiniti.
+            // Unreadable file: start over from the defaults.
         }
         return new AppSettings();
     }
@@ -123,7 +123,7 @@ public static class SettingsStore
         }
         catch (Exception)
         {
-            // Supporto in sola lettura: le impostazioni semplicemente non vengono salvate.
+            // Read-only media: settings are simply not saved.
         }
     }
 }

@@ -8,14 +8,14 @@ using WColor = System.Windows.Media.Color;
 
 namespace pViewer.Imaging;
 
-/// <summary>Testo da stampare sull'immagine; coordinate e dimensioni in pixel dell'immagine.</summary>
+/// <summary>Text to print on the image; coordinates and sizes in image pixels.</summary>
 public sealed record TextPlacement(
     string Text, double X, double Y, string FontFamily, double FontSize, bool Bold, bool Italic, WColor Color);
 
 /// <summary>
-/// Operazioni di modifica. Ricevono una BitmapSource congelata e ne restituiscono una nuova:
-/// l'originale resta intatta (serve all'annulla). Quelle che disegnano con WPF vanno
-/// eseguite su un thread STA (vedi <see cref="StaTask"/>).
+/// Editing operations. They take a frozen BitmapSource and return a new one:
+/// the original stays untouched (undo needs it). The ones that draw with WPF must
+/// run on an STA thread (see <see cref="StaTask"/>).
 /// </summary>
 public static class ImageOps
 {
@@ -50,7 +50,7 @@ public static class ImageOps
             down ? KnownResamplers.Lanczos3 : KnownResamplers.Bicubic)));
     }
 
-    /// <summary>Riduce proporzionalmente per stare dentro maxW×maxH (mai ingrandisce).</summary>
+    /// <summary>Scales down proportionally to fit within maxW×maxH (never enlarges).</summary>
     public static BitmapSource FitWithin(BitmapSource src, int maxW, int maxH)
     {
         double ratio = Math.Min((double)maxW / src.PixelWidth, (double)maxH / src.PixelHeight);
@@ -62,7 +62,7 @@ public static class ImageOps
     public static BitmapSource Grayscale(BitmapSource src) => ImageBridge.Process(src, i => i.Mutate(x => x.Grayscale()));
     public static BitmapSource Sepia(BitmapSource src) => ImageBridge.Process(src, i => i.Mutate(x => x.Sepia()));
 
-    /// <summary>Bianco e nero puro (ex "1 bit").</summary>
+    /// <summary>Pure black and white (formerly "1 bit").</summary>
     public static BitmapSource BlackWhite(BitmapSource src) =>
         ImageBridge.Process(src, i => i.Mutate(x => x.BinaryThreshold(0.5f)));
 
@@ -81,7 +81,7 @@ public static class ImageOps
     public static BitmapSource Blur(BitmapSource src, double sigma) => sigma <= 0 ? src
         : ImageBridge.Process(src, i => i.Mutate(x => x.GaussianBlur((float)sigma)));
 
-    /// <param name="hue">-180..180 gradi</param>
+    /// <param name="hue">-180..180 degrees</param>
     /// <param name="saturation">-100..100</param>
     public static BitmapSource HueSaturation(BitmapSource src, double hue, double saturation) =>
         ImageBridge.Process(src, i => i.Mutate(x =>
@@ -94,7 +94,7 @@ public static class ImageOps
         ImageBridge.Process(src, i => i.Mutate(x => x.Pad(i.Width + thickness * 2, i.Height + thickness * 2,
             SixLabors.ImageSharp.Color.FromRgba(color.R, color.G, color.B, color.A))));
 
-    /// <summary>Riduce il rosso dove domina nettamente su verde e blu (occhi rossi).</summary>
+    /// <summary>Reduces red where it clearly dominates green and blue (red eyes).</summary>
     public static BitmapSource RedEye(BitmapSource src, Int32Rect area)
     {
         area = ClampRect(src, area);
@@ -114,7 +114,7 @@ public static class ImageOps
         }));
     }
 
-    // ---- Operazioni che disegnano con WPF (thread STA) ----
+    // ---- Operations that draw with WPF (STA thread) ----
 
     private static BitmapSource Render(int width, int height, Action<DrawingContext> draw)
     {
@@ -165,7 +165,7 @@ public static class ImageOps
             dc.DrawText(CreateFormattedText(text), new Point(text.X, text.Y));
         });
 
-    /// <summary>Unisce le pagine affiancate (modalità manga/comic) in un'unica immagine.</summary>
+    /// <summary>Joins side-by-side pages (manga/comic mode) into a single image.</summary>
     public static BitmapSource Compose(IReadOnlyList<BitmapSource> pages, WColor background)
     {
         if (pages.Count == 1) return pages[0];
@@ -185,7 +185,7 @@ public static class ImageOps
         });
     }
 
-    /// <summary>Appiattisce la trasparenza su un colore di fondo (per JPEG/BMP).</summary>
+    /// <summary>Flattens transparency onto a background color (for JPEG/BMP).</summary>
     public static BitmapSource FlattenAlpha(BitmapSource src, WColor background)
     {
         if (!ImageBridge.MayHaveAlpha(src.Format)) return src;

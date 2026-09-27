@@ -8,15 +8,15 @@ using ISImage = SixLabors.ImageSharp.Image;
 
 namespace pViewer.Imaging;
 
-/// <summary>Un'immagine decodificata e pronta da mostrare.</summary>
+/// <summary>A decoded image, ready to display.</summary>
 public sealed class LoadedImage
 {
     public required BitmapSource Bitmap { get; init; }
 
-    /// <summary>Metadati originali (solo JPEG), per conservarli quando si salva.</summary>
+    /// <summary>Original metadata (JPEG only), kept when saving.</summary>
     public BitmapMetadata? JpegMetadata { get; init; }
 
-    /// <summary>Fotogrammi di GIF, WebP o PNG animati (null per le immagini statiche).</summary>
+    /// <summary>Frames of animated GIF, WebP or PNG (null for static images).</summary>
     public ImageAnimation? Animation { get; init; }
 
     public string FormatName { get; init; } = "";
@@ -25,14 +25,14 @@ public sealed class LoadedImage
     public int PixelHeight => Bitmap.PixelHeight;
 }
 
-/// <summary>Fotogrammi già composti (a piena dimensione) con la durata di ciascuno.</summary>
+/// <summary>Already composited (full size) frames with the duration of each one.</summary>
 public sealed record ImageAnimation(IReadOnlyList<BitmapSource> Frames, IReadOnlyList<TimeSpan> Delays);
 
 public sealed class ImageDecodeException(string message, Exception? inner) : Exception(message, inner);
 
 public static class ImageDecoder
 {
-    /// <summary>Oltre questa memoria si mostra solo il primo fotogramma dell'animazione.</summary>
+    /// <summary>Beyond this much memory only the first frame of the animation is shown.</summary>
     public const long MaxAnimationBytes = 768L * 1024 * 1024;
 
     public static LoadedImage Decode(byte[] data, string name, bool autoOrient)
@@ -46,7 +46,7 @@ public static class ImageDecoder
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                // File animato non leggibile da ImageSharp: si prova come immagine statica.
+                // Animated file ImageSharp cannot read: try it as a static image.
             }
         }
 
@@ -79,13 +79,13 @@ public static class ImageDecoder
         return $"Cannot open «{Path.GetFileName(name)}».\n{hint}";
     }
 
-    /// <summary>Riconosce dai primi byte i formati che possono contenere animazioni (GIF, WebP, PNG/APNG).</summary>
+    /// <summary>Recognizes from the first bytes the formats that can hold animations (GIF, WebP, PNG/APNG).</summary>
     private static bool MayBeAnimated(byte[] d) =>
         (d.Length > 6 && d[0] == 'G' && d[1] == 'I' && d[2] == 'F' && d[3] == '8')
         || (d.Length > 12 && d[0] == 'R' && d[1] == 'I' && d[2] == 'F' && d[3] == 'F' && d[8] == 'W' && d[9] == 'E' && d[10] == 'B' && d[11] == 'P')
         || (d.Length > 8 && d[0] == 0x89 && d[1] == 'P' && d[2] == 'N' && d[3] == 'G');
 
-    /// <returns>null se il file ha un solo fotogramma o se l'animazione occuperebbe troppa memoria.</returns>
+    /// <returns>null if the file has a single frame or the animation would take too much memory.</returns>
     private static LoadedImage? TryDecodeAnimation(byte[] data)
     {
         var info = ISImage.Identify(data);
@@ -123,7 +123,7 @@ public static class ImageDecoder
             SixLabors.ImageSharp.Formats.Png.PngFormat => RationalMs(frame.Metadata.GetPngMetadata().FrameDelay),
             _ => 100,
         };
-        // Come i browser: durate quasi nulle diventano 100 ms (molte GIF usano 0 o 1 centesimo).
+        // Like browsers: near-zero durations become 100 ms (many GIFs use 0 or 1 hundredth).
         return TimeSpan.FromMilliseconds(ms < 20 ? 100 : ms);
     }
 
@@ -132,10 +132,10 @@ public static class ImageDecoder
 
     private static LoadedImage DecodeWic(byte[] data, bool autoOrient, BitmapCreateOptions options)
     {
-        // Lo stream non va chiuso: WIC può leggere i metadati in modo pigro.
+        // Do not close the stream: WIC may read the metadata lazily.
         var ms = new MemoryStream(data, writable: false);
         var decoder = BitmapDecoder.Create(ms, options, BitmapCacheOption.OnLoad);
-        // Le icone contengono più dimensioni: si mostra la più grande.
+        // Icons contain several sizes: show the largest one.
         BitmapFrame frame = decoder.Frames.Count == 1
             ? decoder.Frames[0]
             : decoder.Frames.MaxBy(f => (long)f.PixelWidth * f.PixelHeight)!;
@@ -199,10 +199,10 @@ public static class ImageDecoder
     }
 
     /// <summary>
-    /// Miniatura EXIF incorporata (JPEG delle fotocamere): si legge in pochi millisecondi
-    /// e si mostra mentre l'immagine completa viene decodificata.
+    /// Embedded EXIF thumbnail (camera JPEGs): it reads in a few milliseconds
+    /// and is shown while the full image is being decoded.
     /// </summary>
-    /// <returns>La miniatura e le dimensioni dell'immagine completa (già raddrizzate).</returns>
+    /// <returns>The thumbnail and the size of the full image (already rotated upright).</returns>
     public static (BitmapSource Thumbnail, int FullWidth, int FullHeight)? TryDecodeEmbeddedPreview(byte[] data, bool autoOrient)
     {
         try
@@ -238,7 +238,7 @@ public static class ImageDecoder
         return 1;
     }
 
-    /// <summary>Raddrizza l'immagine secondo il tag EXIF Orientation (1-8).</summary>
+    /// <summary>Rotates the image upright according to the EXIF Orientation tag (1-8).</summary>
     public static BitmapSource ApplyOrientation(BitmapSource source, ushort orientation)
     {
         var group = new TransformGroup();

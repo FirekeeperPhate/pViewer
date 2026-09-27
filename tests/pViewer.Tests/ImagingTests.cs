@@ -55,7 +55,7 @@ public class ImageDecoderTests
     public void Orientation3TurnsImageUpsideDown()
     {
         var img = ImageDecoder.Decode(TestImages.JpegWithOrientation(40, 20, 3), "a.jpg", true);
-        Assert.True(Pixels.IsBluish(Pixels.At(img.Bitmap, 2, 10)));  // la metà blu ora è a sinistra
+        Assert.True(Pixels.IsBluish(Pixels.At(img.Bitmap, 2, 10)));  // the blue half is now on the left
         Assert.True(Pixels.IsReddish(Pixels.At(img.Bitmap, 37, 10)));
     }
 
@@ -79,7 +79,7 @@ public class ImageDecoderTests
     [Fact]
     public void ThumbnailPreviewReportsFullSizeAfterRotation()
     {
-        // ImageSharp non scrive miniature EXIF: senza miniatura l'anteprima deve essere semplicemente null.
+        // ImageSharp does not write EXIF thumbnails: without one the preview must simply be null.
         Assert.Null(ImageDecoder.TryDecodeEmbeddedPreview(TestImages.JpegWithOrientation(40, 20, 6), true));
         Assert.Null(ImageDecoder.TryDecodeEmbeddedPreview(TestImages.Png(4, 4), true));
     }
@@ -95,7 +95,7 @@ public class ImageOpsTests
         var src = Split();
         var r = ImageOps.Rotate(src, 90);
         Assert.Equal((20, 40), (r.PixelWidth, r.PixelHeight));
-        Assert.True(Pixels.IsReddish(Pixels.At(r, 10, 2)));   // la sinistra rossa finisce in alto
+        Assert.True(Pixels.IsReddish(Pixels.At(r, 10, 2)));   // the red left side ends up at the top
         var f = ImageOps.Flip(src, horizontal: true);
         Assert.True(Pixels.IsBluish(Pixels.At(f, 2, 10)));
     }
@@ -115,7 +115,7 @@ public class ImageOpsTests
         Assert.Equal((10, 5), (ImageOps.Resize(src, 10, 5).PixelWidth, ImageOps.Resize(src, 10, 5).PixelHeight));
         var fit = ImageOps.FitWithin(src, 20, 20);
         Assert.Equal((20, 10), (fit.PixelWidth, fit.PixelHeight));
-        Assert.Same(src, ImageOps.FitWithin(src, 100, 100)); // mai ingrandita
+        Assert.Same(src, ImageOps.FitWithin(src, 100, 100)); // never enlarged
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public class ImageOpsTests
 
         var pair = await StaTask.Run(() => ImageOps.Compose([Pixels.Solid(10, 20, WColors.Red), Pixels.Solid(6, 10, WColors.Blue)], WColors.White));
         Assert.Equal((16, 20), (pair.PixelWidth, pair.PixelHeight));
-        Assert.Equal(WColors.White, Pixels.At(pair, 12, 1)); // pagina più bassa centrata verticalmente
+        Assert.Equal(WColors.White, Pixels.At(pair, 12, 1)); // shorter page centered vertically
     }
 }
 
@@ -174,7 +174,7 @@ public class ImageSaverTests
         Assert.Equal("Pentax", make!.Value);
         if (exif.TryGetValue(ExifTag.Orientation, out var o)) Assert.Equal((ushort)1, o!.Value);
 
-        // Riaprendolo con la rotazione automatica non deve ruotare di nuovo.
+        // Reopening it with auto-rotation must not rotate it again.
         var again = ImageDecoder.Decode(File.ReadAllBytes(path), path, true);
         Assert.Equal(20, again.PixelWidth);
     }
@@ -192,7 +192,7 @@ public class ImageSaverTests
         ImageSaver.Save(Pixels.Solid(12, 8, WColor.FromArgb(128, 255, 0, 0)), path, 90);
         var loaded = ImageDecoder.Decode(File.ReadAllBytes(path), name, true);
         Assert.Equal((12, 8), (loaded.PixelWidth, loaded.PixelHeight));
-        Assert.Single(Directory.GetFiles(tmp.Path)); // nessun file temporaneo rimasto
+        Assert.Single(Directory.GetFiles(tmp.Path)); // no temporary file left behind
     }
 
     [Fact]
@@ -228,7 +228,7 @@ public class EditSessionTests
         s.Undo();
         Assert.True(s.IsModified);
         s.Apply(a);
-        Assert.False(s.CanRedo); // una nuova modifica cancella il "ripeti"
+        Assert.False(s.CanRedo); // a new edit clears "redo"
     }
 }
 
@@ -248,7 +248,7 @@ public class BatchProcessorTests
         Assert.Equal(2, first.Written);
         Assert.Empty(first.Errors);
         var b = ImageDecoder.Decode(File.ReadAllBytes(Path.Combine(output, "b.webp")), "b.webp", true);
-        Assert.Equal((4, 8), (b.PixelWidth, b.PixelHeight)); // raddrizzata
+        Assert.Equal((4, 8), (b.PixelWidth, b.PixelHeight)); // rotated upright
 
         var second = await BatchProcessor.RunAsync(src, job, null, CancellationToken.None);
         Assert.Equal(0, second.Written);

@@ -3,8 +3,8 @@ using System.Windows.Threading;
 namespace pViewer.Imaging;
 
 /// <summary>
-/// Esegue lavoro in background su un thread STA: DrawingVisual e RenderTargetBitmap
-/// non funzionano sui thread MTA del thread pool.
+/// Runs background work on an STA thread: DrawingVisual and RenderTargetBitmap
+/// do not work on the MTA threads of the thread pool.
 /// </summary>
 public static class StaTask
 {

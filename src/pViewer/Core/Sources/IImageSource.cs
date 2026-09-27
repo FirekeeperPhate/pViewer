@@ -1,20 +1,20 @@
 namespace pViewer.Core.Sources;
 
-/// <summary>Una pagina navigabile: un file su disco o una voce di un archivio.</summary>
-/// <param name="Name">Nome mostrato (nome file o percorso interno all'archivio).</param>
-/// <param name="FilePath">Percorso su disco, null per le pagine dentro un archivio.</param>
+/// <summary>A browsable page: a file on disk or an archive entry.</summary>
+/// <param name="Name">Display name (file name or path inside the archive).</param>
+/// <param name="FilePath">Path on disk, null for pages inside an archive.</param>
 public sealed record PageInfo(string Name, string? FilePath);
 
-/// <summary>Elenco ordinato di immagini da sfogliare.</summary>
+/// <summary>Ordered list of images to browse.</summary>
 public interface IImageSource : IDisposable
 {
-    /// <summary>Cartella o file archivio da cui provengono le pagine.</summary>
+    /// <summary>Folder or archive file the pages come from.</summary>
     string Location { get; }
 
     bool IsArchive { get; }
 
     IReadOnlyList<PageInfo> Pages { get; }
 
-    /// <summary>Legge in memoria i byte della pagina (nessun file resta bloccato).</summary>
+    /// <summary>Reads the page bytes into memory (no file stays locked).</summary>
     Task<byte[]> ReadAsync(int index, CancellationToken ct = default);
 }

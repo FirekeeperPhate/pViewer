@@ -39,7 +39,7 @@ public class PageNavigatorTests
         Assert.Equal(2, nav.Position);
         Assert.Equal([3, 2], nav.VisibleIndices());
         nav.Next();
-        Assert.Equal([4], nav.VisibleIndices()); // numero dispari: l'ultima pagina è da sola
+        Assert.Equal([4], nav.VisibleIndices()); // odd count: the last page is on its own
     }
 
     [Fact]
@@ -180,7 +180,7 @@ public class BatchRenamerTests
     public void RenamesInOrderEvenWhenNamesSwap()
     {
         using var tmp = new TempFolder();
-        // "foto-2" deve diventare "foto-1" e viceversa: serve il passaggio per nomi temporanei.
+        // "foto-2" must become "foto-1" and vice versa: the temporary-name pass is needed.
         File.WriteAllText(tmp.File("foto-2.jpg"), "A");
         File.WriteAllText(tmp.File("foto-1.jpg"), "B");
         var files = new List<string> { tmp.File("foto-2.jpg"), tmp.File("foto-1.jpg") };

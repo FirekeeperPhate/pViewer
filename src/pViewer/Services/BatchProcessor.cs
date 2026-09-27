@@ -11,8 +11,8 @@ public enum BatchOperation
     Resize, RotateRight, RotateLeft, FlipHorizontal, FlipVertical, Convert, Grayscale, Invert, BlackBorder, WhiteBorder,
 }
 
-/// <param name="ResizePercent">Percentuale; 0 = usa MaxWidth×MaxHeight (riduce senza deformare).</param>
-/// <param name="ConvertExtension">Estensione di destinazione per <see cref="BatchOperation.Convert"/>, es. ".png".</param>
+/// <param name="ResizePercent">Percentage; 0 = use MaxWidth×MaxHeight (shrinks without distortion).</param>
+/// <param name="ConvertExtension">Target extension for <see cref="BatchOperation.Convert"/>, e.g. ".png".</param>
 public sealed record BatchJob(
     BatchOperation Operation, string OutputFolder, int ResizePercent, int MaxWidth, int MaxHeight,
     string? ConvertExtension, int JpegQuality, int BorderThickness, bool AutoOrient);
@@ -22,8 +22,8 @@ public sealed record BatchProgress(int Done, int Total, string Current);
 public sealed record BatchResult(int Written, int Skipped, IReadOnlyList<string> Errors, bool Cancelled);
 
 /// <summary>
-/// Applica un'operazione a tutte le pagine di una sorgente (cartella o archivio) e scrive i risultati
-/// in una cartella a parte: gli originali non vengono mai toccati né sovrascritti.
+/// Applies an operation to every page of a source (folder or archive) and writes the results
+/// to a separate folder: originals are never touched or overwritten.
 /// </summary>
 public static class BatchProcessor
 {
@@ -39,7 +39,7 @@ public static class BatchProcessor
     };
 
     public static Task<BatchResult> RunAsync(IImageSource source, BatchJob job, IProgress<BatchProgress>? progress, CancellationToken ct) =>
-        // Un solo thread STA per tutto il lavoro: gli encoder WIC e WPF lo preferiscono.
+        // A single STA thread for the whole job: the WIC and WPF encoders prefer it.
         StaTask.Run(() => Run(source, job, progress, ct));
 
     private static BatchResult Run(IImageSource source, BatchJob job, IProgress<BatchProgress>? progress, CancellationToken ct)
@@ -100,6 +100,6 @@ public static class BatchProcessor
         BatchOperation.Invert => ImageOps.Invert(src),
         BatchOperation.BlackBorder => ImageOps.AddBorder(src, job.BorderThickness, Colors.Black),
         BatchOperation.WhiteBorder => ImageOps.AddBorder(src, job.BorderThickness, Colors.White),
-        _ => src, // Convert: cambia solo il formato
+        _ => src, // Convert: only the format changes
     };
 }

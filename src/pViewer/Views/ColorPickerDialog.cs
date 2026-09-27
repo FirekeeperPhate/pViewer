@@ -6,7 +6,7 @@ using pViewer.ViewModels;
 
 namespace pViewer.Views;
 
-/// <summary>Tavolozza di colori con campo esadecimale (WPF non ha un selettore colore di serie).</summary>
+/// <summary>Color palette with a hex field (WPF has no built-in color picker).</summary>
 public sealed class ColorPickerDialog : Window
 {
     private static readonly string[] Palette =
