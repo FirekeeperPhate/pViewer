@@ -13,26 +13,26 @@
     <Window.Resources>
         <!-- "View" menu, used by both the context menu and the toolbar button -->
         <ContextMenu x:Key="ViewModeMenu">
-            <MenuItem Header="Shrink to fit" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ShrinkToFit}"
+            <MenuItem IsCheckable="True" Header="Shrink to fit" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ShrinkToFit}"
                       IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.ShrinkToFit}}" />
-            <MenuItem Header="Fit to window" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.Fit}"
+            <MenuItem IsCheckable="True" Header="Fit to window" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.Fit}"
                       IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.Fit}}" />
-            <MenuItem Header="Fill window" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.Fill}"
+            <MenuItem IsCheckable="True" Header="Fill window" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.Fill}"
                       IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.Fill}}" />
-            <MenuItem Header="Fit width" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.FitWidth}"
+            <MenuItem IsCheckable="True" Header="Fit width" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.FitWidth}"
                       IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.FitWidth}}" />
-            <MenuItem Header="Fit height" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.FitHeight}"
+            <MenuItem IsCheckable="True" Header="Fit height" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.FitHeight}"
                       IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.FitHeight}}" />
-            <MenuItem Header="Actual size" InputGestureText="A" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ActualSize}"
+            <MenuItem IsCheckable="True" Header="Actual size" InputGestureText="A" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ActualSize}"
                       IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.ActualSize}}" />
         </ContextMenu>
 
         <ContextMenu x:Key="LayoutMenu">
-            <MenuItem Header="Single page" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Single}"
+            <MenuItem IsCheckable="True" Header="Single page" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Single}"
                       IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Single}}" />
-            <MenuItem Header="Manga (right to left)" InputGestureText="M" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Manga}"
+            <MenuItem IsCheckable="True" Header="Manga (right to left)" InputGestureText="M" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Manga}"
                       IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Manga}}" />
-            <MenuItem Header="Comic (left to right)" InputGestureText="C" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Comic}"
+            <MenuItem IsCheckable="True" Header="Comic (left to right)" InputGestureText="C" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Comic}"
                       IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Comic}}" />
             <Separator />
             <MenuItem Header="Shift forward one page" InputGestureText="F12" Command="{Binding ShiftPageCommand}" CommandParameter="1" />
@@ -59,11 +59,11 @@
             </MenuItem>
             <MenuItem Header="Pages">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE89A;" /></MenuItem.Icon>
-                <MenuItem Header="Single page" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Single}"
+                <MenuItem IsCheckable="True" Header="Single page" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Single}"
                           IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Single}}" />
-                <MenuItem Header="Manga (right to left)" InputGestureText="M" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Manga}"
+                <MenuItem IsCheckable="True" Header="Manga (right to left)" InputGestureText="M" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Manga}"
                           IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Manga}}" />
-                <MenuItem Header="Comic (left to right)" InputGestureText="C" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Comic}"
+                <MenuItem IsCheckable="True" Header="Comic (left to right)" InputGestureText="C" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Comic}"
                           IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Comic}}" />
                 <Separator />
                 <MenuItem Header="Shift forward one page" InputGestureText="F12" Command="{Binding ShiftPageCommand}" CommandParameter="1" />
@@ -78,23 +78,23 @@
             </MenuItem>
             <MenuItem Header="View">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE890;" /></MenuItem.Icon>
-                <MenuItem Header="Shrink to fit" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ShrinkToFit}"
+                <MenuItem IsCheckable="True" Header="Shrink to fit" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ShrinkToFit}"
                           IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.ShrinkToFit}}" />
-                <MenuItem Header="Fit to window" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.Fit}"
+                <MenuItem IsCheckable="True" Header="Fit to window" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.Fit}"
                           IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.Fit}}" />
-                <MenuItem Header="Fill window" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.Fill}"
+                <MenuItem IsCheckable="True" Header="Fill window" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.Fill}"
                           IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.Fill}}" />
-                <MenuItem Header="Fit width" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.FitWidth}"
+                <MenuItem IsCheckable="True" Header="Fit width" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.FitWidth}"
                           IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.FitWidth}}" />
-                <MenuItem Header="Fit height" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.FitHeight}"
+                <MenuItem IsCheckable="True" Header="Fit height" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.FitHeight}"
                           IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.FitHeight}}" />
-                <MenuItem Header="Actual size" InputGestureText="A" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ActualSize}"
+                <MenuItem IsCheckable="True" Header="Actual size" InputGestureText="A" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ActualSize}"
                           IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.ActualSize}}" />
                 <Separator />
                 <MenuItem Header="Full screen" InputGestureText="F11" Click="Fullscreen_Click" />
-                <MenuItem Header="White background" InputGestureText="W" Command="{Binding ToggleWhiteBackgroundCommand}" IsChecked="{Binding WhiteBackground, Mode=OneWay}" />
-                <MenuItem x:Name="ToolbarMenuItem" Header="Toolbar" InputGestureText="T" Click="ToggleToolbar_Click" />
-                <MenuItem x:Name="StatusBarMenuItem" Header="Status bar" Click="ToggleStatusBar_Click" />
+                <MenuItem IsCheckable="True" Header="White background" InputGestureText="W" Command="{Binding ToggleWhiteBackgroundCommand}" IsChecked="{Binding WhiteBackground, Mode=OneWay}" />
+                <MenuItem x:Name="ToolbarMenuItem" IsCheckable="True" Header="Toolbar" InputGestureText="T" Click="ToggleToolbar_Click" />
+                <MenuItem x:Name="StatusBarMenuItem" IsCheckable="True" Header="Status bar" Click="ToggleStatusBar_Click" />
             </MenuItem>
             <Separator />
             <MenuItem Header="Edit">

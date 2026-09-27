@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -25,6 +26,20 @@ public partial class MainWindow : Window, IMainView
     private bool _fullscreen;
     private WindowState _restoreState;
     private bool _closeConfirmed;
+
+    static MainWindow()
+    {
+        // The Fluent theme draws the check mark only on checkable menu items, and a checkable item
+        // flips its own IsChecked when clicked. Re-read the bound value once the click has been
+        // handled, so the view model stays the only source of truth (e.g. clicking the mode that is
+        // already active, or a command cancelled by the user).
+        EventManager.RegisterClassHandler(typeof(MenuItem), MenuItem.ClickEvent, new RoutedEventHandler((sender, _) =>
+        {
+            var item = (MenuItem)sender;
+            if (BindingOperations.GetBindingExpression(item, MenuItem.IsCheckedProperty) is { } binding)
+                item.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, binding.UpdateTarget);
+        }));
+    }
 
     public MainWindow(AppSettings settings)
     {
@@ -330,9 +345,23 @@ public partial class MainWindow : Window, IMainView
     private void OpenMenuBelow(FrameworkElement target, ContextMenu menu)
     {
         menu.DataContext = DataContext;
+        // An open menu inherits font properties from its PlacementTarget, and the toolbar buttons
+        // use the icon font: without this every item would render as empty boxes.
+        menu.FontFamily = FontFamily;
+        menu.FontSize = FontSize;
         menu.PlacementTarget = target;
         menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        menu.Closed += OnClosed;
         menu.IsOpen = true;
+
+        // Give the menu back to the context menu service, otherwise a later right-click on the
+        // image would open it under the toolbar button.
+        void OnClosed(object sender, RoutedEventArgs e)
+        {
+            menu.Closed -= OnClosed;
+            menu.ClearValue(ContextMenu.PlacementTargetProperty);
+            menu.ClearValue(ContextMenu.PlacementProperty);
+        }
     }
 
     private void ViewModeButton_Click(object sender, RoutedEventArgs e) =>
