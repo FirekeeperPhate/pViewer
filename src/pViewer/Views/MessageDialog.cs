@@ -26,13 +26,14 @@ public sealed class MessageDialog : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         _result = CancelResult;
 
-        var (glyph, color) = icon switch
+        // Theme brushes: fixed colors picked for the dark theme are too pale on the light one.
+        var (glyph, brushKey) = icon switch
         {
-            MessageBoxImage.Error => ("", Color.FromRgb(0xFF, 0x6B, 0x5E)),
-            MessageBoxImage.Warning => ("", Color.FromRgb(0xFF, 0xC8, 0x3D)),
-            MessageBoxImage.Question => ("", Color.FromRgb(0x60, 0xCD, 0xFF)),
-            MessageBoxImage.Information => ("", Color.FromRgb(0x60, 0xCD, 0xFF)),
-            _ => ("", Colors.Transparent),
+            MessageBoxImage.Error => ("", "SystemFillColorCriticalBrush"),
+            MessageBoxImage.Warning => ("", "SystemFillColorCautionBrush"),
+            MessageBoxImage.Question => ("", "AccentTextFillColorPrimaryBrush"),
+            MessageBoxImage.Information => ("", "AccentTextFillColorPrimaryBrush"),
+            _ => ("", ""),
         };
 
         var body = new DockPanel { Margin = new Thickness(24, 20, 24, 8) };
@@ -42,11 +43,11 @@ public sealed class MessageDialog : Window
             {
                 Text = glyph,
                 FontSize = 30,
-                Foreground = new SolidColorBrush(color),
                 VerticalAlignment = VerticalAlignment.Top,
                 Margin = new Thickness(0, 0, 18, 0),
             };
             iconText.SetResourceReference(TextBlock.FontFamilyProperty, "IconFont");
+            iconText.SetResourceReference(TextBlock.ForegroundProperty, brushKey);
             DockPanel.SetDock(iconText, Dock.Left);
             body.Children.Add(iconText);
         }

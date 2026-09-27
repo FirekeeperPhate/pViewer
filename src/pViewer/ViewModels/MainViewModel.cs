@@ -182,8 +182,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         ErrorText = null;
         _archiveOpenRequest = request;
         // The changes were already confirmed or discarded by the caller: no undo or new edits on
-        // the old image while the archive opens.
-        ResetEditState();
+        // the old image while the archive opens. A pasted image stays "detached", so file commands
+        // (wallpaper, open with, properties) do not act on the folder page hidden behind it.
+        _edit = null;
+        _lastRectangle = null;
+        Tool = ViewerTool.None;
+        UpdateEditFlags();
+        UpdateInfo();
         ArchiveSource archive;
         try
         {
@@ -204,6 +209,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             else
             {
                 // Only a pasted image could be on screen, and its changes were given up above.
+                ResetEditState();
                 _view.ClearPages();
                 HasImage = false;
                 UpdateInfo();
@@ -583,7 +589,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_visible.Length == 1)
         {
             _edit = new EditSession(_visible[0].Bitmap);
-            if (_visible[0].Animation is not null)
+            if (_visible[0].IsAnimated)
                 Toast("Edits apply to the first frame: the animation will not be saved");
             else if (_visible[0].PageCount > 1)
                 Toast($"This file has {_visible[0].PageCount} pages: edits apply to the first page only");
@@ -602,9 +608,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private int _pendingWork;
     /// <summary>A save is queued or running: a second Ctrl+S must not ask again or save twice.</summary>
     private int _savesQueued;
+    /// <summary>Work items queued so far, and the count when the last save was queued: an edit queued
+    /// after that save still needs its own.</summary>
+    private int _queuedTotal, _queuedAtLastSave;
 
     /// <summary>Opening or pasting another image waits for running edits and saves (they belong to this one).</summary>
-    private bool WaitingForWork()
+    public bool WaitingForWork()
     {
         if (!IsBusy) return false;
         Toast("Please wait: an edit or a save is still running");
@@ -618,6 +627,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task<T> RunExclusiveAsync<T>(Func<Task<T>> work)
     {
         _pendingWork++;
+        _queuedTotal++;
         IsBusy = true;
         await _editGate.WaitAsync();
         try
@@ -633,7 +643,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     /// <param name="movesPixels">Rotations, flips, crops, resizes, borders: the last rectangle no
     /// longer marks the same area, so Tab must not fill it.</param>
-    private Task ApplyEditAsync(Func<BitmapSource, BitmapSource> operation, bool needsSta = false, bool movesPixels = false)
+    private Task<bool> ApplyEditAsync(Func<BitmapSource, BitmapSource> operation, bool needsSta = false, bool movesPixels = false)
     {
         // The edit belongs to the image shown when it was requested: if another image is shown by
         // the time its turn comes (paste, open…), it is dropped instead of landing on that one.
@@ -747,9 +757,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 await ApplyEditAsync(b => ImageOps.Crop(b, rect), movesPixels: true);
                 break;
             case SelectionKind.Rectangle:
-                _lastRectangle = rect;
                 var color = ParseColor(Settings.RectangleColor, Colors.Red);
-                await ApplyEditAsync(b => ImageOps.DrawRectangle(b, rect, color, Settings.RectangleThickness, fill: false), needsSta: true);
+                // Remembered for Tab only once drawn: a dropped edit (the image changed) must not leave it.
+                if (await ApplyEditAsync(b => ImageOps.DrawRectangle(b, rect, color, Settings.RectangleThickness, fill: false), needsSta: true))
+                    _lastRectangle = rect;
                 break;
             case SelectionKind.RedEye:
                 await ApplyEditAsync(b => ImageOps.RedEye(b, rect));
@@ -903,7 +914,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (!HasImage) return false;
         // Before any redirect to Save As too (pasted image, archive page): no second dialog.
-        if (_savesQueued > 0)
+        if (_savesQueued > 0 && _queuedTotal == _queuedAtLastSave)
         {
             Toast("Already saving…");
             return true;
@@ -924,7 +935,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return await SaveAsCoreAsync(openSaved);
         }
         // The same for an animation: overwriting it would leave only the edited first frame.
-        if (_visible is { Length: 1 } anim && anim[0].Animation is not null)
+        if (_visible is { Length: 1 } anim && anim[0].IsAnimated)
         {
             Toast($"«{Path.GetFileName(path)}» is animated: choose a new name to keep the original");
             return await SaveAsCoreAsync(openSaved);
@@ -959,7 +970,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _view.ShowError("Unsupported format for saving: use jpg, png, webp, bmp, gif, tif or jxr.");
             return false;
         }
-        bool animated = _visible?.Any(v => v.Animation is not null) == true;
+        bool animated = _visible?.Any(v => v.IsAnimated) == true;
         bool ok = await WriteAsync(CurrentBitmapForExport, path);
         if (!ok) return false;
         if (animated) Toast($"Saved: {Path.GetFileName(path)} (first frame of the animation only)");
@@ -1006,7 +1017,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // (pasted, opened meanwhile…) over that file.
         int request = _requestId;
         _savesQueued++;
-        return RunExclusiveAsync(async () =>
+        var task = RunExclusiveAsync(async () =>
         {
             try
             {
@@ -1037,6 +1048,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 _savesQueued--;
             }
         });
+        _queuedAtLastSave = _queuedTotal;
+        return task;
     }
 
     /// <summary>A file of the current folder was rewritten: its cached decode is stale.</summary>
@@ -1055,13 +1068,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_edit is null || !_edit.IsModified || !Settings.ConfirmDiscardEdits) return true;
         var answer = _view.Ask("The image has unsaved changes. Save them?", "Unsaved changes",
             MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
-        return answer switch
+        if (answer == MessageBoxResult.Cancel) return false;
+        if (answer != MessageBoxResult.Yes) return true;
+        // Saving on the way to another image: a Save As must not also switch to the saved file.
+        if (!await SaveCoreAsync(openSaved: false)) return false;
+        // The window stays usable during the save: an edit made meanwhile is not saved, so stay.
+        if (IsBusy || _edit is { IsModified: true })
         {
-            MessageBoxResult.Cancel => false,
-            // Saving on the way to another image: a Save As must not also switch to the saved file.
-            MessageBoxResult.Yes => await SaveCoreAsync(openSaved: false),
-            _ => true,
-        };
+            Toast("The image was changed while saving: stay on it");
+            return false;
+        }
+        return true;
     }
 
     // ---- File operations ----
@@ -1185,7 +1202,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void Batch()
     {
-        if (_source is null || _source.Pages.Count == 0) return;
+        // An archive being opened (or a save refreshing the folder) would dispose the source while the batch reads it.
+        if (_source is null || _source.Pages.Count == 0 || IsOpeningArchive || WaitingForWork()) return;
         _view.ShowBatchDialog(_source, Settings);
         if (_source is FolderSource) RefreshFolderKeepingPosition();
     }
@@ -1248,7 +1266,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task ShowMetadata()
     {
         if (_detached) { NotAFile(); return; }
-        if (_cache is null || _visible is null) return;
+        if (_cache is null || _source is null || _nav.Count == 0 || IsOpeningArchive) return; // also while the page is still loading
         int index = _nav.Position;
         int request = _requestId;
         string name = Path.GetFileName(_source!.Pages[index].Name);

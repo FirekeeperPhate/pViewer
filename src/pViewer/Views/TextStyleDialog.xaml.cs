@@ -36,6 +36,9 @@ public partial class TextStyleDialog : Window
         if (!_ready) return;
         ColorSwatch.Background = new SolidColorBrush(_color);
         PreviewText.Foreground = new SolidColorBrush(_color);
+        // Dark text on a light box and vice versa, or black text would be invisible.
+        bool lightText = 0.299 * _color.R + 0.587 * _color.G + 0.114 * _color.B > 128;
+        PreviewBox.Background = new SolidColorBrush(lightText ? Color.FromRgb(0x2A, 0x2A, 0x2A) : Color.FromRgb(0xF3, 0xF3, 0xF3));
         try { PreviewText.FontFamily = new FontFamily(FontBox.Text); } catch (ArgumentException) { }
         PreviewText.FontWeight = BoldBox.IsChecked == true ? FontWeights.Bold : FontWeights.Normal;
         PreviewText.FontStyle = ItalicBox.IsChecked == true ? FontStyles.Italic : FontStyles.Normal;

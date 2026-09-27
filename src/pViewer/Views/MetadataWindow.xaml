@@ -9,7 +9,7 @@
             <TextBox x:Name="FilterBox" TextChanged="FilterBox_TextChanged" ToolTip="Filter by name or value" />
         </DockPanel>
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button Content="Close" IsCancel="True" IsDefault="True" MinWidth="90" />
+            <Button Content="Close" IsCancel="True" MinWidth="90" /> <!-- not IsDefault: Enter in the filter box must not close -->
         </StackPanel>
         <ListView x:Name="List" VirtualizingPanel.IsVirtualizingWhenGrouping="True">
             <ListView.GroupStyle>

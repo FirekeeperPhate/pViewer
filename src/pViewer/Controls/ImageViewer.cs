@@ -310,13 +310,15 @@ public sealed class ImageViewer : Border
             _userAdjusted = true;
     }
 
-    private void CancelDrag()
+    /// <summary>Stops a selection or pan in progress (Esc, image changed); true if there was one.</summary>
+    public bool CancelDrag()
     {
-        if (_drag == DragMode.None) return;
+        if (_drag == DragMode.None) return false;
         _drag = DragMode.None;
         _selection.Visibility = Visibility.Collapsed;
         if (IsMouseCaptured) ReleaseMouseCapture();
         Cursor = RestingCursor;
+        return true;
     }
 
     private void ClampAndApply()
@@ -592,7 +594,10 @@ public sealed class ImageViewer : Border
             Background = new SolidColorBrush(Color.FromArgb(50, 0, 0, 0)),
             BorderBrush = new SolidColorBrush(Color.FromArgb(160, 255, 255, 255)),
             Cursor = Cursors.SizeAll,
-            ToolTip = "Drag the border to move · Ctrl+Enter to apply · Esc to cancel",
+            ToolTip = new ToolTip { Content = "Drag the border to move · Ctrl+Enter to apply · Esc to cancel", UseLayoutRounding = true },
+            // The border too: otherwise a right-click there opens the image menu, whose commands
+            // would throw the text away.
+            ContextMenu = _textBox.ContextMenu,
         };
         _textFrame.MouseLeftButtonDown += (_, e) =>
         {
@@ -644,19 +649,22 @@ public sealed class ImageViewer : Border
 
     private ContextMenu CreateTextContextMenu()
     {
-        // The menu would inherit the font, size and color of the text being written (e.g. 72 pt bold
-        // red): use the ones of the window.
+        // The menu would inherit from the text box the font of the text being written (e.g. 72 pt
+        // bold), its I-beam cursor and the unrounded layout of the zoomed canvas: use the window's.
+        // (The colors come from the theme's menu style.)
         var menu = new ContextMenu
         {
             FontFamily = TextElement.GetFontFamily(this),
             FontSize = TextElement.GetFontSize(this),
             FontWeight = FontWeights.Normal,
             FontStyle = FontStyles.Normal,
-            Foreground = TextElement.GetForeground(this),
+            Cursor = Cursors.Arrow,
+            UseLayoutRounding = true,
         };
         var style = new MenuItem { Header = "Font and color…" };
         style.Click += (_, _) => TextStyleRequested?.Invoke(this, EventArgs.Empty);
-        var paste = new MenuItem { Header = "Paste", Command = ApplicationCommands.Paste, InputGestureText = "Ctrl+V" };
+        // Explicit target: the menu is also opened from the frame around the text box.
+        var paste = new MenuItem { Header = "Paste", Command = ApplicationCommands.Paste, CommandTarget = _textBox, InputGestureText = "Ctrl+V" };
         var confirm = new MenuItem { Header = "Write on the image", InputGestureText = "Ctrl+Enter" };
         confirm.Click += (_, _) => CommitTextEdit();
         var cancel = new MenuItem { Header = "Cancel", InputGestureText = "Esc" };
@@ -683,9 +691,13 @@ public sealed class ImageViewer : Border
         }
     }
 
+    /// <summary>Asked before applying the text; false keeps the text box open (e.g. an edit is still running).</summary>
+    public Func<bool>? CanCommitText { get; set; }
+
     public void CommitTextEdit()
     {
         if (_textBox is null || _textStyle is null) return;
+        if (CanCommitText?.Invoke() == false) return;
         string text = _textBox.Text;
         if (string.IsNullOrWhiteSpace(text))
         {

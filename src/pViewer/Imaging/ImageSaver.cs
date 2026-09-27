@@ -73,16 +73,17 @@ public static class ImageSaver
         BitmapSource source = jpeg || ext == ".bmp" ? ImageOps.FlattenAlpha(bitmap, Colors.White) : bitmap;
         // BMP readers other than Windows know only the classic depths: 16-bit or HDR images would be
         // written as 64 bits per pixel.
-        if (ext == ".bmp" && !IsClassicBmpFormat(source.Format))
+        // PNG has no CMYK: convert here, so the profile is chosen for the pixels really written.
+        if ((ext == ".bmp" && !IsClassicBmpFormat(source.Format)) || (ext == ".png" && source.Format == PixelFormats.Cmyk32))
         {
-            var bgr = new FormatConvertedBitmap(source, PixelFormats.Bgr24, null, 0);
-            bgr.Freeze();
-            source = bgr;
+            // Copied, not frozen: freezing a conversion of an image decoded on another thread fails.
+            source = ImageBridge.Materialize(new FormatConvertedBitmap(source, PixelFormats.Bgr24, null, 0));
         }
 
         BitmapMetadata? meta = jpeg ? PrepareJpegMetadata(metadata, resetOrientation) : null;
-        // A JPEG keeps its profile in the copied metadata; BMP and GIF are written without one.
-        ColorContext? profile = ext is ".png" or ".tif" or ".tiff" or ".jxr" or ".wdp" || (jpeg && meta is null)
+        // For a JPEG the profile is passed even with the copied metadata: it replaces the original
+        // one held there, which may no longer describe the pixels. BMP and GIF get none.
+        ColorContext? profile = ext is ".png" or ".tif" or ".tiff" or ".jxr" or ".wdp" || jpeg
             ? MatchingProfile(colorContexts, source.Format) : null;
         try
         {
@@ -105,7 +106,8 @@ public static class ImageSaver
 
     /// <summary>
     /// The profile that fits the pixels being saved: an edit may have turned a grayscale or CMYK
-    /// image into RGB, and an RGB file with a CMYK profile would be invalid.
+    /// image into RGB, and an RGB file with a CMYK profile would be invalid. RGB pixels with no
+    /// fitting profile get sRGB (what the conversion to RGB produced).
     /// </summary>
     private static ColorContext? MatchingProfile(IReadOnlyList<ColorContext>? contexts, PixelFormat format)
     {
@@ -119,9 +121,9 @@ public static class ImageSaver
                 // ICC header: the data color space is at offset 16.
                 if (bytes.Length >= 20 && System.Text.Encoding.ASCII.GetString(bytes, 16, 4) == wanted) return context;
             }
-            catch (Exception ex) when (ex is not OutOfMemoryException) { /* EXIF color space, not a profile */ }
+            catch (Exception ex) when (ex is not OutOfMemoryException) { /* unreadable: skip it */ }
         }
-        return null;
+        return wanted == "RGB " ? ImageDecoder.Srgb : null;
     }
 
     private static byte[] ProfileBytes(ColorContext context)

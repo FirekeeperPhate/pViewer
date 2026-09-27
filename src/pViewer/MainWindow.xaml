@@ -12,7 +12,7 @@
 
     <Window.Resources>
         <!-- "View" menu, used by both the context menu and the toolbar button -->
-        <ContextMenu x:Key="ViewModeMenu">
+        <ContextMenu x:Key="ViewModeMenu" Cursor="Arrow">
             <MenuItem IsCheckable="True" Header="Shrink to fit" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ShrinkToFit}"
                       IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.ShrinkToFit}}" />
             <MenuItem IsCheckable="True" Header="Fit to window" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.Fit}"
@@ -27,7 +27,7 @@
                       IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.ActualSize}}" />
         </ContextMenu>
 
-        <ContextMenu x:Key="LayoutMenu">
+        <ContextMenu x:Key="LayoutMenu" Cursor="Arrow">
             <MenuItem IsCheckable="True" Header="Single page" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Single}"
                       IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Single}}" />
             <MenuItem IsCheckable="True" Header="Manga (right to left)" InputGestureText="M" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Manga}"
@@ -40,7 +40,7 @@
         </ContextMenu>
 
         <!-- Full menu (right click) -->
-        <ContextMenu x:Key="MainMenu">
+        <ContextMenu x:Key="MainMenu" Cursor="Arrow">
             <MenuItem Header="Open…" InputGestureText="Ctrl+O" Command="{Binding OpenCommand}">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE8E5;" /></MenuItem.Icon>
             </MenuItem>
@@ -176,6 +176,13 @@
         <!-- Toolbar -->
         <Border x:Name="Toolbar" Grid.Row="0" Padding="6,4" BorderThickness="0,0,0,1" BorderBrush="#30808080">
             <DockPanel LastChildFill="False">
+                <!-- Docked first: in a narrow window the left group is clipped, not these ("All commands" stays reachable) -->
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE786;" ToolTip="Slideshow" Click="SlideshowButton_Click" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE740;" ToolTip="Full screen (F11)" Click="Fullscreen_Click" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE713;" ToolTip="Settings" Command="{Binding OpenSettingsCommand}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE712;" ToolTip="All commands (right-click the image)" Click="MoreButton_Click" />
+                </StackPanel>
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                     <Button Style="{StaticResource ToolButton}" Content="&#xE8E5;" ToolTip="Open (Ctrl+O)" Command="{Binding OpenCommand}" />
                     <Border Style="{StaticResource ToolSeparator}" />
@@ -210,12 +217,6 @@
                         </Button.Style>
                     </Button>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE786;" ToolTip="Slideshow" Click="SlideshowButton_Click" />
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE740;" ToolTip="Full screen (F11)" Click="Fullscreen_Click" />
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE713;" ToolTip="Settings" Command="{Binding OpenSettingsCommand}" />
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE712;" ToolTip="All commands (right-click the image)" Click="MoreButton_Click" />
-                </StackPanel>
             </DockPanel>
         </Border>
 
@@ -224,12 +225,12 @@
             <controls:ImageViewer x:Name="Viewer" ViewMode="{Binding ViewMode}" Background="#FF1C1C1C" />
 
             <!-- Welcome -->
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False"
+            <StackPanel x:Name="Welcome" VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False" Margin="16,0" MaxWidth="640"
                         Visibility="{Binding ShowWelcome, Converter={StaticResource BoolToVisibility}}">
                 <TextBlock Text="&#xEB9F;" FontFamily="{StaticResource IconFont}" FontSize="56" Opacity="0.35" HorizontalAlignment="Center" />
                 <TextBlock Text="pViewer" FontSize="28" FontWeight="SemiBold" Opacity="0.8" HorizontalAlignment="Center" Margin="0,14,0,6" />
-                <TextBlock Text="Drop an image, a folder or an archive here (zip, rar, 7z, cbz, cbr)" Opacity="0.6" HorizontalAlignment="Center" />
-                <TextBlock Text="Double-click or Ctrl+O to open · Ctrl+V to paste from clipboard · F1 for shortcuts" Opacity="0.45" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                <TextBlock Text="Drop an image, a folder or an archive here (zip, rar, 7z, cbz, cbr)" Opacity="0.6" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" />
+                <TextBlock Text="Double-click or Ctrl+O to open · Ctrl+V to paste from clipboard · F1 for shortcuts" Opacity="0.45" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="0,4,0,0" />
             </StackPanel>
 
             <!-- Open error -->

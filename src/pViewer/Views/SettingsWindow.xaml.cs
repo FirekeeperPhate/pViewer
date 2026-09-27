@@ -18,6 +18,7 @@ public partial class SettingsWindow : Window
     {
         _settings = settings;
         InitializeComponent();
+        Height = Math.Min(Height, SystemParameters.WorkArea.Height * 0.9); // small screens at high scaling
         PathText.Text = $"Settings file: {SettingsStore.FilePath}";
         Load(settings);
     }
@@ -49,7 +50,8 @@ public partial class SettingsWindow : Window
         CropColorButton.Background = new SolidColorBrush(_cropColor);
         RectColorButton.Background = new SolidColorBrush(_rectColor);
         TextStyleSummary.Text = $"{_textStyle.FontFamily}, {_textStyle.FontSize:0.#} px";
-        TextStyleSummary.Foreground = new SolidColorBrush(_textStyle.Color);
+        // The color in a swatch: text drawn in it would vanish on the background (black on dark).
+        TextColorSwatch.Background = new SolidColorBrush(_textStyle.Color);
     }
 
     private void CropColor_Click(object sender, RoutedEventArgs e)

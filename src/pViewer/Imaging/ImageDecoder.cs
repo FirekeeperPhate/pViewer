@@ -17,8 +17,9 @@ public sealed class LoadedImage
     public BitmapMetadata? JpegMetadata { get; init; }
 
     /// <summary>
-    /// Embedded color profile (ICC). The pixels are not converted when decoded, so a saved file
-    /// must carry the profile again, or color-managed apps would show other colors.
+    /// Embedded color profile (ICC), only when the pixels are still in the file's color space
+    /// (16-bit, float, gray, CMYK): a saved file must carry it again. 8-bit RGB pixels are
+    /// converted to sRGB while decoding, so for them this is null.
     /// </summary>
     public IReadOnlyList<ColorContext>? ColorContexts { get; init; }
 
@@ -34,6 +35,14 @@ public sealed class LoadedImage
     /// <summary>Pages in the file (multi-page TIFF): only the first one is shown and edited.</summary>
     public int PageCount { get; init; } = 1;
 
+    /// <summary>
+    /// Frames in the file. More than one with no <see cref="Animation"/> means an animation shown
+    /// still (too large, or unreadable as an animation): it must not be overwritten either.
+    /// </summary>
+    public int FrameCount { get; internal set; } = 1;
+
+    public bool IsAnimated => Animation is not null || FrameCount > 1;
+
     public string FormatName { get; init; } = "";
     public long FileSize { get; init; }
     public int PixelWidth => Bitmap.PixelWidth;
@@ -47,16 +56,20 @@ public sealed class ImageDecodeException(string message, Exception? inner) : Exc
 
 public static class ImageDecoder
 {
+    /// <summary>The standard sRGB profile (WPF's default for RGB pixel formats).</summary>
+    public static ColorContext Srgb => new(PixelFormats.Bgra32); // a new one each time: used from several threads
+
     /// <summary>Beyond this much memory only the first frame of the animation is shown.</summary>
     public const long MaxAnimationBytes = 768L * 1024 * 1024;
 
     public static LoadedImage Decode(byte[] data, string name, bool autoOrient)
     {
+        int frameCount = 1;
         if (MayBeAnimated(data))
         {
             try
             {
-                var animated = TryDecodeAnimation(data);
+                var animated = TryDecodeAnimation(data, out frameCount);
                 if (animated is not null) return animated;
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -69,11 +82,21 @@ public static class ImageDecoder
         foreach (var options in new[] { BitmapCreateOptions.PreservePixelFormat,
                                         BitmapCreateOptions.PreservePixelFormat | BitmapCreateOptions.IgnoreColorProfile })
         {
-            try { return DecodeWic(data, autoOrient, options); }
+            try
+            {
+                var still = DecodeWic(data, autoOrient, options);
+                still.FrameCount = Math.Max(still.FrameCount, frameCount);
+                return still;
+            }
             catch (Exception ex) when (ex is not OutOfMemoryException) { firstError ??= ex; }
         }
 
-        try { return DecodeImageSharp(data, autoOrient); }
+        try
+        {
+            var still = DecodeImageSharp(data, autoOrient);
+            still.FrameCount = Math.Max(still.FrameCount, frameCount);
+            return still;
+        }
         catch (Exception ex) when (ex is not OutOfMemoryException) { firstError ??= ex; }
 
         throw new ImageDecodeException(FriendlyError(name), firstError);
@@ -101,9 +124,11 @@ public static class ImageDecoder
         || (d.Length > 8 && d[0] == 0x89 && d[1] == 'P' && d[2] == 'N' && d[3] == 'G');
 
     /// <returns>null if the file has a single frame or the animation would take too much memory.</returns>
-    private static LoadedImage? TryDecodeAnimation(byte[] data)
+    /// <param name="frameCount">Frames in the file, also when null is returned (animation too large).</param>
+    private static LoadedImage? TryDecodeAnimation(byte[] data, out int frameCount)
     {
-        int width, height, frameCount;
+        frameCount = 1;
+        int width, height;
         if (data[0] == 0x89)
         {
             // PNG: ImageSharp 3.1 Identify rejects valid APNGs, so the chunks are read directly.
@@ -138,16 +163,22 @@ public static class ImageDecoder
         };
     }
 
-    /// <summary>Size (IHDR) and frame count (acTL) of an animated PNG; false for a static PNG.</summary>
+    /// <summary>
+    /// Size (IHDR) and frame count of an animated PNG; false for a static PNG. The count is the
+    /// larger of the declared one (acTL) and the frames really present (fcTL): the decoder reads
+    /// them all, so a wrong declaration must not slip past the memory limit.
+    /// </summary>
     private static bool TryReadApngInfo(byte[] d, out int width, out int height, out int frames)
     {
         width = height = frames = 0;
         static int BigEndian(byte[] b, int at) => (b[at] << 24) | (b[at + 1] << 16) | (b[at + 2] << 8) | b[at + 3];
+        bool animated = false;
+        int declared = 0, present = 0;
         int pos = 8; // after the signature
         while (pos + 8 <= d.Length)
         {
             int length = BigEndian(d, pos);
-            if (length < 0 || pos + 12L + length > d.Length) return false;
+            if (length < 0 || pos + 12L + length > d.Length) break; // truncated: count what was read
             string type = System.Text.Encoding.ASCII.GetString(d, pos + 4, 4);
             if (type == "IHDR" && length >= 8)
             {
@@ -156,16 +187,25 @@ public static class ImageDecoder
             }
             else if (type == "acTL" && length >= 4)
             {
-                frames = BigEndian(d, pos + 8);
-                return width > 0 && height > 0 && frames > 0;
+                animated = true;
+                declared = BigEndian(d, pos + 8);
             }
-            else if (type == "IDAT")
+            else if (type == "fcTL")
+            {
+                present++;
+            }
+            else if (type == "IDAT" && !animated)
             {
                 return false; // acTL must come before the image data: not animated
             }
+            else if (type == "IEND")
+            {
+                break;
+            }
             pos += 12 + length;
         }
-        return false;
+        frames = Math.Max(declared, present);
+        return animated && width > 0 && height > 0 && frames > 0;
     }
 
     private static TimeSpan FrameDelay(SixLabors.ImageSharp.ImageFrame frame, SixLabors.ImageSharp.Formats.IImageFormat? format)
@@ -218,7 +258,13 @@ public static class ImageDecoder
         IReadOnlyList<ColorContext>? colorContexts = null;
         if ((options & BitmapCreateOptions.IgnoreColorProfile) == 0)
         {
-            try { colorContexts = frame.ColorContexts is { Count: > 0 } cc ? cc.ToList() : null; }
+            try
+            {
+                // Converted pixels are sRGB now: that is the profile a saved copy must declare (for a
+                // JPEG it replaces the original one kept in the copied metadata).
+                if (frame.ColorContexts is { Count: > 0 } cc)
+                    colorContexts = KeepsFileColors(frame.Format) ? cc.ToList() : [Srgb];
+            }
             catch (Exception ex) when (ex is not OutOfMemoryException) { /* unreadable profile: none */ }
         }
 
@@ -231,8 +277,20 @@ public static class ImageDecoder
             FileSize = data.LongLength,
             AutoOriented = autoOrient,
             PageCount = decoder is TiffBitmapDecoder ? decoder.Frames.Count : 1, // GIF frames are not pages
+            // Icon frames are sizes of one picture, TIFF frames are pages.
+            FrameCount = decoder is TiffBitmapDecoder or IconBitmapDecoder ? 1 : Math.Max(1, decoder.Frames.Count),
         };
     }
+
+    /// <summary>
+    /// WIC converts 8-bit RGB (and palette) pixels to sRGB while decoding with the embedded profile;
+    /// deeper, float, gray and CMYK pixels are left in the file's color space.
+    /// </summary>
+    private static bool KeepsFileColors(PixelFormat f) =>
+        f == PixelFormats.Cmyk32 || f == PixelFormats.Gray2 || f == PixelFormats.Gray4 || f == PixelFormats.Gray8
+        || f == PixelFormats.Gray16 || f == PixelFormats.Gray32Float || f == PixelFormats.BlackWhite
+        || f == PixelFormats.Rgb48 || f == PixelFormats.Rgba64 || f == PixelFormats.Prgba64
+        || f == PixelFormats.Rgb128Float || f == PixelFormats.Rgba128Float || f == PixelFormats.Prgba128Float;
 
     private static string FormatName(BitmapDecoder decoder) => decoder switch
     {

@@ -60,7 +60,7 @@ public sealed class HelpWindow : Window
     {
         Title = "Keyboard shortcuts";
         Width = 620;
-        Height = 700;
+        Height = Math.Min(700, SystemParameters.WorkArea.Height * 0.9); // fits 1080p screens at 150%
         MinWidth = 400;
         ShowInTaskbar = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;

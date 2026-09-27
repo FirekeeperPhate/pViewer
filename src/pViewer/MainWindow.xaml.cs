@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -71,6 +72,8 @@ public partial class MainWindow : Window, IMainView
             if (_vm.CanEdit) Viewer.BeginTextEdit(p, _vm.CurrentTextStyle);
         };
         Viewer.TextCommitted += async (_, t) => await _vm.OnTextCommittedAsync(t);
+        // The text position is in the coordinates of the image on screen: not while a rotation or crop is queued.
+        Viewer.CanCommitText = () => !_vm.WaitingForWork();
         Viewer.TextStyleRequested += (_, _) =>
         {
             var style = _vm.ChooseTextStyle();
@@ -154,6 +157,9 @@ public partial class MainWindow : Window, IMainView
             : _fullscreen ? Colors.Black
             : IsLightTheme() ? Color.FromRgb(0xEB, 0xEB, 0xEB) : Color.FromRgb(0x1C, 0x1C, 0x1C);
         Viewer.Background = new SolidColorBrush(color);
+        // The welcome text sits on that background, which is not always the theme's (W, full screen).
+        bool light = 0.299 * color.R + 0.587 * color.G + 0.114 * color.B > 128;
+        TextElement.SetForeground(Welcome, new SolidColorBrush(light ? Color.FromRgb(0x1A, 0x1A, 0x1A) : Colors.White));
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -280,6 +286,7 @@ public partial class MainWindow : Window, IMainView
 
     private void HandleEscape()
     {
+        if (Viewer.CancelDrag()) return; // a crop or red-eye selection being drawn: only cancel it
         if (_vm.IsSlideshowRunning) { _vm.StopSlideshow(); if (_fullscreen) SetFullscreen(false); }
         else if (_vm.Tool != ViewerTool.None) _vm.ToggleRedEyeToolCommand.Execute(null);
         else if (_fullscreen) SetFullscreen(false);
@@ -341,7 +348,38 @@ public partial class MainWindow : Window, IMainView
         Width = p.Width;
         Height = p.Height;
         if (p.Maximized) WindowState = WindowState.Maximized;
+        else Loaded += (_, _) => FitToMonitor();
     }
+
+    /// <summary>
+    /// A size saved on a larger monitor (e.g. docked to a 4K screen, reopened on the laptop) must
+    /// not leave the toolbar and the status bar off-screen: shrink and move into the work area.
+    /// </summary>
+    private void FitToMonitor()
+    {
+        if (WindowState != WindowState.Normal) return;
+        var info = new MONITORINFO { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<MONITORINFO>() };
+        if (!GetMonitorInfo(MonitorFromWindow(WindowHandle, 2 /* MONITOR_DEFAULTTONEAREST */), ref info)) return;
+        double scale = VisualTreeHelper.GetDpi(this).DpiScaleX;
+        double left = info.rcWork.Left / scale, top = info.rcWork.Top / scale;
+        double right = info.rcWork.Right / scale, bottom = info.rcWork.Bottom / scale;
+        Width = Math.Max(MinWidth, Math.Min(Width, right - left));
+        Height = Math.Max(MinHeight, Math.Min(Height, bottom - top));
+        Left = Math.Max(left, Math.Min(Left, right - Width));
+        Top = Math.Max(top, Math.Min(Top, bottom - Height));
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct RECT { public int Left, Top, Right, Bottom; }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct MONITORINFO { public int cbSize; public RECT rcMonitor, rcWork; public uint dwFlags; }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
 
     private void SavePlacement()
     {

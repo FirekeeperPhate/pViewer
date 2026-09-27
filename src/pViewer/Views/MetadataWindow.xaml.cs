@@ -17,6 +17,7 @@ public partial class MetadataWindow : Window
     public MetadataWindow(string title, IReadOnlyList<MetadataGroup> groups)
     {
         InitializeComponent();
+        Height = Math.Min(Height, SystemParameters.WorkArea.Height * 0.9); // small screens at high scaling
         Title = $"Metadata — {title}";
         _rows = groups.SelectMany(g => g.Tags.Select(t => new Row(g.Name, t.Key, t.Value))).ToList();
         _view = CollectionViewSource.GetDefaultView(_rows);

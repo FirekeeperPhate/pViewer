@@ -51,7 +51,15 @@ public static class ImageBridge
     /// Forces decoding and freezes: safe to pass between threads. Copies the pixels as they are
     /// (a CachedBitmap would turn 16-bit, CMYK or HDR images into 8-bit ones).
     /// </summary>
-    public static BitmapSource Materialize(BitmapSource source) => WithDpi(source, source.DpiX, source.DpiY);
+    public static BitmapSource Materialize(BitmapSource source)
+    {
+        long bytes = ((long)source.PixelWidth * source.Format.BitsPerPixel + 7) / 8 * source.PixelHeight;
+        if (bytes <= Array.MaxLength) return WithDpi(source, source.DpiX, source.DpiY);
+        // Too large for one array (a huge 16-bit scan): keep it editable at 8 bits per channel.
+        var cached = new CachedBitmap(source, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+        cached.Freeze();
+        return cached;
+    }
 
     /// <summary>Frozen copy of the pixels with the given resolution (e.g. a 300 dpi scan after an edit).</summary>
     public static BitmapSource WithDpi(BitmapSource source, double dpiX, double dpiY)
@@ -72,5 +80,7 @@ public static class ImageBridge
           || format == PixelFormats.Cmyk32 || format == PixelFormats.Bgr565 || format == PixelFormats.Bgr555
           || format == PixelFormats.Bgr101010 || format == PixelFormats.Rgb48 || format == PixelFormats.Rgb128Float);
 
-    public static long EstimateBytes(BitmapSource bmp) => (long)bmp.PixelWidth * bmp.PixelHeight * 4;
+    /// <summary>Memory held by the pixels (16-bit and float images take 2-4 times a 32-bit one).</summary>
+    public static long EstimateBytes(BitmapSource bmp) =>
+        (long)bmp.PixelWidth * bmp.PixelHeight * Math.Max(4, bmp.Format.BitsPerPixel / 8);
 }

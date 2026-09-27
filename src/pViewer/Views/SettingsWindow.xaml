@@ -17,7 +17,7 @@
         <Border DockPanel.Dock="Bottom" Padding="20,12" BorderThickness="0,1,0,0" BorderBrush="#30808080">
             <StackPanel>
                 <!-- Outside the scrolling area, so a validation error is always visible -->
-                <TextBlock x:Name="ErrorText" Foreground="#FFFF6B5E" TextWrapping="Wrap" Margin="0,0,0,8" Visibility="{Binding Text, RelativeSource={RelativeSource Self}, Converter={StaticResource NullToVisibility}}" />
+                <TextBlock x:Name="ErrorText" Foreground="{DynamicResource SystemFillColorCriticalBrush}" TextWrapping="Wrap" Margin="0,0,0,8" Visibility="{Binding Text, RelativeSource={RelativeSource Self}, Converter={StaticResource NullToVisibility}}" />
                 <DockPanel>
                     <Button DockPanel.Dock="Left" Content="Defaults" Click="Defaults_Click" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -123,7 +123,8 @@
                     <TextBlock Grid.Row="6" Text="Text" VerticalAlignment="Center" />
                     <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal">
                         <Button Content="Font and color…" Click="TextStyle_Click" />
-                        <TextBlock x:Name="TextStyleSummary" VerticalAlignment="Center" Margin="12,0,0,0" Opacity="0.7" />
+                        <Border x:Name="TextColorSwatch" Width="16" Height="16" CornerRadius="3" BorderThickness="1" BorderBrush="#80808080" Margin="12,0,0,0" VerticalAlignment="Center" />
+                        <TextBlock x:Name="TextStyleSummary" VerticalAlignment="Center" Margin="8,0,0,0" Opacity="0.7" />
                     </StackPanel>
                     <TextBlock Grid.Row="8" Text="Slideshow" VerticalAlignment="Center" />
                     <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal">

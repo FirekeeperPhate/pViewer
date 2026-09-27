@@ -25,8 +25,8 @@
             <TextBox x:Name="DigitsBox" Grid.Row="4" Grid.Column="1" TextChanged="Input_Changed" />
         </Grid>
         <TextBlock Text="Preview" FontWeight="SemiBold" Margin="0,16,0,4" />
-        <TextBlock x:Name="PreviewText" Opacity="0.8" FontFamily="Consolas" />
-        <TextBlock x:Name="ErrorText" Foreground="#FFFF6B5E" TextWrapping="Wrap" Margin="0,6,0,0" Visibility="Collapsed" />
+        <TextBlock x:Name="PreviewText" Opacity="0.8" FontFamily="Consolas" TextWrapping="Wrap" />
+        <TextBlock x:Name="ErrorText" Foreground="{DynamicResource SystemFillColorCriticalBrush}" TextWrapping="Wrap" Margin="0,6,0,0" Visibility="Collapsed" />
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
             <Button x:Name="OkButton" Content="Rename" IsDefault="True" MinWidth="90" Click="Ok_Click" Style="{DynamicResource AccentButtonStyle}" />
             <Button Content="Cancel" IsCancel="True" MinWidth="90" Margin="8,0,0,0" />
