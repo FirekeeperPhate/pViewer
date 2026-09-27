@@ -3,6 +3,7 @@ using System.Windows.Media.Imaging;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Gif;
 using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Metadata.Profiles.Icc;
 
 namespace pViewer.Imaging;
 
@@ -12,9 +13,10 @@ public static class ImageSaver
     /// Saves in the format given by the extension. Writes to a temporary file and then replaces,
     /// so a failure halfway never destroys the original. If the original was a JPEG its metadata
     /// (date taken, camera, GPS…) is kept; the orientation is reset when the pixels were rotated upright.
+    /// The color profile of the original, if any, is written again when the format can hold it.
     /// </summary>
     public static void Save(BitmapSource bitmap, string path, int jpegQuality, BitmapMetadata? jpegMetadata = null,
-        bool resetOrientation = true)
+        bool resetOrientation = true, IReadOnlyList<ColorContext>? colorContexts = null)
     {
         string ext = Path.GetExtension(path).ToLowerInvariant();
         if (File.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReadOnly) != 0)
@@ -27,6 +29,7 @@ public static class ImageSaver
             if (ext == ".webp")
             {
                 using var img = ImageBridge.ToImageSharp(bitmap);
+                if (MatchingProfile(colorContexts, PixelFormats.Bgra32) is { } icc) img.Metadata.IccProfile = new IccProfile(ProfileBytes(icc));
                 img.Save(temp, new WebpEncoder { Quality = Math.Clamp(jpegQuality, 1, 100) });
             }
             else if (ext == ".gif")
@@ -53,7 +56,7 @@ public static class ImageSaver
             }
             else
             {
-                WriteWithEncoder(bitmap, temp, ext, jpegQuality, jpegMetadata, resetOrientation);
+                WriteWithEncoder(bitmap, temp, ext, jpegQuality, jpegMetadata, resetOrientation, colorContexts);
             }
             File.Move(temp, path, overwrite: true);
         }
@@ -64,24 +67,73 @@ public static class ImageSaver
     }
 
     private static void WriteWithEncoder(BitmapSource bitmap, string path, string ext, int quality, BitmapMetadata? metadata,
-        bool resetOrientation)
+        bool resetOrientation, IReadOnlyList<ColorContext>? colorContexts)
     {
         bool jpeg = ext is ".jpg" or ".jpeg" or ".jpe" or ".jfif";
         BitmapSource source = jpeg || ext == ".bmp" ? ImageOps.FlattenAlpha(bitmap, Colors.White) : bitmap;
+        // BMP readers other than Windows know only the classic depths: 16-bit or HDR images would be
+        // written as 64 bits per pixel.
+        if (ext == ".bmp" && !IsClassicBmpFormat(source.Format))
+        {
+            var bgr = new FormatConvertedBitmap(source, PixelFormats.Bgr24, null, 0);
+            bgr.Freeze();
+            source = bgr;
+        }
 
         BitmapMetadata? meta = jpeg ? PrepareJpegMetadata(metadata, resetOrientation) : null;
+        // A JPEG keeps its profile in the copied metadata; BMP and GIF are written without one.
+        ColorContext? profile = ext is ".png" or ".tif" or ".tiff" or ".jxr" or ".wdp" || (jpeg && meta is null)
+            ? MatchingProfile(colorContexts, source.Format) : null;
         try
         {
-            Encode(source, path, ext, quality, meta);
+            Encode(source, path, ext, quality, meta, profile);
         }
-        catch (Exception) when (meta is not null)
+        catch (Exception) when (meta is not null || profile is not null)
         {
-            // Metadata not compatible with the encoder: save without it.
-            Encode(source, path, ext, quality, null);
+            // Metadata or profile not compatible with the encoder: save without them.
+            Encode(source, path, ext, quality, null, null);
         }
     }
 
-    private static void Encode(BitmapSource source, string path, string ext, int quality, BitmapMetadata? meta)
+    private static bool IsClassicBmpFormat(PixelFormat f) =>
+        f == PixelFormats.Bgr24 || f == PixelFormats.Bgr32 || f == PixelFormats.Indexed8 || f == PixelFormats.Indexed4
+        || f == PixelFormats.Indexed1 || f == PixelFormats.BlackWhite;
+
+    private static bool IsGray(PixelFormat f) =>
+        f == PixelFormats.Gray2 || f == PixelFormats.Gray4 || f == PixelFormats.Gray8 || f == PixelFormats.Gray16
+        || f == PixelFormats.Gray32Float || f == PixelFormats.BlackWhite;
+
+    /// <summary>
+    /// The profile that fits the pixels being saved: an edit may have turned a grayscale or CMYK
+    /// image into RGB, and an RGB file with a CMYK profile would be invalid.
+    /// </summary>
+    private static ColorContext? MatchingProfile(IReadOnlyList<ColorContext>? contexts, PixelFormat format)
+    {
+        if (contexts is null) return null;
+        string wanted = format == PixelFormats.Cmyk32 ? "CMYK" : IsGray(format) ? "GRAY" : "RGB ";
+        foreach (var context in contexts)
+        {
+            try
+            {
+                byte[] bytes = ProfileBytes(context);
+                // ICC header: the data color space is at offset 16.
+                if (bytes.Length >= 20 && System.Text.Encoding.ASCII.GetString(bytes, 16, 4) == wanted) return context;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException) { /* EXIF color space, not a profile */ }
+        }
+        return null;
+    }
+
+    private static byte[] ProfileBytes(ColorContext context)
+    {
+        using var stream = context.OpenProfileStream();
+        using var copy = new MemoryStream();
+        stream.CopyTo(copy);
+        return copy.ToArray();
+    }
+
+    private static void Encode(BitmapSource source, string path, string ext, int quality, BitmapMetadata? meta,
+        ColorContext? profile)
     {
         BitmapEncoder encoder = ext switch
         {
@@ -92,7 +144,7 @@ public static class ImageSaver
             ".jxr" or ".wdp" => new WmpBitmapEncoder(),
             _ => throw new NotSupportedException($"Unsupported save format: {ext}"),
         };
-        encoder.Frames.Add(BitmapFrame.Create(source, null, meta, null));
+        encoder.Frames.Add(BitmapFrame.Create(source, null, meta, profile is null ? null : new System.Collections.ObjectModel.ReadOnlyCollection<ColorContext>([profile])));
         using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
         encoder.Save(fs);
     }

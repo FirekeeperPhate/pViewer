@@ -32,7 +32,9 @@ public partial class BatchRenameDialog : Window
         if (name.Length == 0 || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) error = "Invalid base name.";
         else if (!int.TryParse(StartBox.Text, out int start) || start < 0) error = "The first number must be 0 or more.";
         else if (!int.TryParse(DigitsBox.Text, out int digits) || digits < 1 || digits > 9) error = "Digits: 1 to 9.";
-        else return new BatchRenameOptions(name, start, digits);
+        else if ((long)start + _count - 1 > 999_999_999) error = "The first number is too large.";
+        // At least as many digits as the last number, or "-1000" would sort before "-999".
+        else return new BatchRenameOptions(name, start, Math.Max(digits, (start + _count - 1).ToString().Length));
         return null;
     }
 

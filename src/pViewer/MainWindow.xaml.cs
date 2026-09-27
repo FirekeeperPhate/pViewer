@@ -378,6 +378,8 @@ public partial class MainWindow : Window, IMainView
             _closeWhenIdle = true;
             while (_vm.IsBusy) await Task.Delay(100);
             _closeWhenIdle = false;
+            // Edits made while a save was running after "Save changes?" must be asked about again.
+            _closeConfirmed = false;
             _ = Dispatcher.BeginInvoke(Close);
             return;
         }

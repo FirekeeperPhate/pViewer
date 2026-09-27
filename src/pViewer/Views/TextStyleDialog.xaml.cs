@@ -63,7 +63,7 @@ public partial class TextStyleDialog : Window
 
     private void Ok_Click(object sender, RoutedEventArgs e)
     {
-        if (!double.TryParse(SizeBox.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out double size) || size < 1 || size > 2000)
+        if (!double.TryParse(SizeBox.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out double size) || !(size >= 1 && size <= 2000))
         {
             ErrorText.Text = "Size: 1 to 2000 pixels.";
             return;

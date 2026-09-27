@@ -181,6 +181,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IsLoading = true;
         ErrorText = null;
         _archiveOpenRequest = request;
+        // The changes were already confirmed or discarded by the caller: no undo or new edits on
+        // the old image while the archive opens.
+        ResetEditState();
         ArchiveSource archive;
         try
         {
@@ -194,6 +197,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             // Remembered, so moving between volumes skips it instead of trying it again forever.
             _brokenArchives.Add(path);
             _view.ShowError($"Cannot open the archive «{Path.GetFileName(path)}».\n{ex.Message}");
+            // The open may have interrupted the loading of the current page (or cleared its error):
+            // show it again, so what is on screen matches the position and the title.
+            if (request != _requestId) return;
+            if (_source is not null) await ShowCurrentAsync();
+            else
+            {
+                // Only a pasted image could be on screen, and its changes were given up above.
+                _view.ClearPages();
+                HasImage = false;
+                UpdateInfo();
+            }
             return;
         }
         finally
@@ -284,6 +298,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         if (!ready)
         {
+            // The previous page stays on screen until this one arrives, but nothing may edit, copy
+            // or save it under the new page's name.
+            _visible = null;
             IsLoading = true;
             UpdateInfo(pending: true);
             if (indices.Length == 1) _ = ShowPreviewAsync(cache.Get(indices[0]), request);
@@ -492,7 +509,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_source is FolderSource folder)
         {
             string? current = _nav.Count > 0 ? folder.Pages[_nav.Position].FilePath : null;
-            var fresh = FolderSource.Open(folder.Location);
+            FolderSource fresh;
+            try { fresh = FolderSource.Open(folder.Location); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Folder renamed, deleted or on a drive that was unplugged.
+                _view.ShowError($"Cannot read the folder «{folder.Location}».\n{ex.Message}");
+                return;
+            }
             int index = current is null ? _nav.Position : fresh.IndexOf(current);
             await SetSourceAsync(fresh, index < 0 ? Math.Min(_nav.Position, Math.Max(0, fresh.Pages.Count - 1)) : index, null);
         }
@@ -553,6 +577,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Creates (if needed) the edit session on the visible image. Page pairs are joined.</summary>
     private EditSession? EnsureEditSession()
     {
+        if (IsOpeningArchive) return null; // the image on screen is about to be replaced
         if (_edit is not null) return _edit;
         if (_visible is null || _visible.Length == 0 || IsLoading) return null;
         if (_visible.Length == 1)
@@ -576,7 +601,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private int _pendingWork;
     /// <summary>A save is queued or running: a second Ctrl+S must not ask again or save twice.</summary>
-    private bool _saveQueued;
+    private int _savesQueued;
 
     /// <summary>Opening or pasting another image waits for running edits and saves (they belong to this one).</summary>
     private bool WaitingForWork()
@@ -687,6 +712,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 Math.Max(1, b.PixelWidth * percent / 100), Math.Max(1, b.PixelHeight * percent / 100)), movesPixels: true);
             return;
         }
+        // The dialog shows the current size: a queued edit could still change it.
+        if (WaitingForWork()) return;
         // No edit session before the dialog: cancelling must not join a page pair.
         var current = CurrentBitmapForExport();
         if (current is null) return;
@@ -711,6 +738,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Selections made with the mouse in the viewer.</summary>
     public async Task OnSelectionAsync(SelectionKind kind, Int32Rect rect)
     {
+        // The rectangle is in the coordinates of the image on screen: a queued rotation or crop
+        // would move it onto another area.
+        if (WaitingForWork()) return;
         switch (kind)
         {
             case SelectionKind.Crop:
@@ -731,7 +761,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task FillLastRectangle()
     {
-        if (_lastRectangle is not { } rect || _edit is null) return;
+        if (_lastRectangle is not { } rect || _edit is null || WaitingForWork()) return;
         var color = ParseColor(Settings.RectangleColor, Colors.Red);
         await ApplyEditAsync(b => ImageOps.DrawRectangle(b, rect, color, 0, fill: true), needsSta: true);
     }
@@ -872,13 +902,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task<bool> SaveCoreAsync(bool openSaved = true)
     {
         if (!HasImage) return false;
-        string? path = CurrentFilePath;
-        if (_detached || path is null || !IsSingleFilePage || !ImageFormats.CanSave(path)) return await SaveAsCoreAsync(openSaved);
-        if (_saveQueued)
+        // Before any redirect to Save As too (pasted image, archive page): no second dialog.
+        if (_savesQueued > 0)
         {
             Toast("Already saving…");
             return true;
         }
+        string? path = CurrentFilePath;
+        if (_detached || path is null || !IsSingleFilePage || !ImageFormats.CanSave(path)) return await SaveAsCoreAsync(openSaved);
         // With edits still queued (e.g. ↑ then Ctrl+S right away) the image is not modified yet:
         // the save is queued after them and checks again when its turn comes.
         if (!IsBusy && (_edit is null || !_edit.IsModified))
@@ -890,6 +921,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_visible is { Length: 1 } pages && pages[0].PageCount > 1)
         {
             Toast($"«{Path.GetFileName(path)}» has {pages[0].PageCount} pages: choose a new name to keep the original");
+            return await SaveAsCoreAsync(openSaved);
+        }
+        // The same for an animation: overwriting it would leave only the edited first frame.
+        if (_visible is { Length: 1 } anim && anim[0].Animation is not null)
+        {
+            Toast($"«{Path.GetFileName(path)}» is animated: choose a new name to keep the original");
             return await SaveAsCoreAsync(openSaved);
         }
         if (Settings.ConfirmOverwrite)
@@ -953,7 +990,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         return true;
     }
 
-    /// <param name="getBitmap">Evaluated when the save actually runs, after any queued edit.</param>
     /// <param name="getBitmap">
     /// Evaluated when the save actually runs, after any queued edit; null = nothing to save.
     /// </param>
@@ -961,6 +997,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         var loaded = !_detached && _visible is { Length: 1 } ? _visible[0] : null;
         var meta = loaded?.JpegMetadata;
+        var colorContexts = loaded?.ColorContexts;
         int quality = Settings.JpegQuality;
         // Pixels are upright only if they were decoded with auto-rotation (the setting may have
         // changed since): otherwise the original Orientation tag is kept.
@@ -968,7 +1005,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // The save belongs to the image shown when it was requested: never write another image
         // (pasted, opened meanwhile…) over that file.
         int request = _requestId;
-        _saveQueued = true;
+        _savesQueued++;
         return RunExclusiveAsync(async () =>
         {
             try
@@ -981,7 +1018,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                     return true;
                 }
                 var session = _edit;
-                await StaTask.Run(() => { ImageSaver.Save(bitmap, path, quality, meta, resetOrientation); return true; });
+                await StaTask.Run(() => { ImageSaver.Save(bitmap, path, quality, meta, resetOrientation, colorContexts); return true; });
                 // Mark as saved only the state that was written (not one reached by a later undo).
                 if (session is not null && ReferenceEquals(session.Current, bitmap)) session.MarkSaved();
                 InvalidateCachedFile(path);
@@ -997,7 +1034,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             }
             finally
             {
-                _saveQueued = false;
+                _savesQueued--;
             }
         });
     }
@@ -1053,7 +1090,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task Delete()
     {
-        if (IsBusy) return;
+        if (IsBusy || IsOpeningArchive) return; // the archive being opened would replace the folder mid-operation
         string? path = CurrentFilePath;
         if (!IsSingleFilePage || path is null)
         {
@@ -1085,7 +1122,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task Rename()
     {
-        if (IsBusy) return;
+        if (IsBusy || IsOpeningArchive) return; // the archive being opened would replace the folder mid-operation
         string? path = CurrentFilePath;
         if (!IsSingleFilePage || path is null)
         {
@@ -1123,7 +1160,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task BatchRename()
     {
-        if (IsBusy) return;
+        if (IsBusy || IsOpeningArchive) return; // the archive being opened would replace the folder mid-operation
         if (_source is not FolderSource folder || folder.Pages.Count == 0) return;
         if (!await ConfirmDiscardEditsAsync()) return;
         var options = _view.ShowBatchRenameDialog(Path.GetFileName(folder.Location), folder.Pages.Count);

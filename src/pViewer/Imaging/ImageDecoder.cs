@@ -16,6 +16,12 @@ public sealed class LoadedImage
     /// <summary>Original metadata (JPEG only), kept when saving.</summary>
     public BitmapMetadata? JpegMetadata { get; init; }
 
+    /// <summary>
+    /// Embedded color profile (ICC). The pixels are not converted when decoded, so a saved file
+    /// must carry the profile again, or color-managed apps would show other colors.
+    /// </summary>
+    public IReadOnlyList<ColorContext>? ColorContexts { get; init; }
+
     /// <summary>Frames of animated GIF, WebP or PNG (null for static images).</summary>
     public ImageAnimation? Animation { get; init; }
 
@@ -97,9 +103,18 @@ public static class ImageDecoder
     /// <returns>null if the file has a single frame or the animation would take too much memory.</returns>
     private static LoadedImage? TryDecodeAnimation(byte[] data)
     {
-        var info = ISImage.Identify(data);
-        int frameCount = info.FrameMetadataCollection.Count;
-        if (frameCount < 2 || (long)info.Width * info.Height * 4 * frameCount > MaxAnimationBytes) return null;
+        int width, height, frameCount;
+        if (data[0] == 0x89)
+        {
+            // PNG: ImageSharp 3.1 Identify rejects valid APNGs, so the chunks are read directly.
+            if (!TryReadApngInfo(data, out width, out height, out frameCount)) return null;
+        }
+        else
+        {
+            var info = ISImage.Identify(data);
+            (width, height, frameCount) = (info.Width, info.Height, info.FrameMetadataCollection.Count);
+        }
+        if (frameCount < 2 || (long)width * height * 4 * frameCount > MaxAnimationBytes) return null;
 
         using var img = ISImage.Load<Bgra32>(data);
         var format = img.Metadata.DecodedImageFormat;
@@ -121,6 +136,36 @@ public static class ImageDecoder
             FormatName = format?.Name ?? "",
             FileSize = data.LongLength,
         };
+    }
+
+    /// <summary>Size (IHDR) and frame count (acTL) of an animated PNG; false for a static PNG.</summary>
+    private static bool TryReadApngInfo(byte[] d, out int width, out int height, out int frames)
+    {
+        width = height = frames = 0;
+        static int BigEndian(byte[] b, int at) => (b[at] << 24) | (b[at + 1] << 16) | (b[at + 2] << 8) | b[at + 3];
+        int pos = 8; // after the signature
+        while (pos + 8 <= d.Length)
+        {
+            int length = BigEndian(d, pos);
+            if (length < 0 || pos + 12L + length > d.Length) return false;
+            string type = System.Text.Encoding.ASCII.GetString(d, pos + 4, 4);
+            if (type == "IHDR" && length >= 8)
+            {
+                width = BigEndian(d, pos + 8);
+                height = BigEndian(d, pos + 12);
+            }
+            else if (type == "acTL" && length >= 4)
+            {
+                frames = BigEndian(d, pos + 8);
+                return width > 0 && height > 0 && frames > 0;
+            }
+            else if (type == "IDAT")
+            {
+                return false; // acTL must come before the image data: not animated
+            }
+            pos += 12 + length;
+        }
+        return false;
     }
 
     private static TimeSpan FrameDelay(SixLabors.ImageSharp.ImageFrame frame, SixLabors.ImageSharp.Formats.IImageFormat? format)
@@ -170,10 +215,18 @@ public static class ImageDecoder
             catch (Exception) { jpegMeta = null; }
         }
 
+        IReadOnlyList<ColorContext>? colorContexts = null;
+        if ((options & BitmapCreateOptions.IgnoreColorProfile) == 0)
+        {
+            try { colorContexts = frame.ColorContexts is { Count: > 0 } cc ? cc.ToList() : null; }
+            catch (Exception ex) when (ex is not OutOfMemoryException) { /* unreadable profile: none */ }
+        }
+
         return new LoadedImage
         {
             Bitmap = bitmap,
             JpegMetadata = jpegMeta,
+            ColorContexts = colorContexts,
             FormatName = FormatName(decoder),
             FileSize = data.LongLength,
             AutoOriented = autoOrient,

@@ -89,7 +89,7 @@ public partial class SettingsWindow : Window
             return;
         }
         if (!double.TryParse(SlideshowBox.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out double seconds)
-            || seconds < 0.5 || seconds > 3600)
+            || !(seconds >= 0.5 && seconds <= 3600)) // written this way so NaN is rejected too
         {
             ErrorText.Text = "Slideshow: 0.5 to 3600 seconds.";
             SlideshowBox.Focus();

@@ -134,8 +134,11 @@ public sealed class PageNavigator
         return true;
     }
 
+    /// <summary>Jumps to a page; in two-page mode the pairs start from it (not shown alone as a cover).</summary>
     public void GoTo(int index)
     {
-        if (Count > 0) Position = Math.Clamp(index, 0, Count - 1);
+        if (Count == 0) return;
+        Position = Math.Clamp(index, 0, Count - 1);
+        _alignment = Position % 2;
     }
 }

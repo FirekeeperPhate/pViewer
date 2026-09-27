@@ -127,7 +127,11 @@ var
   FindRec: TFindRec;
 begin
   App := ExpandConstant('{app}\');
-  if not FileExists(App + '{#AppExe}') then
+  { Only a folder this setup installed before: a pViewer.exe alone (the old portable build kept in a
+    folder of tools) must not get its neighbours deleted. }
+  if (WizardForm.PrevAppDir = '') or
+     (CompareText(AddBackslash(WizardForm.PrevAppDir), App) <> 0) or
+     not FileExists(App + '{#AppExe}') then
     Exit;
   if FindFirst(App + '*', FindRec) then
   begin

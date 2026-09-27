@@ -68,6 +68,9 @@ public sealed class ImageViewer : Border
         _content.RenderTransform = _transform;
         _content.Children.Add(_selection);
         _host.Children.Add(_content);
+        // The window rounds layout to device pixels; inside the zoomed canvas that would resize the
+        // pages by a fraction of a pixel at 125/150% (blurry at 100%, grid off from the selections).
+        _host.UseLayoutRounding = false;
         Child = _host;
     }
 
@@ -176,6 +179,7 @@ public sealed class ImageViewer : Border
         else
         {
             CancelTextEdit();
+            CancelDrag(); // a selection or pan started on the previous image must not land on this one
             ResetView();
         }
         UpdateScalingMode();
@@ -265,7 +269,10 @@ public sealed class ImageViewer : Border
     public void ZoomAt(double factor, Point viewportPoint)
     {
         if (!HasContent) return;
-        double newScale = Math.Clamp(_scale * factor, Math.Min(MinScale, _scale), Math.Max(MaxScale, _scale));
+        // The lower limit never blocks going back to 100% or to the view mode's zoom (a tiny icon has a
+        // minimum above 100%: once zoomed in, it must still zoom out again).
+        double low = Math.Min(Math.Min(MinScale, _scale), Math.Min(ModeScale(ViewMode), 1 / DpiScale));
+        double newScale = Math.Clamp(_scale * factor, low, Math.Max(MaxScale, _scale));
         if (newScale == _scale) return;
         double f = newScale / _scale;
         var p = (Vector)viewportPoint;
@@ -286,9 +293,29 @@ public sealed class ImageViewer : Border
     public void Pan(double dx, double dy)
     {
         if (!HasContent) return;
-        _offset += new Vector(dx, dy);
-        _userAdjusted = true;
+        MoveBy(new Vector(dx, dy));
+    }
+
+    /// <summary>
+    /// Scrolls. It counts as a manual adjustment (auto-fit off) only if the image really moved, and
+    /// not for vertical scrolling in "fit width".
+    /// </summary>
+    private void MoveBy(Vector delta)
+    {
+        var before = _offset;
+        _offset += delta;
         ClampAndApply();
+        if (_offset != before && !(ViewMode == ViewMode.FitWidth && _offset.X == before.X))
+            _userAdjusted = true;
+    }
+
+    private void CancelDrag()
+    {
+        if (_drag == DragMode.None) return;
+        _drag = DragMode.None;
+        _selection.Visibility = Visibility.Collapsed;
+        if (IsMouseCaptured) ReleaseMouseCapture();
+        Cursor = RestingCursor;
     }
 
     private void ClampAndApply()
@@ -364,11 +391,11 @@ public sealed class ImageViewer : Border
         if (shift || (!ctrl && ViewMode == ViewMode.FitWidth && !_userAdjusted && tallerThanView))
         {
             double step = e.Delta / 120.0 * ActualHeight / 5;
-            if (shift) { _offset += new Vector(step, 0); _userAdjusted = true; ClampAndApply(); }
-            else { _offset += new Vector(0, step); ClampAndApply(); }
+            MoveBy(shift ? new Vector(step, 0) : new Vector(0, step));
             return;
         }
-        ZoomAt(e.Delta > 0 ? ZoomStep : 1 / ZoomStep, e.GetPosition(this));
+        // Proportional to the wheel movement: touchpads and smooth wheels send many small deltas.
+        ZoomAt(Math.Pow(ZoomStep, e.Delta / 120.0), e.GetPosition(this));
     }
 
     protected override void OnMouseDown(MouseButtonEventArgs e)
@@ -487,12 +514,7 @@ public sealed class ImageViewer : Border
                 // switch off auto-fit, or fullscreen and window resizes would stop refitting.
                 if (!_panStarted && (pos - _dragStartViewport).Length < PanThreshold) break;
                 _panStarted = true;
-                var before = _offset;
-                _offset = _dragStartOffset + (pos - _dragStartViewport);
-                ClampAndApply();
-                // Vertical scrolling in "fit width" is not a manual adjustment either.
-                if (_offset != before && !(ViewMode == ViewMode.FitWidth && _offset.X == before.X))
-                    _userAdjusted = true;
+                MoveBy(_dragStartOffset + (pos - _dragStartViewport) - _offset);
                 break;
             case DragMode.Select:
                 UpdateSelection(ToImage(pos));

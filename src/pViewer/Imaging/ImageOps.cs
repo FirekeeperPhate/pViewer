@@ -143,11 +143,16 @@ public static class ImageOps
 
     private static Rect FullRect(BitmapSource src) => new(0, 0, src.PixelWidth, src.PixelHeight);
 
+    /// <summary>The rendered image is 96 dpi: give it back the resolution of the original (a 300 dpi scan stays 300).</summary>
+    private static BitmapSource KeepDpi(BitmapSource original, BitmapSource rendered) =>
+        original.DpiX == rendered.DpiX && original.DpiY == rendered.DpiY ? rendered
+            : ImageBridge.WithDpi(rendered, original.DpiX, original.DpiY);
+
     public static BitmapSource DrawRectangle(BitmapSource src, Int32Rect rect, WColor color, double thickness, bool fill)
     {
         var brush = new SolidColorBrush(color);
         brush.Freeze();
-        return Render(src.PixelWidth, src.PixelHeight, dc =>
+        return KeepDpi(src, Render(src.PixelWidth, src.PixelHeight, dc =>
         {
             dc.DrawImage(src, FullRect(src));
             var r = new Rect(rect.X, rect.Y, rect.Width, rect.Height);
@@ -165,7 +170,7 @@ public static class ImageOps
                 dc.DrawRectangle(brush, null, new Rect(left, top + t, t, outerH - 2 * t));        // left
                 dc.DrawRectangle(brush, null, new Rect(left + outerW - t, top + t, t, outerH - 2 * t)); // right
             }
-        }, aliased: true);
+        }, aliased: true));
     }
 
     public static FormattedText CreateFormattedText(TextPlacement t)
@@ -181,11 +186,11 @@ public static class ImageOps
     }
 
     public static BitmapSource DrawText(BitmapSource src, TextPlacement text) =>
-        Render(src.PixelWidth, src.PixelHeight, dc =>
+        KeepDpi(src, Render(src.PixelWidth, src.PixelHeight, dc =>
         {
             dc.DrawImage(src, FullRect(src));
             dc.DrawText(CreateFormattedText(text), new Point(text.X, text.Y));
-        });
+        }));
 
     /// <summary>Joins side-by-side pages (manga/comic mode) into a single image.</summary>
     public static BitmapSource Compose(IReadOnlyList<BitmapSource> pages, WColor background)

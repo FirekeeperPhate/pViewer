@@ -33,7 +33,7 @@ public partial class ResizeDialog : Window
     }
 
     private static bool TryRead(TextBox box, out double value) =>
-        double.TryParse(box.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out value) && value > 0;
+        double.TryParse(box.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out value) && value > 0 && double.IsFinite(value);
 
     // Ticking the box again re-derives the height from the width, so OK never applies a
     // distorted size while "Keep aspect ratio" is shown as ticked.

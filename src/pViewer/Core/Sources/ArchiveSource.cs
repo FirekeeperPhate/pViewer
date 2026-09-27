@@ -146,7 +146,7 @@ public sealed class ArchiveSource : IImageSource
                         token.ThrowIfCancellationRequested();
                         var key = reader.Entry.Key;
                         if (key is null || !byKey.TryGetValue(key, out var queue) || !queue.TryDequeue(out var slot)) continue;
-                        using var ms = new MemoryStream(reader.Entry.Size > 0 ? (int)Math.Min(reader.Entry.Size, Array.MaxLength) : 0);
+                        using var ms = new MemoryStream(InitialCapacity(reader.Entry.Size));
                         reader.WriteEntryTo(ms);
                         slot.Preload!.TrySetResult(ms.ToArray());
                     }
@@ -178,12 +178,18 @@ public sealed class ArchiveSource : IImageSource
             {
                 ObjectDisposedException.ThrowIf(_disposed, this);
                 using var s = slot.Entry.OpenEntryStream();
-                using var ms = new MemoryStream(slot.Entry.Size > 0 ? (int)Math.Min(slot.Entry.Size, int.MaxValue) : 0);
+                using var ms = new MemoryStream(InitialCapacity(slot.Entry.Size));
                 s.CopyTo(ms);
                 return ms.ToArray();
             }
         }, ct);
     }
+
+    /// <summary>
+    /// Buffer sized from the size the archive declares, but capped: a damaged header claiming
+    /// gigabytes for a small page must not allocate them (the stream grows if really needed).
+    /// </summary>
+    private static int InitialCapacity(long declaredSize) => (int)Math.Clamp(declaredSize, 0, 64L * 1024 * 1024);
 
     /// <summary>Archives in the same folder, in natural order (to move to the next volume).</summary>
     public static List<string> Siblings(string archivePath)

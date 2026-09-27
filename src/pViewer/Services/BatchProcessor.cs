@@ -78,7 +78,7 @@ public static class BatchProcessor
                 var loaded = ImageDecoder.Decode(bytes, name, job.AutoOrient);
                 var result = Apply(job, loaded.Bitmap);
                 var meta = ImageFormats.IsJpeg(target) ? loaded.JpegMetadata : null;
-                ImageSaver.Save(result, target, job.JpegQuality, meta, resetOrientation: job.AutoOrient);
+                ImageSaver.Save(result, target, job.JpegQuality, meta, resetOrientation: job.AutoOrient, colorContexts: loaded.ColorContexts);
                 written++;
             }
             catch (OperationCanceledException)
