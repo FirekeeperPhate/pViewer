@@ -1,30 +1,30 @@
-# Novità
+# Changelog
 
 ## 2.0.0
 
-Riscrittura completa in .NET 10 e WPF (tema Fluent), mantenendo funzioni e scorciatoie della 1.x.
+Complete rewrite in .NET 10 and WPF (Fluent theme), keeping the features and keyboard shortcuts of 1.x.
 
-**Nuovo**
-- Archivi letti in memoria, senza estrazione in una cartella temporanea; supporto 7z/cb7; si torna
-  anche al volume *precedente* andando indietro dalla prima pagina.
-- Annulla/ripeti per tutte le modifiche, con avviso se si lascia un'immagine modificata.
-- Testo scritto direttamente sull'immagine alla dimensione finale, spostabile trascinandone il bordo.
-- Tinta/saturazione, seppia, anteprima dal vivo degli effetti con confronto con l'originale.
-- Viste "riempi", "adatta alla larghezza" (con scorrimento a rotella) e "adatta all'altezza".
-- Zoom al 100% reale anche con scalatura dello schermo, pixel netti oltre il 250%.
-- GIF, WebP e APNG animati (tasto P per pausa/riprendi).
-- Formati WebP, HEIC, AVIF, JPEG XL, RAW (con i codec di Windows), TGA, QOI; salvataggio in WebP e JPEG XR.
-- Il salvataggio conserva i dati EXIF delle foto (data, fotocamera, GPS) e azzera l'orientamento.
-- Canc sposta nel Cestino (configurabile); la rinomina in serie non sovrascrive mai altri file.
-- Elaborazione in serie anche delle pagine di un archivio, con avanzamento e interruzione.
-- Impostazioni in `settings.json` (anche la posizione della finestra: niente più registro).
-- Interfaccia interamente in inglese, con dialoghi di conferma che seguono il tema scuro/chiaro.
+**New**
+- Archives are read in memory, with no extraction to a temporary folder; 7z/cb7 support; going back
+  from the first page also opens the *previous* volume.
+- Undo/redo for every edit, with a warning when leaving a modified image.
+- Text is written directly on the image at its final size and can be moved by dragging its border.
+- Hue/saturation, sepia, live preview of effects with a compare-to-original option.
+- "Fill", "fit width" (with mouse-wheel scrolling) and "fit height" views.
+- True 100% zoom even with display scaling, sharp pixels beyond 250%.
+- Animated GIF, WebP and APNG (P key to pause/resume).
+- WebP, HEIC, AVIF, JPEG XL, RAW (with the Windows codecs), TGA and QOI formats; saving to WebP and JPEG XR.
+- Saving keeps the EXIF data of photos (date, camera, GPS) and resets the orientation.
+- Del moves files to the Recycle Bin (configurable); batch rename never overwrites other files.
+- Batch processing also works on the pages of an archive, with progress and a stop button.
+- Settings in `settings.json` (window position included: no more registry).
+- English user interface, with confirmation dialogs that follow the dark/light theme.
 
-**Rimosso**
-- Invio alla cartella Public di Dropbox (servizio chiuso da Dropbox nel 2017).
-- Controllo aggiornamenti su pviewer.net.
+**Removed**
+- Sending images to the Dropbox Public folder (Dropbox shut that service down in 2017).
+- Update check on pviewer.net.
 
-## Storico 1.x
+## 1.x history
 
 ```
 V. 1.6

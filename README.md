@@ -1,71 +1,71 @@
 # pViewer
 
-Visualizzatore e piccolo editor di immagini per Windows, con lettura di fumetti e manga
-direttamente dagli archivi. Versione 2: riscrittura completa in **.NET 10 + WPF** del
-pViewer 1.x (WinForms, .NET Framework 4.0).
+Image viewer and small editor for Windows, with comic and manga reading straight from
+archives. Version 2 is a complete rewrite in **.NET 10 + WPF** of pViewer 1.x (WinForms,
+.NET Framework 4.0).
 
-## Funzioni
+## Features
 
-- **Visualizzazione veloce**: precaricamento delle immagini vicine, anteprima immediata dalla
-  miniatura EXIF delle foto grandi, rotazione automatica secondo l'orientamento EXIF,
-  ordinamento come in Esplora risorse.
-- **Formati**: GIF, WebP e PNG animati (P mette in pausa), JPEG, PNG, GIF, BMP, TIFF, ICO, JPEG XR, WebP, TGA, QOI, PBM e, con le estensioni
-  di Windows, HEIC/HEIF, AVIF, JPEG XL e RAW.
-- **Fumetti e manga**: apre zip/cbz, rar/cbr, 7z/cb7 (anche annidati) leggendo le pagine in
-  memoria, senza cartelle temporanee. Modalità a due pagine **Manga** (destra → sinistra) e
-  **Comic** (sinistra → destra), F12 per riallineare le coppie; arrivati in fondo si passa da
-  soli al volume successivo della cartella.
-- **Viste**: adatta se più grande, adatta, riempi, adatta a larghezza/altezza, dimensioni
-  reali; zoom verso il puntatore, pan, schermo intero, presentazione, sfondo bianco.
-- **Modifica** con annulla/ripeti: ritaglio (Ctrl+trascina), rettangolo (Alt+trascina, Tab lo
-  riempie per oscurare dati), testo direttamente sull'immagine (Maiusc+clic), occhi rossi,
-  ruota/rifletti, ridimensiona, bordi, negativo, scala di grigi, seppia, bianco e nero,
-  luminosità/contrasto, tinta/saturazione, nitidezza, sfocatura con anteprima dal vivo.
-- **Salvataggio** sicuro (file temporaneo e sostituzione) che conserva i metadati EXIF dei JPEG.
-- **Elaborazione in serie** di una cartella o di un archivio (ridimensiona, ruota, rifletti,
-  converti, bordi, grigi, negativo) in una cartella separata, e **rinomina in serie**.
-- Elimina nel Cestino, rinomina, copia/incolla dagli appunti, dati EXIF, proprietà del file,
-  "Apri con", imposta come sfondo del desktop.
-- **Portabile**: le impostazioni stanno in `settings.json` accanto all'eseguibile (se la cartella
-  non è scrivibile si usa `%AppData%\pViewer`).
+- **Fast viewing**: nearby images are preloaded, large photos show their EXIF thumbnail
+  instantly, photos are auto-rotated from their EXIF orientation, files are sorted like in
+  File Explorer.
+- **Formats**: animated GIF, WebP and PNG (P pauses), JPEG, PNG, GIF, BMP, TIFF, ICO, JPEG XR,
+  WebP, TGA, QOI, PBM and, with the Windows extensions, HEIC/HEIF, AVIF, JPEG XL and RAW.
+- **Comics and manga**: opens zip/cbz, rar/cbr, 7z/cb7 (nested archives too) reading pages in
+  memory, with no temporary folders. Two-page **Manga** (right to left) and **Comic** (left to
+  right) modes, F12 to realign page pairs; at the end of an archive the next volume in the
+  folder opens automatically.
+- **Views**: shrink to fit, fit, fill, fit width/height, actual size; zoom towards the pointer,
+  pan, full screen, slideshow, white background.
+- **Editing** with undo/redo: crop (Ctrl+drag), rectangle (Alt+drag, Tab fills it to hide
+  data), text written directly on the image (Shift+click), red-eye, rotate/flip, resize,
+  borders, invert, grayscale, sepia, black and white, brightness/contrast, hue/saturation,
+  sharpen, blur with live preview.
+- **Safe saving** (temporary file, then replace) that keeps the EXIF metadata of JPEG photos.
+- **Batch processing** of a folder or an archive (resize, rotate, flip, convert, borders,
+  grayscale, invert) into a separate folder, and **batch rename**.
+- Delete to the Recycle Bin, rename, copy/paste via the clipboard, EXIF data, file properties,
+  "Open with", set as desktop background.
+- **Portable**: settings live in `settings.json` next to the executable (if that folder is not
+  writable, `%AppData%\pViewer` is used).
 
-L’interfaccia è in inglese. Tutte le scorciatoie sono nella guida dell’app (F1).
+All keyboard shortcuts are listed in the app's help (F1).
 
-## Compilare
+## Building
 
-Serve l'SDK di .NET 10.
+Requires the .NET 10 SDK.
 
 ```bash
 dotnet build
 dotnet test
 ```
 
-Per i pacchetti distribuibili (eseguibile portabile unico e versione leggera che richiede il
-.NET 10 Desktop Runtime) in `artifacts\`:
+To build the distributable packages (a single portable executable, and a light build that
+requires the .NET 10 Desktop Runtime) into `artifacts\`:
 
 ```bash
 powershell -ExecutionPolicy Bypass -File publish.ps1
 ```
 
-## Struttura
+## Project layout
 
-| Cartella | Contenuto |
+| Folder | Contents |
 |---|---|
-| `src/pViewer/Core` | Formati, ordinamento naturale, sorgenti (cartella/archivio), navigazione manga/comic |
-| `src/pViewer/Imaging` | Decodifica WIC con ripiego ImageSharp, operazioni di modifica, salvataggio |
-| `src/pViewer/Services` | Cache e precaricamento, impostazioni, annulla/ripeti, batch, integrazione con Windows |
-| `src/pViewer/Controls` | `ImageViewer`: zoom/pan e gesti di modifica |
-| `src/pViewer/ViewModels` | `MainViewModel` (MVVM con CommunityToolkit.Mvvm) |
-| `src/pViewer/Views` | Dialoghi |
-| `tests/pViewer.Tests` | Test xUnit |
+| `src/pViewer/Core` | Formats, natural sorting, image sources (folder/archive), manga/comic navigation |
+| `src/pViewer/Imaging` | WIC decoding with ImageSharp fallback, editing operations, saving |
+| `src/pViewer/Services` | Caching and preloading, settings, undo/redo, batch, Windows integration |
+| `src/pViewer/Controls` | `ImageViewer`: zoom/pan and editing gestures |
+| `src/pViewer/ViewModels` | `MainViewModel` (MVVM with CommunityToolkit.Mvvm) |
+| `src/pViewer/Views` | Dialogs |
+| `tests/pViewer.Tests` | xUnit tests |
 
-## Librerie
+## Libraries
 
-[ImageSharp](https://github.com/SixLabors/ImageSharp) 3.1 (Six Labors Split License; la 4.x
-richiede una chiave di licenza), [SharpCompress](https://github.com/adamhathcock/sharpcompress) (MIT),
+[ImageSharp](https://github.com/SixLabors/ImageSharp) 3.1 (Six Labors Split License; 4.x requires
+a license key), [SharpCompress](https://github.com/adamhathcock/sharpcompress) (MIT),
 [MetadataExtractor](https://github.com/drewnoakes/metadata-extractor-dotnet) (Apache 2.0),
 [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) (MIT).
 
-## Licenza
+## License
 
-GNU GPL v3 — vedi [LICENSE](LICENSE).
+GNU GPL v3 — see [LICENSE](LICENSE).
