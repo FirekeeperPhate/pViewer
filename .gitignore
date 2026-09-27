@@ -1,6 +1,8 @@
 bin/
 obj/
 artifacts/
+publish/
+installer/Output/
 .vs/
 *.user
 TestResults/

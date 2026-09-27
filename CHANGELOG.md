@@ -19,6 +19,8 @@ Complete rewrite in .NET 10 and WPF (Fluent theme), keeping the features and key
 - Batch processing also works on the pages of an archive, with progress and a stop button.
 - Settings in `settings.json` (window position included: no more registry).
 - English user interface, with confirmation dialogs that follow the dark/light theme.
+- Installers in two editions: Full (.NET runtime included) and Light (needs the .NET 10 Desktop
+  Runtime); per-user install without administrator rights, optional "Open with" entries.
 
 **Removed**
 - Sending images to the Dropbox Public folder (Dropbox shut that service down in 2017).

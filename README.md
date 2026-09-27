@@ -26,10 +26,23 @@ archives. Version 2 is a complete rewrite in **.NET 10 + WPF** of pViewer 1.x (W
   grayscale, invert) into a separate folder, and **batch rename**.
 - Delete to the Recycle Bin, rename, copy/paste via the clipboard, EXIF data, file properties,
   "Open with", set as desktop background.
-- **Portable**: settings live in `settings.json` next to the executable (if that folder is not
-  writable, `%AppData%\pViewer` is used).
+- Settings live in `settings.json` next to the executable (if that folder is not writable,
+  `%AppData%\pViewer` is used).
 
 All keyboard shortcuts are listed in the app's help (F1).
+
+## Installing
+
+Download an installer from the [releases](https://github.com/MarcoTrombetta/pViewer/releases):
+
+- **Full** (`pViewer-Setup-<version>-Full.exe`): includes the .NET runtime, no prerequisites.
+- **Light** (`pViewer-Setup-<version>-Light.exe`): much smaller, needs the
+  [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (x64); setup
+  checks for it and offers the download page.
+
+Both install per user by default (no administrator rights needed; installing for all users can
+be chosen in the first dialog), optionally add pViewer to the "Open with" menu of images and
+comic archives, and replace each other. Requires 64-bit Windows 10 or 11.
 
 ## Building
 
@@ -40,11 +53,11 @@ dotnet build
 dotnet test
 ```
 
-To build the distributable packages (a single portable executable, and a light build that
-requires the .NET 10 Desktop Runtime) into `artifacts\`:
+To build the two installers (needs [Inno Setup](https://jrsoftware.org/isinfo.php) 6 or 7) into
+`installer\Output\` — the script runs the tests first, then publishes both editions:
 
 ```bash
-powershell -ExecutionPolicy Bypass -File publish.ps1
+powershell -ExecutionPolicy Bypass -File installer\build.ps1
 ```
 
 ## Project layout
