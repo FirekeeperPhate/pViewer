@@ -46,11 +46,20 @@ public static class BatchRenamer
         }
         catch
         {
-            // Restore the files left with a temporary name.
+            // Full rollback, in two steps like the rename: first every file already at its final
+            // name goes back to its temporary name, then all of them get their original name
+            // back (by then every original name is free again, even when names were swapped).
+            foreach (var (oldPath, temp, newPath) in temps)
+            {
+                if (!result.ContainsKey(oldPath)) continue;
+                try { File.Move(newPath, temp); } catch (IOException) { }
+            }
             foreach (var (oldPath, temp, _) in temps)
             {
-                if (!File.Exists(temp)) continue;
-                try { File.Move(temp, File.Exists(oldPath) ? temp : oldPath); } catch (IOException) { }
+                if (File.Exists(temp) && !File.Exists(oldPath))
+                {
+                    try { File.Move(temp, oldPath); } catch (IOException) { }
+                }
             }
             throw;
         }

@@ -13,6 +13,7 @@ public sealed class PageCache : IDisposable
     {
         public required Task<byte[]> Bytes { get; init; }
         public required Task<LoadedImage> Image { get; init; }
+        public required CancellationTokenSource Cancellation { get; init; }
     }
 
     private readonly IImageSource _source;
@@ -34,18 +35,29 @@ public sealed class PageCache : IDisposable
         lock (_lock)
         {
             if (_entries.TryGetValue(index, out var existing)) return existing;
-            var token = _cts.Token;
+            // Each page has its own cancellation, so pages passed while scrolling fast are dropped
+            // (see Trim) instead of all being read and decoded in parallel.
+            var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+            var token = cancellation.Token;
             var bytes = _source.ReadAsync(index, token);
             string name = _source.Pages[index].Name;
             var image = bytes.ContinueWith(
                 t => ImageDecoder.Decode(t.GetAwaiter().GetResult(), name, _autoOrient),
                 token, TaskContinuationOptions.RunContinuationsAsynchronously, TaskScheduler.Default);
             // Exceptions of preloads that were never requested must not stay "unobserved".
+            _ = bytes.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
             _ = image.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
-            var entry = new Entry { Bytes = bytes, Image = image };
+            var entry = new Entry { Bytes = bytes, Image = image, Cancellation = cancellation };
             _entries[index] = entry;
             return entry;
         }
+    }
+
+    private void Drop(int index)
+    {
+        if (!_entries.Remove(index, out var entry)) return;
+        entry.Cancellation.Cancel();
+        entry.Cancellation.Dispose();
     }
 
     public bool TryGetLoaded(int index, out LoadedImage? image)
@@ -75,19 +87,22 @@ public sealed class PageCache : IDisposable
         lock (_lock)
         {
             foreach (int k in _entries.Keys.Where(k => !set.Contains(k)).ToList())
-                _entries.Remove(k);
+                Drop(k);
         }
     }
 
     public void Invalidate(int index)
     {
-        lock (_lock) _entries.Remove(index);
+        lock (_lock) Drop(index);
     }
 
     public void Dispose()
     {
         _cts.Cancel();
-        lock (_lock) _entries.Clear();
+        lock (_lock)
+        {
+            foreach (int k in _entries.Keys.ToList()) Drop(k);
+        }
         _cts.Dispose();
     }
 }

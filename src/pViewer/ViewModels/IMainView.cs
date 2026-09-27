@@ -23,6 +23,7 @@ public interface IMainView
     void ShowPages(IReadOnlyList<BitmapSource> pages, bool preserveView, IReadOnlyList<ImageAnimation?>? animations = null);
     void ShowPreview(BitmapSource thumbnail, int fullWidth, int fullHeight);
     void ClearPages();
+    void ResetView();
 
     MessageBoxResult Ask(string message, string title, MessageBoxButton buttons, MessageBoxImage icon = MessageBoxImage.Question);
     void ShowError(string message);

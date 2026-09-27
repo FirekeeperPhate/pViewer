@@ -47,6 +47,9 @@ public static class BatchProcessor
         Directory.CreateDirectory(job.OutputFolder);
         int written = 0, skipped = 0, total = source.Pages.Count;
         var errors = new List<string>();
+        // Output names already used by this run: pages with the same name in different archive
+        // folders, or a.jpg + a.png converted to the same format, get " (2)", " (3)"…
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         for (int i = 0; i < total; i++)
         {
@@ -58,10 +61,14 @@ public static class BatchProcessor
                 ? job.ConvertExtension
                 : Path.GetExtension(name).ToLowerInvariant();
             if (!ImageFormats.CanSave("x" + ext)) ext = ".png";
-            string target = Path.Combine(job.OutputFolder, Path.GetFileNameWithoutExtension(name) + ext);
+            string baseName = Path.GetFileNameWithoutExtension(name);
+            string target = Path.Combine(job.OutputFolder, baseName + ext);
+            for (int n = 2; used.Contains(target); n++)
+                target = Path.Combine(job.OutputFolder, $"{baseName} ({n}){ext}");
+            used.Add(target);
             if (File.Exists(target))
             {
-                skipped++;
+                skipped++; // left by an earlier run: never overwritten
                 continue;
             }
 
@@ -71,7 +78,7 @@ public static class BatchProcessor
                 var loaded = ImageDecoder.Decode(bytes, name, job.AutoOrient);
                 var result = Apply(job, loaded.Bitmap);
                 var meta = ImageFormats.IsJpeg(target) ? loaded.JpegMetadata : null;
-                ImageSaver.Save(result, target, job.JpegQuality, meta);
+                ImageSaver.Save(result, target, job.JpegQuality, meta, resetOrientation: job.AutoOrient);
                 written++;
             }
             catch (OperationCanceledException)

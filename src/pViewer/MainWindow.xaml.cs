@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -26,6 +27,7 @@ public partial class MainWindow : Window, IMainView
     private bool _fullscreen;
     private WindowState _restoreState;
     private bool _closeConfirmed;
+    private bool _closeWhenIdle;
 
     static MainWindow()
     {
@@ -109,12 +111,21 @@ public partial class MainWindow : Window, IMainView
             case nameof(MainViewModel.IsLoading):
             case nameof(MainViewModel.IsBusy):
                 Progress.Visibility = _vm.IsLoading || _vm.IsBusy ? Visibility.Visible : Visibility.Collapsed;
-                Viewer.Cursor = _vm.IsBusy ? Cursors.Wait : null;
+                UpdateCursor();
                 break;
             case nameof(MainViewModel.IsSlideshowRunning):
-                Viewer.Cursor = _vm.IsSlideshowRunning ? Cursors.None : null;
+                UpdateCursor();
                 break;
         }
+    }
+
+    /// <summary>
+    /// Busy and slideshow cursors go through Mouse.OverrideCursor, so they are not undone by the
+    /// viewer's own cursor (pan, crosshair of the red-eye tool) or by a page that is still loading.
+    /// </summary>
+    private void UpdateCursor()
+    {
+        Mouse.OverrideCursor = _vm.IsBusy ? Cursors.Wait : _vm.IsSlideshowRunning ? Cursors.None : null;
     }
 
     private void ApplySettingsToView()
@@ -155,6 +166,16 @@ public partial class MainWindow : Window, IMainView
     {
         // While typing (text on the image) keys go to the text box.
         if (Keyboard.FocusedElement is TextBox) return;
+        // Keys pressed in an open menu tunnel through the window too: leave them to the menu
+        // (arrows move through the items, Esc closes the menu and not the app).
+        if (e.OriginalSource is DependencyObject source && IsInsideMenu(source)) return;
+        // The text box lost focus (e.g. a toolbar click) but the text is still being edited:
+        // Esc cancels it, and no other key must act on the image underneath.
+        if (Viewer.IsEditingText)
+        {
+            if (e.Key == Key.Escape) { Viewer.CancelTextEdit(); e.Handled = true; }
+            return;
+        }
 
         Key key = e.Key == Key.System ? e.SystemKey : e.Key;
         ModifierKeys mods = Keyboard.Modifiers;
@@ -232,6 +253,16 @@ public partial class MainWindow : Window, IMainView
         }
     }
 
+    private static bool IsInsideMenu(DependencyObject element)
+    {
+        for (DependencyObject? d = element; d is not null;
+             d = d is Visual or System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
+        {
+            if (d is MenuBase or MenuItem) return true;
+        }
+        return false;
+    }
+
     private void HandleEscape()
     {
         if (_vm.IsSlideshowRunning) { _vm.StopSlideshow(); if (_fullscreen) SetFullscreen(false); }
@@ -259,9 +290,12 @@ public partial class MainWindow : Window, IMainView
         }
         else
         {
+            // Through Normal again: going back to Maximized directly would keep the borderless
+            // full-monitor bounds and cover the taskbar.
+            WindowState = WindowState.Normal;
             WindowStyle = WindowStyle.SingleBorderWindow;
             ResizeMode = ResizeMode.CanResize;
-            WindowState = _restoreState == WindowState.Minimized ? WindowState.Normal : _restoreState;
+            if (_restoreState == WindowState.Maximized) WindowState = WindowState.Maximized;
             _vm.StopSlideshow();
         }
         UpdateBars();
@@ -298,12 +332,34 @@ public partial class MainWindow : Window, IMainView
             Top = bounds.Top,
             Width = bounds.Width,
             Height = bounds.Height,
-            Maximized = WindowState == WindowState.Maximized,
+            // Closed while minimized: remember the state it was minimized from.
+            Maximized = WindowState == WindowState.Maximized
+                        || (WindowState == WindowState.Minimized && _lastShownState == WindowState.Maximized),
         };
+    }
+
+    private WindowState _lastShownState = WindowState.Normal;
+
+    protected override void OnStateChanged(EventArgs e)
+    {
+        base.OnStateChanged(e);
+        if (WindowState != WindowState.Minimized && !_fullscreen) _lastShownState = WindowState;
     }
 
     private async void Window_Closing(object? sender, CancelEventArgs e)
     {
+        // A save or an edit is still running: exiting now would kill it halfway (the StaTask threads
+        // are background threads). Wait for it, then close.
+        if (_vm.IsBusy)
+        {
+            e.Cancel = true;
+            if (_closeWhenIdle) return; // already waiting
+            _closeWhenIdle = true;
+            while (_vm.IsBusy) await Task.Delay(100);
+            _closeWhenIdle = false;
+            _ = Dispatcher.BeginInvoke(Close);
+            return;
+        }
         if (!_closeConfirmed && _vm.IsModified && _settings.ConfirmDiscardEdits)
         {
             e.Cancel = true;
@@ -405,6 +461,8 @@ public partial class MainWindow : Window, IMainView
         Viewer.SetPages([thumbnail], false, new Size(fullWidth, fullHeight));
 
     public void ClearPages() => Viewer.Clear();
+
+    public void ResetView() => Viewer.ResetView();
 
     public MessageBoxResult Ask(string message, string title, MessageBoxButton buttons, MessageBoxImage icon = MessageBoxImage.Question) =>
         MessageDialog.Show(this, message, title, buttons, icon);

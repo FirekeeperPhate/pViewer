@@ -1,8 +1,12 @@
 # pViewer
 
 Image viewer and small editor for Windows, with comic and manga reading straight from
-archives. Version 2 is a complete rewrite in **.NET 10 + WPF** of pViewer 1.x (WinForms,
-.NET Framework 4.0).
+archives.
+
+This is the revised and finally updated version of the original pViewer, published on
+SourceForge: [sourceforge.net/projects/picoviewer](https://sourceforge.net/projects/picoviewer/).
+Version 2 is a complete rewrite in **.NET 10 + WPF** of pViewer 1.x (WinForms, .NET Framework
+4.0), keeping its ideas and keyboard shortcuts.
 
 ## Features
 

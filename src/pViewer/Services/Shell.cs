@@ -49,10 +49,10 @@ public static class Shell
     private static extern bool SystemParametersInfo(uint action, uint param, string vParam, uint winIni);
 
     private const uint FO_DELETE = 3;
-    private const ushort FOF_SILENT = 0x0004, FOF_NOCONFIRMATION = 0x0010, FOF_ALLOWUNDO = 0x0040, FOF_NOERRORUI = 0x0400;
+    private const ushort FOF_SILENT = 0x0004, FOF_NOCONFIRMATION = 0x0010, FOF_ALLOWUNDO = 0x0040, FOF_NOERRORUI = 0x0400, FOF_WANTNUKEWARNING = 0x4000;
 
     /// <summary>Deletes a file, moving it to the Recycle Bin if requested.</summary>
-    public static void DeleteFile(string path, bool toRecycleBin)
+    public static void DeleteFile(string path, bool toRecycleBin, IntPtr owner = default)
     {
         if (!toRecycleBin)
         {
@@ -63,11 +63,14 @@ public static class Shell
         {
             wFunc = FO_DELETE,
             pFrom = Path.GetFullPath(path) + "\0\0",
-            fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI,
+            // Without FOF_WANTNUKEWARNING, files that cannot be recycled (network shares, drives with no
+            // Recycle Bin, files too big for it) would be deleted permanently without asking.
+            fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI | FOF_WANTNUKEWARNING,
+            hwnd = owner,
         };
         int result = SHFileOperation(ref op);
         if (result != 0 || op.fAnyOperationsAborted)
-            throw new IOException($"Cannot move the file to the Recycle Bin (code {result}).");
+            throw new IOException(op.fAnyOperationsAborted ? "The file was not deleted." : $"Cannot move the file to the Recycle Bin (code {result}).");
     }
 
     public static void ShowProperties(string path, IntPtr owner)

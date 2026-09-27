@@ -14,7 +14,7 @@ public static class ImageBridge
             ? source
             : new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
         int w = bgra.PixelWidth, h = bgra.PixelHeight, stride = w * 4;
-        var buffer = GC.AllocateUninitializedArray<byte>(stride * h);
+        var buffer = GC.AllocateUninitializedArray<byte>(BufferSize(w, h));
         bgra.CopyPixels(buffer, stride, 0);
         return ISImage.LoadPixelData<Bgra32>(buffer, w, h);
     }
@@ -22,11 +22,20 @@ public static class ImageBridge
     public static BitmapSource ToBitmapSource(SixLabors.ImageSharp.Image<Bgra32> image)
     {
         int w = image.Width, h = image.Height;
-        var buffer = GC.AllocateUninitializedArray<byte>(w * h * 4);
+        var buffer = GC.AllocateUninitializedArray<byte>(BufferSize(w, h));
         image.CopyPixelDataTo(buffer);
         var bmp = BitmapSource.Create(w, h, 96, 96, PixelFormats.Bgra32, null, buffer, w * 4);
         bmp.Freeze();
         return bmp;
+    }
+
+    /// <summary>32-bit buffer size; beyond ~536 MP it would overflow an int (and a .NET array).</summary>
+    private static int BufferSize(int width, int height)
+    {
+        long size = (long)width * height * 4;
+        if (size > Array.MaxLength)
+            throw new InvalidOperationException($"The image is too large to edit ({width} × {height}).");
+        return (int)size;
     }
 
     /// <summary>Applies an ImageSharp transformation to a BitmapSource.</summary>

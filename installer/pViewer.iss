@@ -118,10 +118,12 @@ Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags
 
 [Code]
 { Switching edition (Full <-> Light) or upgrading: remove the previous program files so no
-  stale runtime or library DLLs are left behind. The user's settings.json is kept. }
+  stale runtime or library DLLs are left behind. Both editions publish everything flat in {app},
+  so only files are touched (never folders the user may have put there); settings.json and the
+  uninstaller files (unins*) are kept. }
 procedure CleanProgramFolder;
 var
-  App: String;
+  App, Name: String;
   FindRec: TFindRec;
 begin
   App := ExpandConstant('{app}\');
@@ -131,12 +133,11 @@ begin
   begin
     try
       repeat
-        if (FindRec.Name = '.') or (FindRec.Name = '..') then
-          Continue;
-        if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
-          DelTree(App + FindRec.Name, True, True, True)
-        else if CompareText(FindRec.Name, 'settings.json') <> 0 then
-          DeleteFile(App + FindRec.Name);
+        Name := FindRec.Name;
+        if ((FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) = 0) and
+           (CompareText(Name, 'settings.json') <> 0) and
+           (CompareText(Copy(Name, 1, 5), 'unins') <> 0) then
+          DeleteFile(App + Name);
       until not FindNext(FindRec);
     finally
       FindClose(FindRec);
@@ -151,16 +152,23 @@ begin
 end;
 
 #if Flavor == "Light"
+{ Looks for a release (not preview) x64 .NET 10 Desktop Runtime. On ARM64 Windows the x64 runtime
+  lives in dotnet\x64, the plain dotnet folder holds the native ARM64 one. }
 function IsDesktopRuntimeInstalled: Boolean;
 var
   FindRec: TFindRec;
+  Root: String;
 begin
   Result := False;
-  if FindFirst(ExpandConstant('{commonpf64}\dotnet\shared\Microsoft.WindowsDesktop.App\10.*'), FindRec) then
+  if IsArm64 then
+    Root := ExpandConstant('{commonpf64}\dotnet\x64')
+  else
+    Root := ExpandConstant('{commonpf64}\dotnet');
+  if FindFirst(Root + '\shared\Microsoft.WindowsDesktop.App\10.*', FindRec) then
   begin
     try
       repeat
-        if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
+        if ((FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0) and (Pos('-', FindRec.Name) = 0) then
         begin
           Result := True;
           Break;

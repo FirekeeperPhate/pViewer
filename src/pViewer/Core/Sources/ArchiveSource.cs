@@ -67,12 +67,17 @@ public sealed class ArchiveSource : IImageSource
 
         slots.Sort((a, b) => NaturalComparer.Instance.Compare(a.Name, b.Name));
         var source = new ArchiveSource(path, slots, owned);
-        if (SafeIsSolid(root)) source.StartSequentialPreload(root);
+        // The sequential preload keeps every page in memory: beyond this size random access (slower
+        // on solid archives, but bounded in memory) is the lesser evil.
+        if (SafeIsSolid(root) && SafeUncompressedSize(root) <= MaxPreloadBytes) source.StartSequentialPreload(root);
         return source;
     }
 
+    private const long MaxPreloadBytes = 1024L * 1024 * 1024;
+
     private static bool SafeIsEncrypted(IArchive a) { try { return a.IsEncrypted; } catch { return false; } }
     private static bool SafeIsSolid(IArchive a) { try { return a.IsSolid; } catch { return false; } }
+    private static long SafeUncompressedSize(IArchive a) { try { return a.TotalUncompressedSize; } catch { return 0; } }
 
     private static bool IsJunk(string key)
     {
@@ -94,19 +99,25 @@ public sealed class ArchiveSource : IImageSource
             }
             else if (depth < MaxNestingDepth && ImageFormats.IsArchive(entry.Key))
             {
+                // Collected into separate lists, merged only on success: an unreadable inner
+                // archive (truncated, encrypted…) is skipped instead of failing the whole comic.
+                var innerSlots = new List<Slot>();
+                var innerOwned = new List<IDisposable>();
                 var ms = new MemoryStream();
+                innerOwned.Add(ms);
                 try
                 {
                     using (var s = entry.OpenEntryStream()) s.CopyTo(ms);
                     ms.Position = 0;
                     var inner = ArchiveFactory.OpenArchive(ms, new ReaderOptions());
-                    owned.Add(inner);
-                    owned.Add(ms);
-                    Collect(inner, prefix + entry.Key + "/", slots, owned, depth + 1);
+                    innerOwned.Insert(0, inner);
+                    Collect(inner, prefix + entry.Key + "/", innerSlots, innerOwned, depth + 1);
+                    slots.AddRange(innerSlots);
+                    owned.AddRange(innerOwned);
                 }
-                catch (Exception) when (!owned.Contains(ms))
+                catch (Exception)
                 {
-                    ms.Dispose(); // unreadable inner archive: skip it
+                    foreach (var d in innerOwned) d.Dispose();
                 }
             }
         }
@@ -114,11 +125,15 @@ public sealed class ArchiveSource : IImageSource
 
     private void StartSequentialPreload(IArchive root)
     {
-        var byKey = new Dictionary<string, Slot>(StringComparer.Ordinal);
-        foreach (var slot in _slots.Where(s => s.Archive == root))
+        // Several entries can share a key (files appended to a solid RAR): each occurrence in the
+        // stream completes the next waiting page with that key, so no page waits forever.
+        var byKey = new Dictionary<string, Queue<Slot>>(StringComparer.Ordinal);
+        var all = _slots.Where(s => s.Archive == root).ToList();
+        foreach (var slot in all)
         {
             slot.Preload = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
-            byKey.TryAdd(slot.Entry.Key!, slot);
+            if (!byKey.TryGetValue(slot.Entry.Key!, out var queue)) byKey[slot.Entry.Key!] = queue = new Queue<Slot>();
+            queue.Enqueue(slot);
         }
 
         var token = _cts.Token;
@@ -133,18 +148,18 @@ public sealed class ArchiveSource : IImageSource
                     {
                         token.ThrowIfCancellationRequested();
                         var key = reader.Entry.Key;
-                        if (key is null || !byKey.TryGetValue(key, out var slot)) continue;
-                        using var ms = new MemoryStream();
+                        if (key is null || !byKey.TryGetValue(key, out var queue) || !queue.TryDequeue(out var slot)) continue;
+                        using var ms = new MemoryStream(reader.Entry.Size > 0 ? (int)Math.Min(reader.Entry.Size, Array.MaxLength) : 0);
                         reader.WriteEntryTo(ms);
                         slot.Preload!.TrySetResult(ms.ToArray());
                     }
                 }
-                foreach (var slot in byKey.Values)
+                foreach (var slot in all)
                     slot.Preload!.TrySetException(new FileNotFoundException("Entry not found in the archive.", slot.Name));
             }
             catch (Exception ex)
             {
-                foreach (var slot in byKey.Values)
+                foreach (var slot in all)
                 {
                     if (ex is OperationCanceledException) slot.Preload!.TrySetCanceled();
                     else slot.Preload!.TrySetException(ex);

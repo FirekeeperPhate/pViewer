@@ -52,6 +52,8 @@ public sealed class ImageViewer : Border
     private Point _dragStartViewport;
     private Point _dragStartImage;
     private Vector _dragStartOffset;
+    private bool _panStarted;
+    private const double PanThreshold = 3;
     private Point _textDragStart;
 
     // Text being edited.
@@ -125,6 +127,8 @@ public sealed class ImageViewer : Border
         var oldSize = _contentSize;
         _pages = pages;
         StopAnimations();
+        // A pause (P) belongs to the image it was pressed on: the next image plays normally.
+        if (!preserveView) IsAnimationPaused = false;
         foreach (var img in _images) _content.Children.Remove(img);
         _images.Clear();
 
@@ -148,7 +152,9 @@ public sealed class ImageViewer : Border
         _content.Width = x;
         _content.Height = height;
 
-        if (preserveView && _userAdjusted && oldSize == _contentSize)
+        // Same size (an edit like a rectangle or an effect): keep zoom and position, including the
+        // scroll position of "fit width", which is not a manual adjustment.
+        if (preserveView && oldSize == _contentSize)
         {
             ClampAndApply();
         }
@@ -198,6 +204,7 @@ public sealed class ImageViewer : Border
     /// <summary>Pauses or resumes the animations (P key).</summary>
     public void ToggleAnimationPause()
     {
+        if (!HasAnimation) return; // on a static image P does nothing (no hidden pause state)
         IsAnimationPaused = !IsAnimationPaused;
         foreach (var (_, clock) in _animations)
         {
@@ -294,13 +301,32 @@ public sealed class ImageViewer : Border
     {
         base.OnRenderSizeChanged(sizeInfo);
         if (_userAdjusted) ClampAndApply();
-        else ResetView();
+        else ResetKeepingScroll();
     }
 
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
     {
         base.OnDpiChanged(oldDpi, newDpi);
-        if (!_userAdjusted) ResetView();
+        // Also when zoomed by hand: the zoom text and the pixelated/smooth switch depend on the DPI.
+        if (_userAdjusted) ClampAndApply();
+        else ResetKeepingScroll();
+    }
+
+    /// <summary>
+    /// Refits after a size change. In "fit width" the scroll position is kept (hiding the toolbar or
+    /// resizing the window must not jump back to the top of a long strip).
+    /// </summary>
+    private void ResetKeepingScroll()
+    {
+        if (ViewMode != ViewMode.FitWidth || _scale <= 0)
+        {
+            ResetView();
+            return;
+        }
+        double topInImage = -_offset.Y / _scale;
+        ResetView();
+        _offset.Y = -topInImage * _scale;
+        ClampAndApply();
     }
 
     private Point ToImage(Point viewportPoint) =>
@@ -370,6 +396,7 @@ public sealed class ImageViewer : Border
         else
         {
             _drag = DragMode.Pan;
+            _panStarted = false;
             _dragStartOffset = _offset;
             Cursor = Cursors.SizeAll;
         }
@@ -419,7 +446,15 @@ public sealed class ImageViewer : Border
         _selection.StrokeThickness = _selectionKind == SelectionKind.Rectangle ? RectangleThickness : 1.5 / _scale;
         if (_textFrame is not null)
         {
+            // The border keeps a constant size on screen, so its size in image pixels changes with
+            // the zoom: move the frame by the difference, so the text itself stays where it was put.
             double handle = 8 / _scale;
+            double old = _textFrame.BorderThickness.Left;
+            if (old > 0 && !double.IsNaN(Canvas.GetLeft(_textFrame)))
+            {
+                Canvas.SetLeft(_textFrame, Canvas.GetLeft(_textFrame) + old - handle);
+                Canvas.SetTop(_textFrame, Canvas.GetTop(_textFrame) + old - handle);
+            }
             _textFrame.BorderThickness = new Thickness(handle);
             _textFrame.CornerRadius = new CornerRadius(3 / _scale);
         }
@@ -432,9 +467,16 @@ public sealed class ImageViewer : Border
         switch (_drag)
         {
             case DragMode.Pan:
+                // A click (or the tiny movement of a double-click) is not a pan: it must not
+                // switch off auto-fit, or fullscreen and window resizes would stop refitting.
+                if (!_panStarted && (pos - _dragStartViewport).Length < PanThreshold) break;
+                _panStarted = true;
+                var before = _offset;
                 _offset = _dragStartOffset + (pos - _dragStartViewport);
-                _userAdjusted = true;
                 ClampAndApply();
+                // Vertical scrolling in "fit width" is not a manual adjustment either.
+                if (_offset != before && !(ViewMode == ViewMode.FitWidth && _offset.X == before.X))
+                    _userAdjusted = true;
                 break;
             case DragMode.Select:
                 UpdateSelection(ToImage(pos));

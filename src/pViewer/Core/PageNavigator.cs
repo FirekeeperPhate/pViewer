@@ -90,7 +90,16 @@ public sealed class PageNavigator
     public void Last() => Position = LastPosition();
 
     /// <summary>Position that shows the last view (the last pair in two-page mode).</summary>
-    public int LastPosition() => Count == 0 ? 0 : IsDouble ? Math.Max(0, Count - 2) : Count - 1;
+    public int LastPosition()
+    {
+        if (Count == 0) return 0;
+        if (!IsDouble) return Count - 1;
+        // Keep the pairing used going forward (pairs start on the same parity as the current one):
+        // with 5 pages and pairs [0,1] [2,3], the last view is [4] alone, not [3,4].
+        int last = Count - 1;
+        if (last % 2 != Position % 2) last--;
+        return Math.Max(0, last);
+    }
 
     /// <summary>Shifts the pair by a single page (to realign double-page spreads).</summary>
     public bool Shift(int delta)
