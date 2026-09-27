@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -643,7 +644,16 @@ public sealed class ImageViewer : Border
 
     private ContextMenu CreateTextContextMenu()
     {
-        var menu = new ContextMenu();
+        // The menu would inherit the font, size and color of the text being written (e.g. 72 pt bold
+        // red): use the ones of the window.
+        var menu = new ContextMenu
+        {
+            FontFamily = TextElement.GetFontFamily(this),
+            FontSize = TextElement.GetFontSize(this),
+            FontWeight = FontWeights.Normal,
+            FontStyle = FontStyles.Normal,
+            Foreground = TextElement.GetForeground(this),
+        };
         var style = new MenuItem { Header = "Font and color…" };
         style.Click += (_, _) => TextStyleRequested?.Invoke(this, EventArgs.Empty);
         var paste = new MenuItem { Header = "Paste", Command = ApplicationCommands.Paste, InputGestureText = "Ctrl+V" };
