@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.3
+
+**Faster startup**
+- Opening an image from Explorer is about 30% faster (about 1.0 s to 0.7 s for a 24 MP photo on
+  a warm start): the image is read and decoded while the window is being built, and appears in the
+  window's first frame instead of after an empty window.
+- Settings are read in the background during startup; the image context menu is built once the
+  first image is on screen.
+
 ## 2.0.2
 
 **Fixed**
