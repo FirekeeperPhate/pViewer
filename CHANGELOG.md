@@ -1,5 +1,43 @@
 # Changelog
 
+## 2.0.1
+
+Bug-fix release: four review passes over the whole code base.
+
+**Saving**
+- Unsaved edits are never written over the wrong file: edits and saves run in order, belong to the
+  image they were made on, and opening another image waits for them.
+- The embedded color profile (ICC) is kept after edits, so colors no longer shift in other apps.
+- Rotating, flipping and cropping keep 16-bit, CMYK and HDR images as they are; every edit keeps
+  the image resolution (a 300 dpi scan stays 300 dpi).
+- Animated GIF/WebP and multi-page TIFF files are never overwritten with a single frame: Ctrl+S
+  asks for a new name.
+- GIF and black & white keep transparency; BMP is always saved in a standard bit depth; long file
+  names save correctly; the XMP orientation is reset together with the EXIF one.
+- Save As switches to the saved file when it is in the folder being browsed; a second Ctrl+S
+  while saving no longer asks again.
+
+**Viewing**
+- Animated PNG (APNG) files animate.
+- Sharp images at 100% with 125/150% display scaling; rectangles and joined pages drawn on whole pixels.
+- Wheel zoom follows touchpads and smooth-scrolling mice; small icons can be zoomed out again.
+- Full screen, toolbar and window resizes refit the image after a simple click or a scroll that
+  did not move it.
+- Camera photos show a correctly proportioned preview while loading.
+
+**Comics and archives**
+- Switching to two pages mid-book, F12 realignment and Save As keep the page pairs correct in
+  both directions.
+- Broken volumes are skipped; a failed archive open restores the current page.
+- Missing or locked files show a message on the page instead of an error dialog.
+
+**Other**
+- Toolbar menus no longer show their items as empty rectangles.
+- Settings are stored in %AppData% when the program folder is not writable; invalid values
+  (also "NaN") are rejected.
+- Batch rename keeps the files in order with large starting numbers.
+- Installer: cleaning an upgrade only touches a folder this setup installed to.
+
 ## 2.0.0
 
 Complete rewrite in .NET 10 and WPF (Fluent theme), keeping the features and keyboard shortcuts of 1.x.
