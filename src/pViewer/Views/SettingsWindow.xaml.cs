@@ -38,7 +38,7 @@ public partial class SettingsWindow : Window
         _rectColor = MainViewModel.ParseColor(s.RectangleColor, Colors.Red);
         RectThicknessBox.Text = s.RectangleThickness.ToString();
         BorderThicknessBox.Text = s.BorderThickness.ToString();
-        SlideshowBox.Text = s.SlideshowSeconds.ToString("0.#", CultureInfo.CurrentCulture);
+        SlideshowBox.Text = s.SlideshowSeconds.ToString("0.###", CultureInfo.CurrentCulture);
         _textStyle = new TextStyle(s.TextFontFamily, s.TextFontSize, s.TextBold, s.TextItalic,
             MainViewModel.ParseColor(s.TextColor, Colors.Red));
         UpdateSwatches();
@@ -79,17 +79,20 @@ public partial class SettingsWindow : Window
         if (!int.TryParse(RectThicknessBox.Text, out int rect) || rect < 1 || rect > 500)
         {
             ErrorText.Text = "Rectangle thickness: 1 to 500 pixels.";
+            RectThicknessBox.Focus();
             return;
         }
         if (!int.TryParse(BorderThicknessBox.Text, out int border) || border < 1 || border > 2000)
         {
             ErrorText.Text = "Border thickness: 1 to 2000 pixels.";
+            BorderThicknessBox.Focus();
             return;
         }
         if (!double.TryParse(SlideshowBox.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out double seconds)
             || seconds < 0.5 || seconds > 3600)
         {
             ErrorText.Text = "Slideshow: 0.5 to 3600 seconds.";
+            SlideshowBox.Focus();
             return;
         }
 

@@ -19,6 +19,15 @@ public sealed class LoadedImage
     /// <summary>Frames of animated GIF, WebP or PNG (null for static images).</summary>
     public ImageAnimation? Animation { get; init; }
 
+    /// <summary>
+    /// Decoded with EXIF auto-rotation: the pixels are upright, so a saved JPEG must get
+    /// Orientation = 1. Otherwise the original tag is kept.
+    /// </summary>
+    public bool AutoOriented { get; init; }
+
+    /// <summary>Pages in the file (multi-page TIFF): only the first one is shown and edited.</summary>
+    public int PageCount { get; init; } = 1;
+
     public string FormatName { get; init; } = "";
     public long FileSize { get; init; }
     public int PixelWidth => Bitmap.PixelWidth;
@@ -135,10 +144,12 @@ public static class ImageDecoder
         // Do not close the stream: WIC may read the metadata lazily.
         var ms = new MemoryStream(data, writable: false);
         var decoder = BitmapDecoder.Create(ms, options, BitmapCacheOption.OnLoad);
-        // Icons contain several sizes: show the largest one.
-        BitmapFrame frame = decoder.Frames.Count == 1
-            ? decoder.Frames[0]
-            : decoder.Frames.MaxBy(f => (long)f.PixelWidth * f.PixelHeight)!;
+        // Icons hold several sizes of the same picture: show the largest. Other multi-frame files
+        // (multi-page TIFF) show their first page.
+        bool icon = decoder is IconBitmapDecoder;
+        BitmapFrame frame = icon && decoder.Frames.Count > 1
+            ? decoder.Frames.MaxBy(f => (long)f.PixelWidth * f.PixelHeight)!
+            : decoder.Frames[0];
 
         ushort orientation = autoOrient ? ReadOrientation(frame) : (ushort)1;
         BitmapSource bitmap = orientation > 1 ? ApplyOrientation(frame, orientation) : frame;
@@ -165,6 +176,8 @@ public static class ImageDecoder
             JpegMetadata = jpegMeta,
             FormatName = FormatName(decoder),
             FileSize = data.LongLength,
+            AutoOriented = autoOrient,
+            PageCount = icon ? 1 : decoder.Frames.Count,
         };
     }
 
@@ -195,6 +208,7 @@ public static class ImageDecoder
             Bitmap = ImageBridge.ToBitmapSource(img),
             FormatName = img.Metadata.DecodedImageFormat?.Name ?? "",
             FileSize = data.LongLength,
+            AutoOriented = autoOrient,
         };
     }
 

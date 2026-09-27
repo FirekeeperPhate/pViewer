@@ -76,10 +76,18 @@ public static class SettingsStore
     private static string ResolvePath()
     {
         string portable = Path.Combine(AppContext.BaseDirectory, "settings.json");
-        if (File.Exists(portable) || IsWritable(AppContext.BaseDirectory)) return portable;
+        if (IsWritable(AppContext.BaseDirectory)) return portable;
+        // Program folder not writable (all-users install in Program Files): settings go to the
+        // user's profile. A settings.json left there (e.g. by a run as administrator) is only
+        // used as the starting point, since it could never be saved again.
         string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "pViewer");
         Directory.CreateDirectory(appData);
-        return Path.Combine(appData, "settings.json");
+        string path = Path.Combine(appData, "settings.json");
+        if (!File.Exists(path) && File.Exists(portable))
+        {
+            try { File.Copy(portable, path); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        }
+        return path;
     }
 
     private static bool IsWritable(string dir)
@@ -107,7 +115,9 @@ public static class SettingsStore
         }
         catch (Exception)
         {
-            // Unreadable file: start over from the defaults.
+            // Unreadable file: start over from the defaults, but keep a copy instead of silently
+            // overwriting it on exit.
+            try { File.Copy(path, path + ".bad", overwrite: true); } catch (Exception) { }
         }
         return new AppSettings();
     }

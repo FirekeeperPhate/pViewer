@@ -37,11 +37,27 @@ public partial class App : Application
         };
     }
 
+    private static bool _showingError;
+
     private static void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        // An unexpected error must not close the app (and lose unsaved changes).
-        pViewer.Views.MessageDialog.Show(Current.MainWindow, $"An unexpected error occurred:\n\n{e.Exception.Message}",
-            "pViewer", MessageBoxButton.OK, MessageBoxImage.Error);
+        // An unexpected error must not close the app (and lose unsaved changes)…
         e.Handled = true;
+        // …and an error that repeats on every layout pass must not stack dialogs.
+        if (_showingError) return;
+        _showingError = true;
+        try
+        {
+            var main = Current.MainWindow;
+            bool started = main is { IsLoaded: true };
+            pViewer.Views.MessageDialog.Show(main, $"An unexpected error occurred:\n\n{e.Exception.Message}",
+                "pViewer", MessageBoxButton.OK, MessageBoxImage.Error);
+            // Failed while starting: there is no usable window, so exit instead of lingering.
+            if (!started) Current.Shutdown(1);
+        }
+        finally
+        {
+            _showingError = false;
+        }
     }
 }

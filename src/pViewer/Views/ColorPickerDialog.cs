@@ -41,7 +41,7 @@ public sealed class ColorPickerDialog : Window
                 BorderBrush = Brushes.Gray, BorderThickness = new Thickness(1),
             };
             swatch.Click += (_, _) => SetColor(color);
-            swatch.MouseDoubleClick += (_, _) => { SetColor(color); DialogResult = true; };
+            swatch.MouseDoubleClick += (_, _) => { SetColor(color); Result = color; DialogResult = true; };
             grid.Children.Add(swatch);
         }
 

@@ -52,13 +52,13 @@ public static class BatchRenamer
             foreach (var (oldPath, temp, newPath) in temps)
             {
                 if (!result.ContainsKey(oldPath)) continue;
-                try { File.Move(newPath, temp); } catch (IOException) { }
+                try { File.Move(newPath, temp); } catch (Exception) { }
             }
             foreach (var (oldPath, temp, _) in temps)
             {
                 if (File.Exists(temp) && !File.Exists(oldPath))
                 {
-                    try { File.Move(temp, oldPath); } catch (IOException) { }
+                    try { File.Move(temp, oldPath); } catch (Exception) { }
                 }
             }
             throw;

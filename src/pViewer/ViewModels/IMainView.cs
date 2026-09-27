@@ -32,7 +32,7 @@ public interface IMainView
     string? PickSaveFile(string? initialDirectory, string fileName);
     string? AskText(string title, string prompt, string initial, Func<string, string?>? validate = null);
 
-    double[]? ShowEffectDialog(EffectDefinition effect, BitmapSource source);
+    double[]? ShowEffectDialog(EffectDefinition effect, BitmapSource preview, double scale);
     (int Width, int Height)? ShowResizeDialog(int width, int height);
     void ShowBatchDialog(IImageSource source, AppSettings settings);
     BatchRenameOptions? ShowBatchRenameDialog(string suggestedBase, int count);
@@ -41,6 +41,8 @@ public interface IMainView
     TextStyle? ShowTextStyleDialog(TextStyle current);
 
     bool IsFullscreen { get; }
+    /// <summary>A modal dialog (WPF or Win32, e.g. the file dialogs) is open over the window.</summary>
+    bool HasModalDialog { get; }
     void SetFullscreen(bool fullscreen);
     IntPtr WindowHandle { get; }
 }

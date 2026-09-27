@@ -15,13 +15,17 @@
     </Window.Resources>
     <DockPanel>
         <Border DockPanel.Dock="Bottom" Padding="20,12" BorderThickness="0,1,0,0" BorderBrush="#30808080">
-            <DockPanel>
-                <Button DockPanel.Dock="Left" Content="Defaults" Click="Defaults_Click" />
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="OK" IsDefault="True" MinWidth="90" Click="Ok_Click" Style="{DynamicResource AccentButtonStyle}" />
-                    <Button Content="Cancel" IsCancel="True" MinWidth="90" Margin="8,0,0,0" />
-                </StackPanel>
-            </DockPanel>
+            <StackPanel>
+                <!-- Outside the scrolling area, so a validation error is always visible -->
+                <TextBlock x:Name="ErrorText" Foreground="#FFFF6B5E" TextWrapping="Wrap" Margin="0,0,0,8" Visibility="{Binding Text, RelativeSource={RelativeSource Self}, Converter={StaticResource NullToVisibility}}" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Left" Content="Defaults" Click="Defaults_Click" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="OK" IsDefault="True" MinWidth="90" Click="Ok_Click" Style="{DynamicResource AccentButtonStyle}" />
+                        <Button Content="Cancel" IsCancel="True" MinWidth="90" Margin="8,0,0,0" />
+                    </StackPanel>
+                </DockPanel>
+            </StackPanel>
         </Border>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="24,0,24,16">
@@ -127,8 +131,6 @@
                         <TextBlock Text="seconds (toolbar button)" VerticalAlignment="Center" Margin="8,0,0,0" />
                     </StackPanel>
                 </Grid>
-
-                <TextBlock x:Name="ErrorText" Foreground="#FFFF6B5E" TextWrapping="Wrap" Margin="0,12,0,0" />
                 <TextBlock x:Name="PathText" TextWrapping="Wrap" Opacity="0.5" FontSize="12" Margin="0,12,0,0" />
             </StackPanel>
         </ScrollViewer>

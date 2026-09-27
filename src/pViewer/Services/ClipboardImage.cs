@@ -8,6 +8,23 @@ namespace pViewer.Services;
 public static class ClipboardImage
 {
     /// <summary>
+    /// Copies an image as both the standard bitmap (understood by every program) and PNG, which
+    /// keeps transparency (used by pViewer itself, browsers, Office, GIMP…).
+    /// </summary>
+    public static void Set(BitmapSource bitmap)
+    {
+        var data = new DataObject();
+        data.SetImage(bitmap);
+        var png = new MemoryStream();
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        encoder.Save(png);
+        png.Position = 0;
+        data.SetData("PNG", png, false);
+        Clipboard.SetDataObject(data, copy: true);
+    }
+
+    /// <summary>
     /// Reads an image from the clipboard. Prefers the PNG format (keeps transparency);
     /// the standard DIB often has a zero alpha channel, so it is read as opaque.
     /// </summary>

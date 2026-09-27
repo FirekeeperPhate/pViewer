@@ -88,7 +88,11 @@ public partial class MainWindow : Window, IMainView
         PreviewKeyDown += Window_PreviewKeyDown;
         DragOver += Window_DragOver;
         Drop += Window_Drop;
-        SourceInitialized += (_, _) => RestorePlacement();
+        SourceInitialized += (_, _) =>
+        {
+            RestorePlacement();
+            HwndSource.FromHwnd(WindowHandle)?.AddHook(WndProc);
+        };
         Closing += Window_Closing;
 
         ApplySettingsToView();
@@ -120,12 +124,12 @@ public partial class MainWindow : Window, IMainView
     }
 
     /// <summary>
-    /// Busy and slideshow cursors go through Mouse.OverrideCursor, so they are not undone by the
-    /// viewer's own cursor (pan, crosshair of the red-eye tool) or by a page that is still loading.
+    /// Busy and slideshow cursors apply to the image area only (dialogs and menus keep a normal
+    /// pointer); the viewer keeps them over its own pan and red-eye cursors.
     /// </summary>
     private void UpdateCursor()
     {
-        Mouse.OverrideCursor = _vm.IsBusy ? Cursors.Wait : _vm.IsSlideshowRunning ? Cursors.None : null;
+        Viewer.CursorOverride = _vm.IsBusy ? Cursors.Wait : _vm.IsSlideshowRunning ? Cursors.None : null;
     }
 
     private void ApplySettingsToView()
@@ -150,6 +154,17 @@ public partial class MainWindow : Window, IMainView
             : _fullscreen ? Colors.Black
             : IsLightTheme() ? Color.FromRgb(0xEB, 0xEB, 0xEB) : Color.FromRgb(0x1C, 0x1C, 0x1C);
         Viewer.Background = new SolidColorBrush(color);
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        // Windows switched between light and dark: with the "Same as Windows" theme the Fluent
+        // chrome follows by itself, the viewer background has to be updated here.
+        const int WM_SETTINGCHANGE = 0x001A;
+        if (msg == WM_SETTINGCHANGE && lParam != IntPtr.Zero &&
+            System.Runtime.InteropServices.Marshal.PtrToStringUni(lParam) == "ImmersiveColorSet")
+            UpdateBackground();
+        return IntPtr.Zero;
     }
 
     private bool IsLightTheme() => _settings.Theme switch
@@ -304,6 +319,12 @@ public partial class MainWindow : Window, IMainView
 
     public IntPtr WindowHandle => new WindowInteropHelper(this).Handle;
 
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool IsWindowEnabled(IntPtr hwnd);
+
+    // Modal dialogs, WPF or Win32 (file dialogs), disable their owner window.
+    public bool HasModalDialog => WindowHandle != IntPtr.Zero && !IsWindowEnabled(WindowHandle);
+
     // ---- Window position ----
 
     private void RestorePlacement()
@@ -382,12 +403,16 @@ public partial class MainWindow : Window, IMainView
         e.Handled = true;
     }
 
-    private async void Window_Drop(object sender, DragEventArgs e)
+    private void Window_Drop(object sender, DragEventArgs e)
     {
         if (e.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } files)
         {
             Activate();
-            await _vm.OpenPathAsync(files[0]);
+            // Opened after the drop has returned: a "save changes?" prompt inside the OLE drop
+            // callback would keep the Explorer window it came from frozen. Only the first item is
+            // opened; the others of the same folder are reachable with next/previous.
+            string path = files[0];
+            _ = Dispatcher.BeginInvoke(async () => await _vm.OpenPathAsync(path));
         }
     }
 
@@ -501,9 +526,9 @@ public partial class MainWindow : Window, IMainView
         return dlg.ShowDialog() == true ? dlg.Value : null;
     }
 
-    public double[]? ShowEffectDialog(EffectDefinition effect, BitmapSource source)
+    public double[]? ShowEffectDialog(EffectDefinition effect, BitmapSource preview, double scale)
     {
-        var dlg = new EffectDialog(effect, source) { Owner = this };
+        var dlg = new EffectDialog(effect, preview, scale) { Owner = this };
         return dlg.ShowDialog() == true ? dlg.Values : null;
     }
 

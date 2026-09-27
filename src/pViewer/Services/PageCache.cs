@@ -53,9 +53,10 @@ public sealed class PageCache : IDisposable
         }
     }
 
-    private void Drop(int index)
+    private void Drop(int index, bool cancel = true)
     {
         if (!_entries.Remove(index, out var entry)) return;
+        if (!cancel) return;
         entry.Cancellation.Cancel();
         entry.Cancellation.Dispose();
     }
@@ -91,9 +92,13 @@ public sealed class PageCache : IDisposable
         }
     }
 
+    /// <summary>
+    /// Forgets a page so it is read again next time. Not cancelled: the current request may be
+    /// waiting on it (e.g. F5 while a save of the same file finishes).
+    /// </summary>
     public void Invalidate(int index)
     {
-        lock (_lock) Drop(index);
+        lock (_lock) Drop(index, cancel: false);
     }
 
     public void Dispose()

@@ -30,7 +30,7 @@ public sealed class HelpWindow : Window
             ("W", "White background"),
             ("T", "Show / hide the toolbar"),
             ("P", "Pause / resume animations (GIF, WebP, APNG)"),
-            ("Esc", "Leaves full screen or the slideshow, otherwise closes"),
+            ("Esc", "Stops the slideshow, exits the red-eye tool or full screen; otherwise closes pViewer"),
         ]),
         ("Edit", [
             ("↑  /  ↓", "Rotate right / left"),

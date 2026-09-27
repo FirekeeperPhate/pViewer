@@ -95,6 +95,21 @@ public sealed class ImageViewer : Border
     }
 
     public ViewerTool Tool { get; set; }
+
+    private Cursor? _cursorOverride;
+
+    /// <summary>Cursor imposed by the window (busy, hidden during the slideshow); null = normal.</summary>
+    public Cursor? CursorOverride
+    {
+        get => _cursorOverride;
+        set
+        {
+            _cursorOverride = value;
+            if (_drag == DragMode.None) Cursor = RestingCursor;
+        }
+    }
+
+    private Cursor? RestingCursor => CursorOverride ?? (Tool == ViewerTool.RedEye ? Cursors.Cross : null);
     public Color CropColor { get; set; } = Colors.Red;
     public Color RectangleColor { get; set; } = Colors.Red;
     public double RectangleThickness { get; set; } = 5;
@@ -359,6 +374,8 @@ public sealed class ImageViewer : Border
     protected override void OnMouseDown(MouseButtonEventArgs e)
     {
         base.OnMouseDown(e);
+        // Any button (a right-click opens the menu) stops the slideshow.
+        UserClicked?.Invoke(this, EventArgs.Empty);
         if (e.ChangedButton == MouseButton.Middle)
         {
             DoubleClicked?.Invoke(this, EventArgs.Empty);
@@ -369,7 +386,6 @@ public sealed class ImageViewer : Border
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonDown(e);
-        UserClicked?.Invoke(this, EventArgs.Empty);
         if (e.ClickCount == 2)
         {
             DoubleClicked?.Invoke(this, EventArgs.Empty);
@@ -398,7 +414,7 @@ public sealed class ImageViewer : Border
             _drag = DragMode.Pan;
             _panStarted = false;
             _dragStartOffset = _offset;
-            Cursor = Cursors.SizeAll;
+            Cursor = CursorOverride ?? Cursors.SizeAll;
         }
         CaptureMouse();
         e.Handled = true;
@@ -408,7 +424,7 @@ public sealed class ImageViewer : Border
     {
         _drag = DragMode.Select;
         _selectionKind = kind;
-        Cursor = Cursors.Cross;
+        Cursor = CursorOverride ?? Cursors.Cross;
         bool rect = kind == SelectionKind.Rectangle;
         _selection.Stroke = new SolidColorBrush(rect ? RectangleColor : kind == SelectionKind.RedEye ? Colors.Red : CropColor);
         _selection.StrokeDashArray = rect ? null : new DoubleCollection { 4, 3 };
@@ -488,7 +504,7 @@ public sealed class ImageViewer : Border
                 _textDragStart = img;
                 break;
             case DragMode.None:
-                Cursor = Tool == ViewerTool.RedEye ? Cursors.Cross : null;
+                Cursor = RestingCursor;
                 break;
         }
     }
@@ -499,7 +515,7 @@ public sealed class ImageViewer : Border
         var mode = _drag;
         _drag = DragMode.None;
         if (IsMouseCaptured) ReleaseMouseCapture();
-        Cursor = Tool == ViewerTool.RedEye ? Cursors.Cross : null;
+        Cursor = RestingCursor;
 
         if (mode == DragMode.Select)
         {

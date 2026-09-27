@@ -28,7 +28,7 @@
             <TextBox x:Name="PercentBox" Grid.Row="4" Grid.Column="1" TextChanged="PercentBox_TextChanged" />
             <TextBlock Grid.Row="4" Grid.Column="2" Text="%" VerticalAlignment="Center" Margin="8,0,0,0" />
         </Grid>
-        <CheckBox x:Name="KeepRatio" Content="Keep aspect ratio" IsChecked="True" Margin="0,12,0,0" />
+        <CheckBox x:Name="KeepRatio" Content="Keep aspect ratio" IsChecked="True" Margin="0,12,0,0" Checked="KeepRatio_Checked" />
         <TextBlock x:Name="ErrorText" Foreground="#FFFF6B5E" Margin="0,6,0,0" Visibility="Collapsed" />
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
             <Button Content="OK" IsDefault="True" MinWidth="90" Click="Ok_Click" Style="{DynamicResource AccentButtonStyle}" />

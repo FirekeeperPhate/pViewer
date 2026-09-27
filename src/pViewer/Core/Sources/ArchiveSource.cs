@@ -67,17 +67,14 @@ public sealed class ArchiveSource : IImageSource
 
         slots.Sort((a, b) => NaturalComparer.Instance.Compare(a.Name, b.Name));
         var source = new ArchiveSource(path, slots, owned);
-        // The sequential preload keeps every page in memory: beyond this size random access (slower
-        // on solid archives, but bounded in memory) is the lesser evil.
-        if (SafeIsSolid(root) && SafeUncompressedSize(root) <= MaxPreloadBytes) source.StartSequentialPreload(root);
+        // Solid archives must be read in sequence (random access to an entry of a solid RAR is not
+        // reliable), so all their pages are preloaded in memory.
+        if (SafeIsSolid(root)) source.StartSequentialPreload(root);
         return source;
     }
 
-    private const long MaxPreloadBytes = 1024L * 1024 * 1024;
-
     private static bool SafeIsEncrypted(IArchive a) { try { return a.IsEncrypted; } catch { return false; } }
     private static bool SafeIsSolid(IArchive a) { try { return a.IsSolid; } catch { return false; } }
-    private static long SafeUncompressedSize(IArchive a) { try { return a.TotalUncompressedSize; } catch { return 0; } }
 
     private static bool IsJunk(string key)
     {

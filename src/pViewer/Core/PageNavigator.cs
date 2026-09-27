@@ -39,17 +39,27 @@ public sealed class PageNavigator
     public bool IsDouble => Layout != PageLayout.Single;
     private int Step => IsDouble ? 2 : 1;
 
+    /// <summary>
+    /// Parity of the first page of each pair: 0 = pairs [0,1] [2,3]…, 1 = pairs [1,2] [3,4]… (after
+    /// F12). A position off this parity (only page 0) is shown alone, like a cover.
+    /// </summary>
+    private int _alignment;
+
     public void Reset(int count, int position = 0)
     {
         Count = Math.Max(0, count);
         Position = Count == 0 ? 0 : Math.Clamp(position, 0, Count - 1);
+        _alignment = Position % 2;
     }
+
+    /// <summary>True when the current page is shown alone although the layout is two-page.</summary>
+    private bool IsCover => Position % 2 != _alignment;
 
     /// <summary>Indices of the visible pages, in the order they are drawn from left to right.</summary>
     public int[] VisibleIndices()
     {
         if (Count == 0) return [];
-        if (!IsDouble || Position + 1 >= Count) return [Position];
+        if (!IsDouble || IsCover || Position + 1 >= Count) return [Position];
         return Layout == PageLayout.Manga ? [Position + 1, Position] : [Position, Position + 1];
     }
 
@@ -66,7 +76,7 @@ public sealed class PageNavigator
     public NavigationResult Next()
     {
         if (Count == 0) return NavigationResult.NoChange;
-        int target = Position + Step;
+        int target = Position + (IsCover ? 1 : Step);
         if (target < Count) { Position = target; return NavigationResult.Moved; }
         if (HasNextContainer) return NavigationResult.NextContainer;
         if (Position == 0) return NavigationResult.NoChange;
@@ -94,10 +104,10 @@ public sealed class PageNavigator
     {
         if (Count == 0) return 0;
         if (!IsDouble) return Count - 1;
-        // Keep the pairing used going forward (pairs start on the same parity as the current one):
+        // Keep the pairing used going forward:
         // with 5 pages and pairs [0,1] [2,3], the last view is [4] alone, not [3,4].
         int last = Count - 1;
-        if (last % 2 != Position % 2) last--;
+        if (last % 2 != _alignment) last--;
         return Math.Max(0, last);
     }
 
@@ -107,6 +117,7 @@ public sealed class PageNavigator
         int target = Position + delta;
         if (target < 0 || target >= Count) return false;
         Position = target;
+        _alignment = target % 2;
         return true;
     }
 

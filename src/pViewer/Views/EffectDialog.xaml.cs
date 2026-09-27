@@ -10,6 +10,9 @@ namespace pViewer.Views;
 /// <summary>Generic effects dialog: sliders and a live preview on a reduced copy.</summary>
 public partial class EffectDialog : Window
 {
+    /// <summary>Maximum size of the preview copy.</summary>
+    public static readonly (int Width, int Height) PreviewSize = (580, 400);
+
     private readonly EffectDefinition _effect;
     private readonly BitmapSource _preview;
     private readonly double _scale;
@@ -18,13 +21,15 @@ public partial class EffectDialog : Window
     private BitmapSource? _result;
     private int _request;
 
-    public EffectDialog(EffectDefinition effect, BitmapSource source)
+    /// <param name="preview">Reduced copy of the image (see <see cref="PreviewSize"/>).</param>
+    /// <param name="scale">Preview width / original width, for effects measured in pixels.</param>
+    public EffectDialog(EffectDefinition effect, BitmapSource preview, double scale)
     {
         InitializeComponent();
         Title = effect.Title;
         _effect = effect;
-        _preview = ImageOps.FitWithin(source, 580, 400);
-        _scale = (double)_preview.PixelWidth / source.PixelWidth;
+        _preview = preview;
+        _scale = scale;
         PreviewImage.Source = _preview;
 
         for (int i = 0; i < effect.Sliders.Count; i++)

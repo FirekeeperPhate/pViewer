@@ -9,7 +9,15 @@ public static class MetadataService
     public static IReadOnlyList<MetadataGroup> Read(byte[] data)
     {
         using var ms = new MemoryStream(data, writable: false);
-        var directories = ImageMetadataReader.ReadMetadata(ms);
+        IReadOnlyList<MetadataExtractor.Directory> directories;
+        try
+        {
+            directories = ImageMetadataReader.ReadMetadata(ms);
+        }
+        catch (ImageProcessingException)
+        {
+            return []; // format MetadataExtractor does not know (QOI, TGA…): simply no metadata
+        }
         var groups = new List<MetadataGroup>();
         foreach (var dir in directories)
         {
