@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.0.2
+
+**Fixed**
+- Colors of wide-gamut photos (Adobe RGB, Display P3) no longer shift after an edit and a save:
+  Windows shows them converted to sRGB, and the saved file now says so (regression of 2.0.1;
+  edited JPEGs were affected before too). 16-bit, grayscale and CMYK images keep their own profile.
+- Save As of an unedited CMYK or 16-bit image to PNG or BMP no longer fails; a CMYK image saved as
+  PNG no longer gets an invalid CMYK profile.
+- Animations too large to play are shown still but are never overwritten with a single frame.
+- Edits made while "Save changes? → Yes" is saving are no longer lost when moving to another image;
+  a new Ctrl+S after further edits is no longer refused as "Already saving".
+- The right-click menu of the text box no longer uses the text's huge font; right-clicking the
+  text frame opens the text menu instead of the image menu (whose commands dropped the text).
+- Esc while drawing a crop or red-eye selection cancels it instead of closing pViewer.
+- Text is not applied while a rotation or crop is still running; batch processing waits for
+  running work.
+
+**Interface**
+- A window saved on a larger monitor fits the current one; tall dialogs fit small screens.
+- In narrow windows the "All commands" button stays visible.
+- The welcome text stays readable on white (W) and full-screen backgrounds.
+- Error texts and dialog icons use the theme colors (readable in the light theme); the text color
+  in Settings is shown as a swatch and the font preview adapts to the text color.
+
 ## 2.0.1
 
 Bug-fix release: four review passes over the whole code base.
