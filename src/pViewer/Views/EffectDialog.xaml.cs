@@ -70,6 +70,7 @@ public partial class EffectDialog : Window
             _ = RecomputeAsync();
         };
         Loaded += (_, _) => _ = RecomputeAsync();
+        Closed += (_, _) => _debounce.Stop();
     }
 
     public double[] Values => _sliders.Select(s => s.Value).ToArray();

@@ -403,6 +403,9 @@ public partial class MainWindow : Window, IMainView
         e.Handled = true;
     }
 
+    // async void on purpose: unexpected errors reach the app error handler instead of being lost.
+    private async void OpenDropped(string path) => await _vm.OpenPathAsync(path);
+
     private void Window_Drop(object sender, DragEventArgs e)
     {
         if (e.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } files)
@@ -412,7 +415,7 @@ public partial class MainWindow : Window, IMainView
             // callback would keep the Explorer window it came from frozen. Only the first item is
             // opened; the others of the same folder are reachable with next/previous.
             string path = files[0];
-            _ = Dispatcher.BeginInvoke(async () => await _vm.OpenPathAsync(path));
+            _ = Dispatcher.InvokeAsync(() => OpenDropped(path));
         }
     }
 

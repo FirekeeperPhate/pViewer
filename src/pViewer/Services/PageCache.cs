@@ -30,20 +30,47 @@ public sealed class PageCache : IDisposable
 
     public IImageSource Source => _source;
 
+    /// <summary>
+    /// Full decodes running at the same time. Pages passed while scrolling fast wait here and are
+    /// cancelled (see Trim) before they start, instead of all decoding in parallel.
+    /// </summary>
+    private static readonly SemaphoreSlim DecodeGate = new(Math.Clamp(Environment.ProcessorCount / 2, 2, 4));
+
+    private bool _disposed;
+
     public Entry Get(int index)
     {
         lock (_lock)
         {
+            if (_disposed)
+            {
+                // A late continuation (after the source changed or the window closed).
+                var cancelled = Task.FromCanceled<byte[]>(new CancellationToken(true));
+                return new Entry { Bytes = cancelled, Image = Task.FromCanceled<LoadedImage>(new CancellationToken(true)),
+                                   Cancellation = new CancellationTokenSource() };
+            }
             if (_entries.TryGetValue(index, out var existing)) return existing;
-            // Each page has its own cancellation, so pages passed while scrolling fast are dropped
-            // (see Trim) instead of all being read and decoded in parallel.
+            // Each page has its own cancellation, so pages passed while scrolling fast are dropped.
             var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
             var token = cancellation.Token;
-            var bytes = _source.ReadAsync(index, token);
+            Task<byte[]> bytes;
+            try { bytes = _source.ReadAsync(index, token); }
+            catch (Exception ex) { bytes = Task.FromException<byte[]>(ex); } // a source that throws synchronously
             string name = _source.Pages[index].Name;
-            var image = bytes.ContinueWith(
-                t => ImageDecoder.Decode(t.GetAwaiter().GetResult(), name, _autoOrient),
-                token, TaskContinuationOptions.RunContinuationsAsynchronously, TaskScheduler.Default);
+            var image = Task.Run(async () =>
+            {
+                var data = await bytes.ConfigureAwait(false);
+                await DecodeGate.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                    token.ThrowIfCancellationRequested();
+                    return ImageDecoder.Decode(data, name, _autoOrient);
+                }
+                finally
+                {
+                    DecodeGate.Release();
+                }
+            }, token);
             // Exceptions of preloads that were never requested must not stay "unobserved".
             _ = bytes.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
             _ = image.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
@@ -103,9 +130,11 @@ public sealed class PageCache : IDisposable
 
     public void Dispose()
     {
-        _cts.Cancel();
         lock (_lock)
         {
+            if (_disposed) return;
+            _disposed = true;
+            _cts.Cancel();
             foreach (int k in _entries.Keys.ToList()) Drop(k);
         }
         _cts.Dispose();

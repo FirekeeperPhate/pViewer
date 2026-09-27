@@ -1,6 +1,7 @@
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Gif;
 using SixLabors.ImageSharp.Formats.Webp;
 
 namespace pViewer.Imaging;
@@ -19,13 +20,36 @@ public static class ImageSaver
         if (File.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReadOnly) != 0)
             throw new IOException($"«{Path.GetFileName(path)}» is read-only.");
         string dir = Path.GetDirectoryName(Path.GetFullPath(path))!;
-        string temp = Path.Combine(dir, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+        // Short name: appending to the original name could exceed the 255-character limit.
+        string temp = Path.Combine(dir, $".pv{Guid.NewGuid():N}.tmp");
         try
         {
             if (ext == ".webp")
             {
                 using var img = ImageBridge.ToImageSharp(bitmap);
                 img.Save(temp, new WebpEncoder { Quality = Math.Clamp(jpegQuality, 1, 100) });
+            }
+            else if (ext == ".gif")
+            {
+                // ImageSharp quantizes with a transparent colour and an adaptive palette; the WIC GIF
+                // encoder would drop transparency and use a fixed palette.
+                using var img = ImageBridge.ToImageSharp(bitmap);
+                // GIF transparency is on/off: normalize alpha, and flag the frame, otherwise the
+                // encoder writes no transparent colour at all.
+                bool anyTransparent = false;
+                img.ProcessPixelRows(rows =>
+                {
+                    for (int y = 0; y < rows.Height; y++)
+                    {
+                        foreach (ref var p in rows.GetRowSpan(y))
+                        {
+                            if (p.A < 128) { p = default; anyTransparent = true; }
+                            else p.A = 255;
+                        }
+                    }
+                });
+                if (anyTransparent) img.Frames.RootFrame.Metadata.GetGifMetadata().HasTransparency = true;
+                img.Save(temp, new GifEncoder());
             }
             else
             {
@@ -64,7 +88,6 @@ public static class ImageSaver
             ".jpg" or ".jpeg" or ".jpe" or ".jfif" => new JpegBitmapEncoder { QualityLevel = Math.Clamp(quality, 1, 100) },
             ".png" => new PngBitmapEncoder(),
             ".bmp" => new BmpBitmapEncoder(),
-            ".gif" => new GifBitmapEncoder(),
             ".tif" or ".tiff" => new TiffBitmapEncoder(),
             ".jxr" or ".wdp" => new WmpBitmapEncoder(),
             _ => throw new NotSupportedException($"Unsupported save format: {ext}"),
@@ -72,6 +95,15 @@ public static class ImageSaver
         encoder.Frames.Add(BitmapFrame.Create(source, null, meta, null));
         using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
         encoder.Save(fs);
+    }
+
+    private static void TrySetQuery(BitmapMetadata meta, string query, object value)
+    {
+        try
+        {
+            if (meta.ContainsQuery(query)) meta.SetQuery(query, value);
+        }
+        catch (Exception) { /* not present in this metadata layout */ }
     }
 
     private static BitmapMetadata? PrepareJpegMetadata(BitmapMetadata? original, bool resetOrientation)
@@ -82,6 +114,8 @@ public static class ImageSaver
             var meta = original.Clone();
             // The pixels are already upright: the orientation goes back to "normal".
             if (resetOrientation && meta.ContainsQuery("/app1/ifd/{ushort=274}")) meta.SetQuery("/app1/ifd/{ushort=274}", (ushort)1);
+            // The XMP copy of the tag too, or apps that read XMP would rotate the image again.
+            if (resetOrientation) TrySetQuery(meta, "/xmp/tiff:Orientation", "1");
             // The EXIF thumbnail would no longer match the content.
             if (meta.ContainsQuery("/app1/thumb")) meta.RemoveQuery("/app1/thumb");
             return meta;

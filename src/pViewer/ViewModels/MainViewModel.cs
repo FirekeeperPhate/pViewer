@@ -26,6 +26,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private PageCache? _cache;
     private List<string> _archiveSiblings = [];
     private int _archiveIndex = -1;
+    /// <summary>Archives that failed to open (skipped when moving between volumes).</summary>
+    private readonly HashSet<string> _brokenArchives = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Loaded pages currently visible (null if the image is "detached", e.g. from the clipboard).</summary>
     private LoadedImage[]? _visible;
@@ -189,15 +191,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             if (request != _requestId) return;
             IsLoading = false;
             StopSlideshow(); // otherwise the error would come back on every tick
-            // Reached while moving between volumes: the next press moves past the broken one
-            // instead of trying it again forever.
-            int failed = _archiveSiblings.FindIndex(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
-            if (keepLayout && failed >= 0)
-            {
-                _archiveIndex = failed;
-                _nav.HasNextContainer = _archiveIndex < _archiveSiblings.Count - 1;
-                _nav.HasPreviousContainer = _archiveIndex > 0;
-            }
+            // Remembered, so moving between volumes skips it instead of trying it again forever.
+            _brokenArchives.Add(path);
             _view.ShowError($"Cannot open the archive «{Path.GetFileName(path)}».\n{ex.Message}");
             return;
         }
@@ -211,6 +206,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             archive.Dispose();
             return;
         }
+        _brokenArchives.Remove(path); // repaired since the last attempt
         Settings.LastFolder = Path.GetDirectoryName(path);
         _archiveSiblings = ArchiveSource.Siblings(path);
         _archiveIndex = _archiveSiblings.FindIndex(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
@@ -227,6 +223,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task SetSourceAsync(IImageSource source, int index, int? archiveIndex)
     {
+        if (_disposed)
+        {
+            // Finished opening after the window closed (e.g. a slow archive).
+            source.Dispose();
+            return;
+        }
         _cache?.Dispose();
         if (!ReferenceEquals(_source, source)) _source?.Dispose();
         _source = source;
@@ -252,7 +254,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Shows the pages at the current position, with an instant preview if needed.</summary>
     private async Task ShowCurrentAsync()
     {
-        if (_source is null || _cache is null) return;
+        if (_disposed || _source is null || _cache is null) return;
         int request = ++_requestId;
         var cache = _cache;
         int[] indices = _nav.VisibleIndices();
@@ -292,6 +294,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             }
             catch (Exception ex)
             {
+                if (_disposed) return;
                 if (request != _requestId) return;
                 IsLoading = false;
                 _visible = null;
@@ -443,12 +446,18 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 await ShowCurrentAsync();
                 break;
             case NavigationResult.NextContainer:
-                Toast($"Next volume: {Path.GetFileName(_archiveSiblings[_archiveIndex + 1])}");
-                await OpenArchiveAsync(_archiveSiblings[_archiveIndex + 1], startAtEnd: false, keepLayout: true);
-                break;
             case NavigationResult.PreviousContainer:
-                Toast($"Previous volume: {Path.GetFileName(_archiveSiblings[_archiveIndex - 1])}");
-                await OpenArchiveAsync(_archiveSiblings[_archiveIndex - 1], startAtEnd: true, keepLayout: true);
+                int step = result == NavigationResult.NextContainer ? 1 : -1;
+                int volume = _archiveIndex + step;
+                while (volume >= 0 && volume < _archiveSiblings.Count && _brokenArchives.Contains(_archiveSiblings[volume]))
+                    volume += step; // skip volumes that already failed to open
+                if (volume < 0 || volume >= _archiveSiblings.Count)
+                {
+                    Toast(step > 0 ? "No further volume can be opened" : "No previous volume can be opened");
+                    break;
+                }
+                Toast($"{(step > 0 ? "Next" : "Previous")} volume: {Path.GetFileName(_archiveSiblings[volume])}");
+                await OpenArchiveAsync(_archiveSiblings[volume], startAtEnd: step < 0, keepLayout: true);
                 break;
         }
     }
@@ -566,6 +575,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     private int _pendingWork;
+    /// <summary>A save is queued or running: a second Ctrl+S must not ask again or save twice.</summary>
+    private bool _saveQueued;
 
     /// <summary>Opening or pasting another image waits for running edits and saves (they belong to this one).</summary>
     private bool WaitingForWork()
@@ -595,7 +606,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private Task ApplyEditAsync(Func<BitmapSource, BitmapSource> operation, bool needsSta = false)
+    /// <param name="movesPixels">Rotations, flips, crops, resizes, borders: the last rectangle no
+    /// longer marks the same area, so Tab must not fill it.</param>
+    private Task ApplyEditAsync(Func<BitmapSource, BitmapSource> operation, bool needsSta = false, bool movesPixels = false)
     {
         // The edit belongs to the image shown when it was requested: if another image is shown by
         // the time its turn comes (paste, open…), it is dropped instead of landing on that one.
@@ -611,6 +624,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 var result = needsSta ? await StaTask.Run(() => operation(source)) : await Task.Run(() => operation(source));
                 if (!ReferenceEquals(session, _edit)) return false;
                 session.Apply(result);
+                if (movesPixels) _lastRectangle = null;
                 bool sameSize = result.PixelWidth == source.PixelWidth && result.PixelHeight == source.PixelHeight;
                 _view.ShowPages([session.Current], preserveView: sameSize);
                 UpdateEditFlags();
@@ -629,6 +643,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void Undo()
     {
         if (IsBusy || _edit is null || !_edit.Undo()) return;
+        _lastRectangle = null;
         ShowEditCurrent();
     }
 
@@ -636,6 +651,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void Redo()
     {
         if (IsBusy || _edit is null || !_edit.Redo()) return;
+        _lastRectangle = null;
         ShowEditCurrent();
     }
 
@@ -649,8 +665,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         UpdateInfo();
     }
 
-    [RelayCommand(AllowConcurrentExecutions = true)] private Task Rotate(string degrees) => ApplyEditAsync(b => ImageOps.Rotate(b, (int.Parse(degrees) + 360) % 360));
-    [RelayCommand(AllowConcurrentExecutions = true)] private Task Flip(string direction) => ApplyEditAsync(b => ImageOps.Flip(b, direction == "H"));
+    [RelayCommand(AllowConcurrentExecutions = true)] private Task Rotate(string degrees) => ApplyEditAsync(b => ImageOps.Rotate(b, (int.Parse(degrees) + 360) % 360), movesPixels: true);
+    [RelayCommand(AllowConcurrentExecutions = true)] private Task Flip(string direction) => ApplyEditAsync(b => ImageOps.Flip(b, direction == "H"), movesPixels: true);
     [RelayCommand(AllowConcurrentExecutions = true)] private Task Invert() => ApplyEditAsync(ImageOps.Invert);
     [RelayCommand(AllowConcurrentExecutions = true)] private Task Grayscale() => ApplyEditAsync(ImageOps.Grayscale);
     [RelayCommand(AllowConcurrentExecutions = true)] private Task Sepia() => ApplyEditAsync(ImageOps.Sepia);
@@ -658,7 +674,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
     [RelayCommand(AllowConcurrentExecutions = true)]
     private Task AddBorder(string color) => ApplyEditAsync(b =>
-        ImageOps.AddBorder(b, Math.Max(1, Settings.BorderThickness), color == "White" ? Colors.White : Colors.Black));
+        ImageOps.AddBorder(b, Math.Max(1, Settings.BorderThickness), color == "White" ? Colors.White : Colors.Black), movesPixels: true);
 
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task Resize(string percentText)
@@ -668,7 +684,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             // Sizes computed when the edit runs: a queued edit may have changed them.
             await ApplyEditAsync(b => ImageOps.Resize(b,
-                Math.Max(1, b.PixelWidth * percent / 100), Math.Max(1, b.PixelHeight * percent / 100)));
+                Math.Max(1, b.PixelWidth * percent / 100), Math.Max(1, b.PixelHeight * percent / 100)), movesPixels: true);
             return;
         }
         // No edit session before the dialog: cancelling must not join a page pair.
@@ -677,7 +693,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var size = _view.ShowResizeDialog(current.PixelWidth, current.PixelHeight);
         if (size is null) return;
         var (w, h) = size.Value;
-        await ApplyEditAsync(b => ImageOps.Resize(b, w, h));
+        await ApplyEditAsync(b => ImageOps.Resize(b, w, h), movesPixels: true);
     }
 
     [RelayCommand]
@@ -698,7 +714,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         switch (kind)
         {
             case SelectionKind.Crop:
-                await ApplyEditAsync(b => ImageOps.Crop(b, rect));
+                await ApplyEditAsync(b => ImageOps.Crop(b, rect), movesPixels: true);
                 break;
             case SelectionKind.Rectangle:
                 _lastRectangle = rect;
@@ -745,6 +761,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // No edit session before the dialog: cancelling must not join a page pair.
         var current = IsBusy ? null : CurrentBitmapForExport();
         if (current is null) return;
+        var editState = _edit?.Current;
         EffectDefinition effect = name switch
         {
             "BrightnessContrast" => new("Brightness and contrast",
@@ -774,7 +791,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _view.ShowError($"The operation failed.\n{ex.Message}");
             return;
         }
-        if (request != _requestId) return; // the image changed meanwhile
+        // The image changed meanwhile (another image, or an edit queued while the copy was made).
+        if (request != _requestId || IsBusy || !ReferenceEquals(_edit?.Current, editState)) return;
         var values = _view.ShowEffectDialog(effect, preview, (double)preview.PixelWidth / current.PixelWidth);
         if (values is null) return;
         await ApplyEditAsync(b => effect.Apply(b, values, 1.0));
@@ -824,6 +842,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _edit = new EditSession(bitmap);
             _detached = true;
             _detachedName = "Clipboard image";
+            _lastRectangle = null;
+            Tool = ViewerTool.None;
             HasImage = true;
             _view.ShowPages([bitmap], preserveView: false);
             UpdateEditFlags();
@@ -854,11 +874,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (!HasImage) return false;
         string? path = CurrentFilePath;
         if (_detached || path is null || !IsSingleFilePage || !ImageFormats.CanSave(path)) return await SaveAsCoreAsync(openSaved);
-        // Overwriting a multi-page file (TIFF) would keep only the page shown: save under a new name.
-        if (_visible is { Length: 1 } pages && pages[0].PageCount > 1)
+        if (_saveQueued)
         {
-            Toast($"«{Path.GetFileName(path)}» has {pages[0].PageCount} pages: choose a new name to keep the original");
-            return await SaveAsCoreAsync(openSaved);
+            Toast("Already saving…");
+            return true;
         }
         // With edits still queued (e.g. ↑ then Ctrl+S right away) the image is not modified yet:
         // the save is queued after them and checks again when its turn comes.
@@ -866,6 +885,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             Toast("Nothing to save");
             return true;
+        }
+        // Overwriting a multi-page file (TIFF) would keep only the page shown: save under a new name.
+        if (_visible is { Length: 1 } pages && pages[0].PageCount > 1)
+        {
+            Toast($"«{Path.GetFileName(path)}» has {pages[0].PageCount} pages: choose a new name to keep the original");
+            return await SaveAsCoreAsync(openSaved);
         }
         if (Settings.ConfirmOverwrite)
         {
@@ -901,17 +926,30 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         bool ok = await WriteAsync(CurrentBitmapForExport, path);
         if (!ok) return false;
         if (animated) Toast($"Saved: {Path.GetFileName(path)} (first frame of the animation only)");
-        if (openSaved && _source is not ArchiveSource)
-        {
-            // Like any editor, the saved file becomes the current one: a later Ctrl+S must write
-            // there, not over the original. (Comic pages stay in their archive.)
-            await OpenPathAsync(path);
-        }
-        else if (_source is FolderSource folder &&
-                 string.Equals(Path.GetDirectoryName(path), folder.Location, StringComparison.OrdinalIgnoreCase))
+        if (_source is FolderSource folder &&
+            string.Equals(Path.GetDirectoryName(path), folder.Location, StringComparison.OrdinalIgnoreCase))
         {
             RefreshFolderKeepingPosition();
+            // Saved into the folder being browsed: the saved file becomes the current one, so a
+            // later Ctrl+S writes there and not over the original. Layout and position are kept.
+            // (Not while other edits are queued: they belong to the image on screen.)
+            if (openSaved && !IsBusy && _source is FolderSource current)
+            {
+                int index = current.IndexOf(Path.GetFullPath(path));
+                if (index >= 0 && (index != _nav.Position || _detached))
+                {
+                    _nav.GoTo(index);
+                    await ShowCurrentAsync();
+                }
+            }
         }
+        else if (openSaved && _source is null && !IsBusy)
+        {
+            // A pasted image with nothing else open: show the file it was saved to.
+            await OpenPathAsync(path);
+        }
+        // Saved elsewhere (an exported copy): browsing stays where it was. The edits count as
+        // saved, so Ctrl+S has nothing to overwrite.
         return true;
     }
 
@@ -930,18 +968,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // The save belongs to the image shown when it was requested: never write another image
         // (pasted, opened meanwhile…) over that file.
         int request = _requestId;
+        _saveQueued = true;
         return RunExclusiveAsync(async () =>
         {
-            if (request != _requestId) return false;
-            var bitmap = getBitmap();
-            if (bitmap is null)
-            {
-                Toast("Nothing to save");
-                return true;
-            }
-            var session = _edit;
             try
             {
+                if (request != _requestId) return false;
+                var bitmap = getBitmap();
+                if (bitmap is null)
+                {
+                    Toast("Nothing to save");
+                    return true;
+                }
+                var session = _edit;
                 await StaTask.Run(() => { ImageSaver.Save(bitmap, path, quality, meta, resetOrientation); return true; });
                 // Mark as saved only the state that was written (not one reached by a later undo).
                 if (session is not null && ReferenceEquals(session.Current, bitmap)) session.MarkSaved();
@@ -955,6 +994,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             {
                 _view.ShowError($"Saving failed.\n{ex.Message}");
                 return false;
+            }
+            finally
+            {
+                _saveQueued = false;
             }
         });
     }
@@ -1003,6 +1046,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         int index = current is null ? -1 : fresh.IndexOf(current);
         _nav.Reset(fresh.Pages.Count, index < 0 ? _nav.Position : index);
         UpdateInfo();
+        // A page was loading from the old cache (now cancelled): load it again from the new one.
+        if (IsLoading && !IsOpeningArchive) _ = ShowCurrentAsync();
     }
 
     [RelayCommand(AllowConcurrentExecutions = true)]
@@ -1150,7 +1195,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 if (bmp is null) return;
                 path = Path.Combine(Shell.LocalDataFolder, "wallpaper.png");
                 string target = path;
-                await StaTask.Run(() => { ImageSaver.Save(bmp, target, 95); return true; });
+                // In the edit/save queue: closing the window waits for it (no half-written file left).
+                await RunExclusiveAsync(() => StaTask.Run(() => { ImageSaver.Save(bmp, target, 95); return true; }));
             }
             Shell.SetWallpaper(path);
             Toast("Desktop background set");
@@ -1167,20 +1213,24 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_detached) { NotAFile(); return; }
         if (_cache is null || _visible is null) return;
         int index = _nav.Position;
+        int request = _requestId;
+        string name = Path.GetFileName(_source!.Pages[index].Name);
         try
         {
             byte[] bytes = await _cache.Get(index).Bytes;
             var groups = await Task.Run(() => MetadataService.Read(bytes));
+            if (request != _requestId) return; // another image is shown by now (slow solid archive)
             if (groups.Count == 0)
             {
                 Toast("No metadata found");
                 return;
             }
-            _view.ShowMetadata(Path.GetFileName(_source!.Pages[index].Name), groups);
+            _view.ShowMetadata(name, groups);
         }
+        catch (OperationCanceledException) { /* the source changed while reading */ }
         catch (Exception ex)
         {
-            _view.ShowError($"Cannot read the metadata.\n{ex.Message}");
+            if (request == _requestId) _view.ShowError($"Cannot read the metadata.\n{ex.Message}");
         }
     }
 
@@ -1197,7 +1247,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             _cache?.Dispose();
             _cache = new PageCache(_source, Settings.AutoRotateExif);
-            if (!_detached && !IsBusy && !IsOpeningArchive && (_edit is null || !_edit.IsModified))
+            if (!IsOpeningArchive && (IsLoading || (!_detached && !IsBusy && (_edit is null || !_edit.IsModified))))
                 await ShowCurrentAsync();
         }
     }
@@ -1225,9 +1275,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private void ToggleActualSize() =>
         ViewMode = ViewMode == ViewMode.ActualSize ? Settings.ViewMode : ViewMode.ActualSize;
 
+    private bool _disposed;
+
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
         _slideshowTimer.Stop();
+        _toastTimer.Stop();
         _cache?.Dispose();
         _source?.Dispose();
     }

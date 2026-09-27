@@ -7,7 +7,7 @@
         xmlns:core="clr-namespace:pViewer.Core"
         Title="{Binding Title}"
         Width="1180" Height="780" MinWidth="420" MinHeight="300"
-        AllowDrop="True" WindowStartupLocation="CenterScreen"
+        AllowDrop="True" WindowStartupLocation="CenterScreen" UseLayoutRounding="True"
         Icon="Assets/pv.ico">
 
     <Window.Resources>

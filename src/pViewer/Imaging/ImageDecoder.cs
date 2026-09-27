@@ -177,7 +177,7 @@ public static class ImageDecoder
             FormatName = FormatName(decoder),
             FileSize = data.LongLength,
             AutoOriented = autoOrient,
-            PageCount = icon ? 1 : decoder.Frames.Count,
+            PageCount = decoder is TiffBitmapDecoder ? decoder.Frames.Count : 1, // GIF frames are not pages
         };
     }
 
@@ -230,12 +230,29 @@ public static class ImageDecoder
             ushort orientation = autoOrient ? ReadOrientation(frame) : (ushort)1;
             var preview = orientation > 1 ? ApplyOrientation(thumb, orientation) : ImageBridge.Materialize(thumb);
             bool swap = orientation >= 5;
-            return (preview, swap ? frame.PixelHeight : frame.PixelWidth, swap ? frame.PixelWidth : frame.PixelHeight);
+            int fullW = swap ? frame.PixelHeight : frame.PixelWidth, fullH = swap ? frame.PixelWidth : frame.PixelHeight;
+            return (CropToAspect(preview, fullW, fullH), fullW, fullH);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// EXIF thumbnails are often 160×120 (4:3) with black bars, even for 3:2 photos: cut them to
+    /// the proportions of the full image, or the preview would be stretched and show the bars.
+    /// </summary>
+    private static BitmapSource CropToAspect(BitmapSource thumb, int fullWidth, int fullHeight)
+    {
+        if (fullWidth <= 0 || fullHeight <= 0) return thumb;
+        double target = (double)fullWidth / fullHeight;
+        int w = thumb.PixelWidth, h = thumb.PixelHeight;
+        int cropW = w, cropH = h;
+        if ((double)w / h > target) cropW = (int)Math.Round(h * target);
+        else cropH = (int)Math.Round(w / target);
+        if (cropW < 1 || cropH < 1 || (cropW == w && cropH == h)) return thumb;
+        return ImageBridge.Materialize(new CroppedBitmap(thumb, new System.Windows.Int32Rect((w - cropW) / 2, (h - cropH) / 2, cropW, cropH)));
     }
 
     public static ushort ReadOrientation(BitmapFrame frame)

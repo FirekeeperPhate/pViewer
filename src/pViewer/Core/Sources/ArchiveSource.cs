@@ -211,7 +211,9 @@ public sealed class ArchiveSource : IImageSource
             _cts.Dispose();
         }
 
+        // Never on the calling (UI) thread: disposing waits for the archive lock, which a page
+        // extraction in progress may hold for a while.
         if (_preloadTask is { IsCompleted: false }) _preloadTask.ContinueWith(_ => DisposeOwned(), TaskScheduler.Default);
-        else DisposeOwned();
+        else _ = Task.Run(DisposeOwned);
     }
 }

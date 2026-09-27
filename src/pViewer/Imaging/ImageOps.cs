@@ -64,7 +64,19 @@ public static class ImageOps
 
     /// <summary>Pure black and white (formerly "1 bit").</summary>
     public static BitmapSource BlackWhite(BitmapSource src) =>
-        ImageBridge.Process(src, i => i.Mutate(x => x.BinaryThreshold(0.5f)));
+        ImageBridge.Process(src, img => img.ProcessPixelRows(rows =>
+        {
+            // By luminance, keeping alpha (a threshold on the whole pixel would turn the
+            // transparent areas of a PNG solid black).
+            for (int y = 0; y < rows.Height; y++)
+            {
+                foreach (ref Bgra32 p in rows.GetRowSpan(y))
+                {
+                    byte v = 0.299 * p.R + 0.587 * p.G + 0.114 * p.B >= 128 ? (byte)255 : (byte)0;
+                    p = new Bgra32(v, v, v, p.A);
+                }
+            }
+        }));
 
     /// <param name="brightness">-100..100</param>
     /// <param name="contrast">-100..100</param>
@@ -116,9 +128,12 @@ public static class ImageOps
 
     // ---- Operations that draw with WPF (STA thread) ----
 
-    private static BitmapSource Render(int width, int height, Action<DrawingContext> draw)
+    /// <param name="aliased">Hard edges: shapes on integer pixel edges stay crisp instead of
+    /// getting half-transparent anti-aliased borders.</param>
+    private static BitmapSource Render(int width, int height, Action<DrawingContext> draw, bool aliased = false)
     {
         var visual = new DrawingVisual();
+        if (aliased) RenderOptions.SetEdgeMode(visual, EdgeMode.Aliased);
         using (var dc = visual.RenderOpen()) draw(dc);
         var rtb = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
         rtb.Render(visual);
@@ -139,11 +154,18 @@ public static class ImageOps
             if (fill) dc.DrawRectangle(brush, null, r);
             else
             {
-                var pen = new Pen(brush, thickness) { LineJoin = PenLineJoin.Miter };
-                pen.Freeze();
-                dc.DrawRectangle(null, pen, r);
+                // Four filled bands on whole pixels, centred on the edges like a pen would be: a pen
+                // of odd width centred on an integer edge would fall on half pixels (soft edges).
+                int t = Math.Max(1, (int)Math.Round(thickness));
+                int before = t / 2;
+                int left = rect.X - before, top = rect.Y - before;
+                int outerW = rect.Width + t, outerH = rect.Height + t;
+                dc.DrawRectangle(brush, null, new Rect(left, top, outerW, t));                    // top
+                dc.DrawRectangle(brush, null, new Rect(left, top + outerH - t, outerW, t));       // bottom
+                dc.DrawRectangle(brush, null, new Rect(left, top + t, t, outerH - 2 * t));        // left
+                dc.DrawRectangle(brush, null, new Rect(left + outerW - t, top + t, t, outerH - 2 * t)); // right
             }
-        });
+        }, aliased: true);
     }
 
     public static FormattedText CreateFormattedText(TextPlacement t)
@@ -179,7 +201,8 @@ public static class ImageOps
             double x = 0;
             foreach (var p in pages)
             {
-                dc.DrawImage(p, new Rect(x, (height - p.PixelHeight) / 2.0, p.PixelWidth, p.PixelHeight));
+                // Whole pixels: a half-pixel offset (odd height difference) would resample the page.
+                dc.DrawImage(p, new Rect(x, Math.Floor((height - p.PixelHeight) / 2.0), p.PixelWidth, p.PixelHeight));
                 x += p.PixelWidth;
             }
         });

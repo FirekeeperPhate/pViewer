@@ -156,7 +156,7 @@ public sealed class ImageViewer : Border
         {
             var img = new Image { Source = page, Width = PageWidth(page), Height = PageHeight(page), Stretch = Stretch.Fill };
             Canvas.SetLeft(img, x);
-            Canvas.SetTop(img, (height - PageHeight(page)) / 2);
+            Canvas.SetTop(img, Math.Floor((height - PageHeight(page)) / 2)); // whole pixels, like the joined image
             _content.Children.Insert(insertAt++, img);
             _images.Add(img);
             if (animations is not null && insertAt - 1 < animations.Count && animations[insertAt - 1] is { } anim)
@@ -521,8 +521,10 @@ public sealed class ImageViewer : Border
         {
             var r = SelectionRect(ToImage(e.GetPosition(this)));
             _selection.Visibility = Visibility.Collapsed;
-            var rect = new Int32Rect((int)Math.Round(r.X), (int)Math.Round(r.Y),
-                                     (int)Math.Round(r.Width), (int)Math.Round(r.Height));
+            // Edges rounded, then the size derived from them (rounding X and Width separately could
+            // make the selection one pixel too large).
+            int left = (int)Math.Round(r.Left), top = (int)Math.Round(r.Top);
+            var rect = new Int32Rect(left, top, (int)Math.Round(r.Right) - left, (int)Math.Round(r.Bottom) - top);
             if (rect.Width >= 2 && rect.Height >= 2)
                 SelectionCompleted?.Invoke(this, new SelectionEventArgs(_selectionKind, rect));
         }

@@ -30,7 +30,19 @@ public sealed class PageNavigator
 {
     public int Count { get; private set; }
     public int Position { get; private set; }
-    public PageLayout Layout { get; set; } = PageLayout.Single;
+    private PageLayout _layout = PageLayout.Single;
+
+    public PageLayout Layout
+    {
+        get => _layout;
+        set
+        {
+            // Switching to two pages mid-book: pairs start from the page being read, so going back
+            // shows every page (not just the ones of the old parity).
+            if (value != PageLayout.Single && _layout == PageLayout.Single) _alignment = Position % 2;
+            _layout = value;
+        }
+    }
 
     /// <summary>If true, going past the ends asks for the adjacent volume instead of wrapping around.</summary>
     public bool HasNextContainer { get; set; }
@@ -68,7 +80,8 @@ public sealed class PageNavigator
     {
         if (Count == 0) return [];
         var result = new List<int>();
-        for (int i = 0; i < Step; i++) result.Add(Position + Step + i);
+        int next = Position + (IsCover ? 1 : Step); // start of the view Next will show
+        for (int i = 0; i < Step; i++) result.Add(next + i);
         for (int i = 0; i < Step; i++) result.Add(Position - Step + i);
         return result.Where(i => i >= 0 && i < Count && !VisibleIndices().Contains(i)).Distinct().ToArray();
     }

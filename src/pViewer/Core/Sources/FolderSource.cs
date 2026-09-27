@@ -29,8 +29,10 @@ public sealed class FolderSource : IImageSource
     public int IndexOf(string filePath) =>
         _pages.FindIndex(p => string.Equals(p.FilePath, filePath, StringComparison.OrdinalIgnoreCase));
 
-    public Task<byte[]> ReadAsync(int index, CancellationToken ct = default) =>
-        File.ReadAllBytesAsync(_pages[index].FilePath!, ct);
+    // async: a missing or locked file (deleted in Explorer, still being copied) must fail the
+    // returned task, not throw synchronously into the caller.
+    public async Task<byte[]> ReadAsync(int index, CancellationToken ct = default) =>
+        await File.ReadAllBytesAsync(_pages[index].FilePath!, ct);
 
     public void Dispose() { }
 }
