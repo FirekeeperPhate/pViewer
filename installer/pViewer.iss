@@ -118,9 +118,9 @@ Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags
 
 [Code]
 { Switching edition (Full <-> Light) or upgrading: remove the previous program files so no
-  stale runtime or library DLLs are left behind. Both editions publish everything flat in {app},
-  so only files are touched (never folders the user may have put there); settings.json and the
-  uninstaller files (unins*) are kept. }
+  stale runtime or library DLLs are left behind. Both editions publish everything flat in the
+  program folder, so only files are touched (never folders the user may have put there);
+  settings.json and the uninstaller files (unins*) are kept. }
 procedure CleanProgramFolder;
 var
   App, Name: String;
