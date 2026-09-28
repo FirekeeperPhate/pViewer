@@ -25,7 +25,9 @@ public interface IMainView
     void ClearPages();
     void ResetView();
 
-    MessageBoxResult Ask(string message, string title, MessageBoxButton buttons, MessageBoxImage icon = MessageBoxImage.Question);
+    /// <param name="buttonLabels">Texts replacing Yes/No/Cancel (e.g. "Update now", "Later"), same order.</param>
+    MessageBoxResult Ask(string message, string title, MessageBoxButton buttons, MessageBoxImage icon = MessageBoxImage.Question,
+        string[]? buttonLabels = null);
     void ShowError(string message);
 
     string? PickOpenFile(string? initialDirectory);
@@ -44,5 +46,9 @@ public interface IMainView
     /// <summary>A modal dialog (WPF or Win32, e.g. the file dialogs) is open over the window.</summary>
     bool HasModalDialog { get; }
     void SetFullscreen(bool fullscreen);
+
+    /// <summary>Starts the downloaded installer and closes the window (changes already confirmed).</summary>
+    /// <param name="reopen">File or archive to open again once the update is installed.</param>
+    void CloseForUpdate(string installer, string? reopen);
     IntPtr WindowHandle { get; }
 }

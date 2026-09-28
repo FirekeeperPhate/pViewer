@@ -135,6 +135,10 @@
                     </StackPanel>
                 </Grid>
 
+                <TextBlock Text="Updates" Style="{StaticResource Section}" />
+                <CheckBox x:Name="UpdatesBox" Content="Check for new versions automatically (once a day)" />
+                <TextBlock Text="Help › Check for updates looks right away. Nothing is installed without asking." Opacity="0.65" TextWrapping="Wrap" Margin="0,4,0,0" />
+
                 <TextBlock Text="Keyboard shortcuts" Style="{StaticResource Section}" />
                 <TextBlock Text="Click + and press the new key combination (with Ctrl, Shift or Alt if you like). A key already used by another command is moved to this one." Opacity="0.65" TextWrapping="Wrap" Margin="0,0,0,6" />
                 <TextBlock x:Name="HotkeyNote" Foreground="{DynamicResource SystemFillColorCautionBrush}" TextWrapping="Wrap" Margin="0,0,0,6" Visibility="{Binding Text, RelativeSource={RelativeSource Self}, Converter={StaticResource NullToVisibility}}" />

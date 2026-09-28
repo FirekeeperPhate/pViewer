@@ -30,6 +30,9 @@ Version 2 is a complete rewrite in **.NET 10 + WPF** of pViewer 1.x (WinForms, .
   grayscale, invert) into a separate folder, and **batch rename**.
 - Delete to the Recycle Bin, rename, copy/paste via the clipboard, EXIF data, file properties,
   "Open with", set as desktop background.
+- **Updates**: once a day pViewer asks GitHub whether a newer release exists (it sends nothing
+  else) and offers to install it; the installer then reopens pViewer on the same file. The check
+  can be turned off in Settings › Updates, and Help › Check for updates runs it on demand.
 - Settings live in `settings.json` next to the executable (if that folder is not writable,
   `%AppData%\pViewer` is used).
 

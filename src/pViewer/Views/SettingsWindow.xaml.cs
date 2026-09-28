@@ -37,6 +37,7 @@ public partial class SettingsWindow : Window
         RecycleBox.IsChecked = s.DeleteToRecycleBin;
         ConfirmOverwriteBox.IsChecked = s.ConfirmOverwrite;
         ConfirmDiscardBox.IsChecked = s.ConfirmDiscardEdits;
+        UpdatesBox.IsChecked = s.CheckForUpdates;
         QualitySlider.Value = Math.Clamp(s.JpegQuality, 10, 100);
         _cropColor = MainViewModel.ParseColor(s.CropColor, Colors.Red);
         _rectColor = MainViewModel.ParseColor(s.RectangleColor, Colors.Red);
@@ -114,6 +115,7 @@ public partial class SettingsWindow : Window
         s.DeleteToRecycleBin = RecycleBox.IsChecked == true;
         s.ConfirmOverwrite = ConfirmOverwriteBox.IsChecked == true;
         s.ConfirmDiscardEdits = ConfirmDiscardBox.IsChecked == true;
+        s.CheckForUpdates = UpdatesBox.IsChecked == true;
         s.JpegQuality = (int)QualitySlider.Value;
         s.CropColor = _cropColor.ToString();
         s.RectangleColor = _rectColor.ToString();

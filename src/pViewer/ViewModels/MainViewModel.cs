@@ -1378,6 +1378,102 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    // ---- Updates ----
+
+    private bool _checkingForUpdates;
+
+    /// <summary>Help › Check for updates.</summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task CheckForUpdates() => CheckForUpdatesAsync(manual: true);
+
+    /// <summary>
+    /// Looks for a newer release. The automatic check (after startup) runs at most once a day,
+    /// only if enabled, stays silent on errors and does not offer a version the user skipped.
+    /// </summary>
+    public async Task CheckForUpdatesAsync(bool manual)
+    {
+        if (_checkingForUpdates || _disposed) return;
+        if (!manual && (!Settings.CheckForUpdates
+                        || Settings.LastUpdateCheck is { } last && DateTime.Now - last < UpdateService.CheckInterval))
+            return;
+        _checkingForUpdates = true;
+        try
+        {
+            if (manual) Toast("Checking for updates…");
+            UpdateInfo? update;
+            try
+            {
+                update = await UpdateService.CheckAsync();
+                Settings.LastUpdateCheck = DateTime.Now;
+            }
+            catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or TaskCanceledException
+                                           or IOException or System.Text.Json.JsonException or InvalidOperationException
+                                           or KeyNotFoundException)
+            {
+                if (manual) _view.ShowError($"Could not check for updates.\n{ex.Message}");
+                return;
+            }
+            if (_disposed) return;
+            string current = UpdateService.CurrentVersion.ToString(3);
+            if (update is null)
+            {
+                if (manual) _view.Ask($"pViewer {current} is the latest version.", "Check for updates", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            string version = update.Version.ToString(3);
+            if (!manual && Settings.SkippedVersion == version) return;
+            // Never on top of another dialog or in the middle of a slideshow: next time instead.
+            if (!manual && (_view.HasModalDialog || IsSlideshowRunning)) { Settings.LastUpdateCheck = null; return; }
+            await OfferUpdateAsync(update, version, current, manual);
+        }
+        finally
+        {
+            _checkingForUpdates = false;
+        }
+    }
+
+    private async Task OfferUpdateAsync(UpdateInfo update, string version, string current, bool manual)
+    {
+        bool installed = UpdateService.IsInstalled;
+        string message = installed
+            ? $"pViewer {version} is available (you have {current}).\n\nUpdate now? pViewer closes, installs the update and opens again."
+            : $"pViewer {version} is available (you have {current}).\n\nThis copy was not installed with the setup: open the download page?";
+        string action = installed ? "Update now" : "Open the page";
+        // Esc = "Later": the last button of each set.
+        var answer = manual
+            ? _view.Ask(message, "Update available", MessageBoxButton.YesNo, MessageBoxImage.Information, [action, "Later"])
+            : _view.Ask(message, "Update available", MessageBoxButton.YesNoCancel, MessageBoxImage.Information, [action, "Skip this version", "Later"]);
+        if (answer == MessageBoxResult.No && !manual)
+        {
+            Settings.SkippedVersion = version;
+            return;
+        }
+        if (answer != MessageBoxResult.Yes) return;
+        if (!installed)
+        {
+            Shell.OpenUrl(update.PageUrl);
+            return;
+        }
+
+        // The update closes pViewer: unsaved changes first, and nothing still being written.
+        if (!await ConfirmDiscardEditsAsync()) return;
+        while (IsBusy) await Task.Delay(100);
+        string installer;
+        try
+        {
+            var progress = new Progress<double>(p => Toast($"Downloading pViewer {version}… {p:P0}"));
+            installer = await UpdateService.DownloadAsync(update, progress);
+        }
+        catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or TaskCanceledException
+                                       or IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            _view.ShowError($"Could not download the update.\n{ex.Message}\n\nIt can also be downloaded from {update.PageUrl}");
+            return;
+        }
+        Toast($"Installing pViewer {version}…");
+        _view.CloseForUpdate(installer, CurrentContainerOrFile);
+    }
+
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task OpenSettings()
     {

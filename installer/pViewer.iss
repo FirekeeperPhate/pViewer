@@ -121,6 +121,9 @@ Root: HKA; Subkey: "Software\RegisteredApplications"; ValueType: string; ValueNa
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+; Update started by pViewer itself (/SILENT /RELAUNCH=1 /OPEN="file"): start it again on that file,
+; as the user who ran it (not elevated, also for an all-users install).
+Filename: "{app}\{#AppExe}"; Parameters: "{code:RelaunchParameters}"; Flags: nowait runasoriginaluser; Check: ShouldRelaunch
 
 [Code]
 { Switching edition (Full <-> Light) or upgrading: remove the previous program files so no
@@ -184,6 +187,22 @@ begin
       RegDeleteValue(HKA, 'Software\Classes\' + Ext + '\OpenWithProgids', 'pViewer.Comic');
     end;
   end;
+end;
+
+function ShouldRelaunch: Boolean;
+begin
+  Result := WizardSilent and (ExpandConstant('{param:RELAUNCH|0}') = '1');
+end;
+
+function RelaunchParameters(Param: String): String;
+var
+  FileToOpen: String;
+begin
+  FileToOpen := ExpandConstant('{param:OPEN|}');
+  if FileToOpen <> '' then
+    Result := AddQuotes(FileToOpen)
+  else
+    Result := '';
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);

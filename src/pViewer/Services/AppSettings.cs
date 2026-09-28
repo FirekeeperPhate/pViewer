@@ -56,6 +56,12 @@ public sealed class AppSettings
     public string? LastFolder { get; set; }
     public WindowPlacement? Window { get; set; }
 
+    /// <summary>Look for a newer version on GitHub once a day (after startup, in the background).</summary>
+    public bool CheckForUpdates { get; set; } = true;
+    public DateTime? LastUpdateCheck { get; set; }
+    /// <summary>A version the user chose to skip: not offered again automatically.</summary>
+    public string? SkippedVersion { get; set; }
+
     /// <summary>Keyboard shortcuts changed by the user: command id → keys ("Ctrl+S"). Others use the defaults.</summary>
     public Dictionary<string, List<string>>? Hotkeys { get; set; }
 }

@@ -160,6 +160,7 @@
             <MenuItem Header="Help">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE897;" /></MenuItem.Icon>
                 <MenuItem Header="Keyboard shortcuts" controls:HotkeyText.Command="Help" Click="Help_Click" />
+                <MenuItem Header="Check for updates…" Command="{Binding CheckForUpdatesCommand}" />
                 <MenuItem Header="About pViewer" Click="About_Click" />
             </MenuItem>
             <MenuItem Header="Exit" controls:HotkeyText.Command="Close" Click="Exit_Click" />

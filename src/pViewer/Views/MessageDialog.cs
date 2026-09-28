@@ -15,9 +15,12 @@ public sealed class MessageDialog : Window
     private MessageBoxResult _result;
     private readonly MessageBoxButton _buttons;
 
-    private MessageDialog(string message, string title, MessageBoxButton buttons, MessageBoxImage icon)
+    private readonly bool _customLabels;
+
+    private MessageDialog(string message, string title, MessageBoxButton buttons, MessageBoxImage icon, string[]? buttonLabels)
     {
         _buttons = buttons;
+        _customLabels = buttonLabels is not null;
         Title = title;
         Width = 460;
         SizeToContent = SizeToContent.Height;
@@ -67,6 +70,9 @@ public sealed class MessageDialog : Window
             MessageBoxButton.YesNoCancel => [("Yes", MessageBoxResult.Yes), ("No", MessageBoxResult.No), ("Cancel", MessageBoxResult.Cancel)],
             _ => [("OK", MessageBoxResult.OK)],
         };
+        // Custom texts ("Update now", "Later"…), in the same order as the standard buttons.
+        if (buttonLabels is not null)
+            for (int i = 0; i < labels.Length && i < buttonLabels.Length; i++) labels[i] = (buttonLabels[i], labels[i].Item2);
         for (int i = 0; i < labels.Length; i++)
         {
             var (label, result) = labels[i];
@@ -111,7 +117,8 @@ public sealed class MessageDialog : Window
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        bool yesNo = _buttons is MessageBoxButton.YesNo or MessageBoxButton.YesNoCancel;
+        // Y and N only when the buttons say Yes and No.
+        bool yesNo = !_customLabels && _buttons is MessageBoxButton.YesNo or MessageBoxButton.YesNoCancel;
         if (yesNo && e.Key == Key.Y) { Close(MessageBoxResult.Yes); e.Handled = true; }
         else if (yesNo && e.Key == Key.N) { Close(MessageBoxResult.No); e.Handled = true; }
         else if (e.Key == Key.Escape) { Close(CancelResult); e.Handled = true; }
@@ -134,9 +141,9 @@ public sealed class MessageDialog : Window
     }
 
     public static MessageBoxResult Show(Window? owner, string message, string title,
-        MessageBoxButton buttons = MessageBoxButton.OK, MessageBoxImage icon = MessageBoxImage.None)
+        MessageBoxButton buttons = MessageBoxButton.OK, MessageBoxImage icon = MessageBoxImage.None, string[]? buttonLabels = null)
     {
-        var dialog = new MessageDialog(message, title, buttons, icon);
+        var dialog = new MessageDialog(message, title, buttons, icon, buttonLabels);
         if (owner is { IsLoaded: true }) dialog.Owner = owner;
         else dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         dialog.ShowDialog();

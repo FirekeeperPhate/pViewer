@@ -109,6 +109,13 @@ public partial class MainWindow : Window, IMainView
             HwndSource.FromHwnd(WindowHandle)?.AddHook(WndProc);
         };
         Closing += Window_Closing;
+        // The update check waits until the window is up and the first image is shown: startup stays fast.
+        ContentRendered += async (_, _) =>
+        {
+            if (StartupTrace.Enabled) return;
+            await Task.Delay(TimeSpan.FromSeconds(8));
+            await _vm.CheckForUpdatesAsync(manual: false);
+        };
 
         ApplySettingsToView();
     }
@@ -572,8 +579,28 @@ public partial class MainWindow : Window, IMainView
 
     public void ResetView() => Viewer.ResetView();
 
-    public MessageBoxResult Ask(string message, string title, MessageBoxButton buttons, MessageBoxImage icon = MessageBoxImage.Question) =>
-        MessageDialog.Show(this, message, title, buttons, icon);
+    public MessageBoxResult Ask(string message, string title, MessageBoxButton buttons, MessageBoxImage icon = MessageBoxImage.Question,
+        string[]? buttonLabels = null) =>
+        MessageDialog.Show(this, message, title, buttons, icon, buttonLabels);
+
+    public void CloseForUpdate(string installer, string? reopen)
+    {
+        // /SILENT shows only the progress; /RELAUNCH and /OPEN make the new version start again on
+        // the same file (see [Run] in pViewer.iss). The installer waits for this process to end
+        // (AppMutex), so the window closes right after starting it.
+        string args = "/SILENT /NORESTART /RELAUNCH=1" + (reopen is null ? "" : $" /OPEN=\"{reopen}\"");
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(installer, args) { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException)
+        {
+            ShowError($"Could not start the update.\n{ex.Message}"); // e.g. UAC refused for an all-users install
+            return;
+        }
+        _closeConfirmed = true; // the changes were already confirmed or discarded
+        Close();
+    }
 
     public void ShowError(string message) =>
         MessageDialog.Show(this, message, "pViewer", MessageBoxButton.OK, MessageBoxImage.Warning);

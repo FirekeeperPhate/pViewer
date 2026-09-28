@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+**New**
+- Automatic updates: once a day (after startup, in the background) pViewer looks for a newer
+  release on GitHub and offers to install it (Update now / Skip this version / Later). The
+  installer is downloaded from GitHub, checked (size and SHA-256), run, and pViewer reopens on
+  the same file. On by default, it can be turned off in Settings › Updates; Help › Check for
+  updates checks right away. Copies not installed with the setup open the download page instead.
+
 ## 2.0.6
 
 - THIRD-PARTY-NOTICES.txt with the licenses of the bundled components, installed next to pViewer
