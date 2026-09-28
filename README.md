@@ -3,6 +3,11 @@
 Image viewer and small editor for Windows, with comic and manga reading straight from
 archives.
 
+![pViewer demo: browsing, zoom, drawing, effects, two-page manga mode and keyboard shortcuts](docs/demo.gif)
+
+[Watch the demo in full quality (MP4, 45 s)](docs/demo.mp4) — the images in it are generated
+for the demo.
+
 This is the revised and finally updated version of the original pViewer, published on
 SourceForge: [sourceforge.net/projects/picoviewer](https://sourceforge.net/projects/picoviewer/).
 Version 2 is a complete rewrite in **.NET 10 + WPF** of pViewer 1.x (WinForms, .NET Framework
