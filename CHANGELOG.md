@@ -11,6 +11,18 @@
 - A maximized window saved on a larger monitor fits the current one when restored.
 - In full screen, T no longer hides the toolbar of the normal window unseen.
 - Batch rename after saving changes into the folder renames the right list of files.
+- Saving over a file keeps its creation date and attributes (a hidden image stays hidden).
+- The later parts of a multi-part RAR (.part2.rar…) are no longer taken for separate volumes;
+  the F12 pairing of a volume is kept when coming back to it.
+- Ctrl+S on a pasted image already saved says "Nothing to save" instead of asking again.
+- Two-page view redraws when a file saved into the folder shifts the pair.
+
+**Robustness**
+- Crafted or broken files can no longer crash pViewer (metadata of an endless EXIF chain),
+  allocate gigabytes (tiny TGA/QOI/PPM files claiming huge sizes, oversized archive pages or
+  nested archives, oversized PNG color profiles) or freeze it (GIFs with thousands of frames are
+  shown still).
+- Out-of-range or broken values in a hand-edited settings.json go back to the defaults.
 
 **Installer**
 - Setup and uninstall ask to close a running pViewer; an interrupted upgrade no longer leaves a

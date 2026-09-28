@@ -114,7 +114,31 @@ public static class SettingsStore
         // Outside the read: a hand-edited file must not break the keys, and a problem here must not
         // send the whole file to .bad.
         settings.Hotkeys = Hotkeys.Normalize(settings.Hotkeys);
+        Sanitize(settings);
         return settings;
+    }
+
+    /// <summary>
+    /// Values a hand-edited file may hold but the Settings dialog never would (out of range, null,
+    /// undefined enum numbers) go back to the defaults: they would break startup or a feature.
+    /// </summary>
+    internal static void Sanitize(AppSettings s)
+    {
+        var d = new AppSettings();
+        if (!Enum.IsDefined(s.Theme)) s.Theme = d.Theme;
+        if (!Enum.IsDefined(s.ViewMode)) s.ViewMode = d.ViewMode;
+        if (!Enum.IsDefined(s.ArchiveLayout)) s.ArchiveLayout = d.ArchiveLayout;
+        s.JpegQuality = Math.Clamp(s.JpegQuality, 10, 100);
+        s.RectangleThickness = Math.Clamp(s.RectangleThickness, 1, 500);
+        s.BorderThickness = Math.Clamp(s.BorderThickness, 1, 2000);
+        if (!(s.TextFontSize >= 1 && s.TextFontSize <= 2000)) s.TextFontSize = d.TextFontSize;
+        if (!(s.SlideshowSeconds >= 0.5 && s.SlideshowSeconds <= 3600)) s.SlideshowSeconds = d.SlideshowSeconds;
+        if (string.IsNullOrWhiteSpace(s.TextFontFamily)) s.TextFontFamily = d.TextFontFamily;
+        s.CropColor ??= d.CropColor;
+        s.RectangleColor ??= d.RectangleColor;
+        s.TextColor ??= d.TextColor;
+        if (s.Window is { } w && !(double.IsFinite(w.Left) && double.IsFinite(w.Top) && double.IsFinite(w.Width) && double.IsFinite(w.Height)))
+            s.Window = null;
     }
 
     private static AppSettings Read(string path)
@@ -138,13 +162,13 @@ public static class SettingsStore
         path ??= FilePath;
         try
         {
-            string temp = path + ".tmp";
-            File.WriteAllText(temp, JsonSerializer.Serialize(settings, Json));
-            File.Move(temp, path, overwrite: true);
+            File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(settings, Json));
+            File.Move(path + ".tmp", path, overwrite: true);
         }
         catch (Exception)
         {
-            // Read-only media: settings are simply not saved.
+            // Read-only media or file: settings are simply not saved (and no .tmp is left behind).
+            try { File.Delete(path + ".tmp"); } catch (Exception) { }
         }
     }
 }

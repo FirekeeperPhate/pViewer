@@ -58,12 +58,34 @@ public static class ImageSaver
             {
                 WriteWithEncoder(bitmap, temp, ext, jpegQuality, jpegMetadata, resetOrientation, colorContexts);
             }
-            File.Move(temp, path, overwrite: true);
+            ReplaceOrMove(temp, path);
         }
         finally
         {
             if (File.Exists(temp)) File.Delete(temp);
         }
+    }
+
+    /// <summary>
+    /// Puts the new file in place. Over an existing file, Replace keeps what belongs to the file
+    /// rather than to its content (creation date, hidden attribute, permissions); some drives and
+    /// shares do not support it, so a plain move is the fallback.
+    /// </summary>
+    private static void ReplaceOrMove(string temp, string path)
+    {
+        if (File.Exists(path))
+        {
+            try
+            {
+                File.Replace(temp, path, destinationBackupFileName: null, ignoreMetadataErrors: true);
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or PlatformNotSupportedException or UnauthorizedAccessException)
+            {
+                if (!File.Exists(temp)) throw; // the replace got halfway: never move over it blindly
+            }
+        }
+        File.Move(temp, path, overwrite: true);
     }
 
     private static void WriteWithEncoder(BitmapSource bitmap, string path, string ext, int quality, BitmapMetadata? metadata,

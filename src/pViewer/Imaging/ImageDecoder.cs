@@ -62,8 +62,19 @@ public static class ImageDecoder
     /// <summary>Beyond this much memory only the first frame of the animation is shown.</summary>
     public const long MaxAnimationBytes = 768L * 1024 * 1024;
 
+    /// <summary>From this many frames on the file is shown still: each frame also costs objects and UI work.</summary>
+    public const int MaxAnimationFrames = 5000;
+
+    /// <summary>Largest image decoded (the ImageSharp fallback would otherwise allocate whatever a header claims).</summary>
+    public const long MaxPixels = 400_000_000;
+
     public static LoadedImage Decode(byte[] data, string name, bool autoOrient)
     {
+        // WIC inflates a PNG's color profile even when told to ignore it: a crafted 300 KB profile
+        // that expands to hundreds of MB would take half a minute to decode.
+        if (data.Length > 8 && data[0] == 0x89 && data[1] == 'P' && PngProfileTooLarge(data))
+            throw new ImageDecodeException(FriendlyError(name), new InvalidDataException("Oversized color profile."));
+
         int frameCount = 1;
         if (MayBeAnimated(data))
         {
@@ -79,6 +90,18 @@ public static class ImageDecoder
         }
 
         Exception? firstError = null;
+        if (frameCount > 1)
+        {
+            // An animation not played (too many or too large frames): its first frame only. WIC would
+            // load every frame first (half a minute for a million-frame GIF).
+            try
+            {
+                var still = DecodeImageSharp(data, autoOrient, firstFrameOnly: true);
+                still.FrameCount = frameCount;
+                return still;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException) { firstError = ex; }
+        }
         foreach (var options in new[] { BitmapCreateOptions.PreservePixelFormat,
                                         BitmapCreateOptions.PreservePixelFormat | BitmapCreateOptions.IgnoreColorProfile })
         {
@@ -136,12 +159,13 @@ public static class ImageDecoder
         }
         else
         {
-            var info = ISImage.Identify(data);
+            // MaxFrames: a file with a million tiny frames must not be parsed to the end just to be counted.
+            var info = ISImage.Identify(new SixLabors.ImageSharp.Formats.DecoderOptions { MaxFrames = MaxAnimationFrames + 2 }, data);
             (width, height, frameCount) = (info.Width, info.Height, info.FrameMetadataCollection.Count);
         }
-        if (frameCount < 2 || (long)width * height * 4 * frameCount > MaxAnimationBytes) return null;
+        if (frameCount < 2 || frameCount >= MaxAnimationFrames || (long)width * height * 4 * frameCount > MaxAnimationBytes) return null;
 
-        using var img = ISImage.Load<Bgra32>(data);
+        using var img = ISImage.Load<Bgra32>(new SixLabors.ImageSharp.Formats.DecoderOptions { MaxFrames = MaxAnimationFrames }, data);
         var format = img.Metadata.DecodedImageFormat;
         var frames = new List<BitmapSource>(img.Frames.Count);
         var delays = new List<TimeSpan>(img.Frames.Count);
@@ -206,6 +230,43 @@ public static class ImageDecoder
         }
         frames = Math.Max(declared, present);
         return animated && width > 0 && height > 0 && frames > 0;
+    }
+
+    /// <summary>Real color profiles are at most a few MB.</summary>
+    private const int MaxProfileBytes = 16 * 1024 * 1024;
+
+    /// <summary>True if the PNG's iCCP chunk inflates beyond <see cref="MaxProfileBytes"/>.</summary>
+    private static bool PngProfileTooLarge(byte[] d)
+    {
+        static int BigEndian(byte[] b, int at) => (b[at] << 24) | (b[at + 1] << 16) | (b[at + 2] << 8) | b[at + 3];
+        int pos = 8;
+        while (pos + 8 <= d.Length)
+        {
+            int length = BigEndian(d, pos);
+            if (length < 0 || pos + 12L + length > d.Length) return false;
+            string type = System.Text.Encoding.ASCII.GetString(d, pos + 4, 4);
+            if (type == "IDAT") return false; // the profile comes before the image data
+            if (type == "iCCP")
+            {
+                int start = pos + 8, end = start + length;
+                int nul = Array.IndexOf(d, (byte)0, start, Math.Min(80, length));
+                if (nul < 0 || nul + 2 > end) return false;
+                try
+                {
+                    using var inflate = new System.IO.Compression.ZLibStream(
+                        new MemoryStream(d, nul + 2, end - nul - 2, writable: false), System.IO.Compression.CompressionMode.Decompress);
+                    var buffer = new byte[81920];
+                    long total = 0;
+                    int read;
+                    while ((read = inflate.Read(buffer, 0, buffer.Length)) > 0)
+                        if ((total += read) > MaxProfileBytes) return true;
+                }
+                catch (InvalidDataException) { } // a broken profile: let the decoders deal with it
+                return false;
+            }
+            pos += 12 + length;
+        }
+        return false;
     }
 
     private static TimeSpan FrameDelay(SixLabors.ImageSharp.ImageFrame frame, SixLabors.ImageSharp.Formats.IImageFormat? format)
@@ -310,9 +371,14 @@ public static class ImageDecoder
         catch (Exception) { return ""; }
     }
 
-    private static LoadedImage DecodeImageSharp(byte[] data, bool autoOrient)
+    private static LoadedImage DecodeImageSharp(byte[] data, bool autoOrient, bool firstFrameOnly = false)
     {
-        using var img = ISImage.Load<Bgra32>(data);
+        var options = new SixLabors.ImageSharp.Formats.DecoderOptions { MaxFrames = firstFrameOnly ? 1u : uint.MaxValue };
+        // The size first: a 70-byte TGA may claim 30000 × 30000 pixels.
+        var info = ISImage.Identify(options, data);
+        if ((long)info.Width * info.Height > MaxPixels)
+            throw new InvalidDataException($"The image is too large ({info.Width} × {info.Height}).");
+        using var img = ISImage.Load<Bgra32>(options, data);
         if (autoOrient) img.Mutate(x => x.AutoOrient());
         return new LoadedImage
         {

@@ -35,6 +35,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>Image not tied to a file: pasted, or two pages joined to edit them.</summary>
     private bool _detached;
     private string _detachedName = "";
+    /// <summary>The pasted or joined image has been saved to a file (Ctrl+S then has nothing new to write).</summary>
+    private bool _detachedSaved;
     private int _requestId;
     /// <summary>An archive (e.g. the next volume) is being opened in the background.</summary>
     private int _archiveOpenRequest = -1;
@@ -107,7 +109,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public static Color ParseColor(string? text, Color fallback)
     {
         try { return text is null ? fallback : (Color)ColorConverter.ConvertFromString(text); }
-        catch (FormatException) { return fallback; }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { return fallback; } // also "sc#1" (InvalidOperation)
     }
 
     // ---- Opening ----
@@ -227,6 +229,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             archive.Dispose();
             return;
         }
+        // The pairing chosen with F12 in the volume being left, and the one of this volume if it was
+        // read before: going back shows the spreads paired as they were.
+        if (_source is ArchiveSource previous) _volumeAlignment[previous.Location] = _nav.Alignment;
+        int? alignment = _volumeAlignment.TryGetValue(path, out int a) ? a : null;
         _brokenArchives.Remove(path); // repaired since the last attempt
         Settings.LastFolder = Path.GetDirectoryName(path);
         _archiveSiblings = ArchiveSource.Siblings(path);
@@ -236,13 +242,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         int start = 0;
         if (startAtEnd)
         {
-            _nav.Reset(archive.Pages.Count);
+            _nav.Reset(archive.Pages.Count, 0, alignment);
             start = _nav.LastPosition();
         }
-        await SetSourceAsync(archive, start, _archiveIndex);
+        await SetSourceAsync(archive, start, _archiveIndex, alignment);
     }
 
-    private async Task SetSourceAsync(IImageSource source, int index, int? archiveIndex)
+    private readonly Dictionary<string, int> _volumeAlignment = new(StringComparer.OrdinalIgnoreCase);
+
+    private async Task SetSourceAsync(IImageSource source, int index, int? archiveIndex, int? alignment = null)
     {
         if (_disposed)
         {
@@ -256,7 +264,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _cache = new PageCache(source, Settings.AutoRotateExif);
         if (archiveIndex is null) { _archiveSiblings = []; _archiveIndex = -1; }
         _nav.Layout = Layout;
-        _nav.Reset(source.Pages.Count, index);
+        _nav.Reset(source.Pages.Count, index, alignment);
         _nav.HasNextContainer = _archiveIndex >= 0 && _archiveIndex < _archiveSiblings.Count - 1;
         _nav.HasPreviousContainer = _archiveIndex > 0;
         ResetEditState();
@@ -267,6 +275,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         _edit = null;
         _detached = false;
+        _detachedSaved = false;
         _lastRectangle = null;
         Tool = ViewerTool.None;
         UpdateEditFlags();
@@ -605,6 +614,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             var composed = ImageOps.Compose(_visible.Select(v => v.Bitmap).ToList(), Colors.White);
             _edit = new EditSession(composed);
             _detached = true;
+            _detachedSaved = false;
             _detachedName = "Joined pages";
             Toast("The two pages have been joined into a single image");
         }
@@ -888,6 +898,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _visible = null;
             _edit = new EditSession(bitmap);
             _detached = true;
+            _detachedSaved = false;
             _detachedName = "Clipboard image";
             _lastRectangle = null;
             Tool = ViewerTool.None;
@@ -926,6 +937,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return true;
         }
         string? path = CurrentFilePath;
+        // A pasted or joined image already saved (and not changed since): nothing to write again.
+        if (_detached && _detachedSaved && !IsBusy && _edit is { IsModified: false })
+        {
+            Toast("Nothing to save");
+            return true;
+        }
         if (_detached || path is null || !IsSingleFilePage || !ImageFormats.CanSave(path)) return await SaveAsCoreAsync(openSaved);
         // With edits still queued (e.g. ↑ then Ctrl+S right away) the image is not modified yet:
         // the save is queued after them and checks again when its turn comes.
@@ -979,6 +996,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         bool animated = _visible?.Any(v => v.IsAnimated) == true;
         bool ok = await WriteAsync(CurrentBitmapForExport, path);
         if (!ok) return false;
+        if (_detached) _detachedSaved = true;
         if (animated) Toast($"Saved: {Path.GetFileName(path)} (first frame of the animation only)");
         if (_source is FolderSource folder &&
             string.Equals(Path.GetDirectoryName(path), folder.Location, StringComparison.OrdinalIgnoreCase))
@@ -1096,6 +1114,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // The page under the view, even when the image is detached (joined pages, pasted image):
         // a file saved into the folder may shift the indices.
         string? current = _nav.Count > 0 ? folder.Pages[_nav.Position].FilePath : null;
+        var shownBefore = _nav.VisibleIndices().Select(i => folder.Pages[i].FilePath).ToList();
         var fresh = FolderSource.Open(folder.Location, include: current);
         // Same list: no need to rebuild the cache.
         if (fresh.Pages.Select(p => p.FilePath).SequenceEqual(folder.Pages.Select(p => p.FilePath), StringComparer.OrdinalIgnoreCase))
@@ -1108,7 +1127,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _nav.Reset(fresh.Pages.Count, index < 0 ? _nav.Position : index);
         UpdateInfo();
         // A page was loading from the old cache (now cancelled): load it again from the new one.
-        if (IsLoading && !IsOpeningArchive) _ = ShowCurrentAsync();
+        // Also a page pair whose second page is now another file (a file added in between), unless
+        // something on screen would be lost.
+        bool pairChanged = !_nav.VisibleIndices().Select(i => fresh.Pages[i].FilePath).SequenceEqual(shownBefore, StringComparer.OrdinalIgnoreCase);
+        if ((IsLoading || (pairChanged && !_detached && !IsBusy && _edit is not { IsModified: true })) && !IsOpeningArchive)
+            _ = ShowCurrentAsync();
     }
 
     [RelayCommand(AllowConcurrentExecutions = true)]
@@ -1203,7 +1226,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _view.ShowError($"Renaming failed.\n{ex.Message}");
             renamed = [];
         }
-        var fresh = FolderSource.Open(folder.Location);
+        var fresh = FolderSource.Open(folder.Location, include: current is not null && renamed.TryGetValue(current, out var renamedCurrent) ? renamedCurrent : current);
         int index = current is not null && renamed.TryGetValue(current, out var np) ? fresh.IndexOf(np) : _nav.Position;
         await SetSourceAsync(fresh, Math.Max(0, index), null);
         if (renamed.Count > 0) Toast($"Renamed {renamed.Count} {(renamed.Count == 1 ? "file" : "files")}");
@@ -1291,7 +1314,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             byte[] bytes = await _cache.Get(index).Bytes;
-            var groups = await Task.Run(() => MetadataService.Read(bytes));
+            var groups = await MetadataService.ReadAsync(bytes);
             if (request != _requestId) return; // another image is shown by now (slow solid archive)
             if (groups.Count == 0)
             {

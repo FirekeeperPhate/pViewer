@@ -104,7 +104,7 @@ public sealed class ArchiveSource : IImageSource
                 innerOwned.Add(ms);
                 try
                 {
-                    using (var s = entry.OpenEntryStream()) s.CopyTo(ms);
+                    using (var s = entry.OpenEntryStream()) CopyLimited(s, ms, MaxNestedArchiveBytes);
                     ms.Position = 0;
                     var inner = ArchiveFactory.OpenArchive(ms, new ReaderOptions());
                     innerOwned.Insert(0, inner);
@@ -147,8 +147,15 @@ public sealed class ArchiveSource : IImageSource
                         var key = reader.Entry.Key;
                         if (key is null || !byKey.TryGetValue(key, out var queue) || !queue.TryDequeue(out var slot)) continue;
                         using var ms = new MemoryStream(InitialCapacity(reader.Entry.Size));
-                        reader.WriteEntryTo(ms);
-                        slot.Preload!.TrySetResult(ms.ToArray());
+                        try
+                        {
+                            using (var es = reader.OpenEntryStream()) CopyLimited(es, ms, MaxPageBytes);
+                            slot.Preload!.TrySetResult(ms.ToArray());
+                        }
+                        catch (InvalidDataException ex)
+                        {
+                            slot.Preload!.TrySetException(ex); // that page only: the reader moves on to the next entry
+                        }
                     }
                 }
                 foreach (var slot in all)
@@ -179,10 +186,33 @@ public sealed class ArchiveSource : IImageSource
                 ObjectDisposedException.ThrowIf(_disposed, this);
                 using var s = slot.Entry.OpenEntryStream();
                 using var ms = new MemoryStream(InitialCapacity(slot.Entry.Size));
-                s.CopyTo(ms);
+                CopyLimited(s, ms, MaxPageBytes);
                 return ms.ToArray();
             }
         }, ct);
+    }
+
+    /// <summary>Largest page read from an archive: bigger is a decompression bomb, not a picture.</summary>
+    private const long MaxPageBytes = 256L * 1024 * 1024;
+
+    /// <summary>Largest archive inside an archive (kept in memory while the comic is open).</summary>
+    private const long MaxNestedArchiveBytes = 512L * 1024 * 1024;
+
+    /// <summary>
+    /// Copies at most <paramref name="limit"/> bytes, counting what is really read (the size an
+    /// archive declares may lie).
+    /// </summary>
+    private static void CopyLimited(Stream from, Stream to, long limit)
+    {
+        var buffer = new byte[81920];
+        long total = 0;
+        int read;
+        while ((read = from.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            if ((total += read) > limit)
+                throw new InvalidDataException($"Archive entry larger than {limit / (1024 * 1024)} MB.");
+            to.Write(buffer, 0, read);
+        }
     }
 
     /// <summary>
@@ -196,10 +226,20 @@ public sealed class ArchiveSource : IImageSource
     {
         string? dir = Path.GetDirectoryName(archivePath);
         if (dir is null || !Directory.Exists(dir)) return [archivePath];
-        var list = Directory.EnumerateFiles(dir).Where(ImageFormats.IsArchive).ToList();
+        var list = Directory.EnumerateFiles(dir)
+            .Where(f => ImageFormats.IsArchive(f) && (!IsLaterRarPart(f) || string.Equals(f, archivePath, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
         list.Sort(NaturalComparer.Instance);
         return list;
     }
+
+    /// <summary>
+    /// "Comic.part2.rar", "Comic.part03.cbr"…: pieces of the set opened from part 1 (SharpCompress
+    /// joins them), not volumes of their own.
+    /// </summary>
+    internal static bool IsLaterRarPart(string path) =>
+        System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(path), @"\.part0*([2-9]|[1-9]\d+)\.(rar|cbr)$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     public void Dispose()
     {

@@ -57,12 +57,16 @@ public sealed class PageNavigator
     /// </summary>
     private int _alignment;
 
-    public void Reset(int count, int position = 0)
+    /// <param name="alignment">Pairing to use (see <see cref="Alignment"/>); by default pairs start at <paramref name="position"/>.</param>
+    public void Reset(int count, int position = 0, int? alignment = null)
     {
         Count = Math.Max(0, count);
         Position = Count == 0 ? 0 : Math.Clamp(position, 0, Count - 1);
-        _alignment = Position % 2;
+        _alignment = alignment is { } a ? a & 1 : Position % 2;
     }
+
+    /// <summary>Current pairing (changed by F12): kept per volume when moving between volumes.</summary>
+    public int Alignment => _alignment;
 
     /// <summary>True when the current page is shown alone although the layout is two-page.</summary>
     private bool IsCover => Position % 2 != _alignment;
