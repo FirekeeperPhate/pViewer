@@ -84,4 +84,49 @@ public class HotkeyTests
         var overrides = new Dictionary<string, List<string>> { ["Save"] = ["F9", "Bogus+Key", "F9"] };
         Assert.Equal([new Shortcut(Key.F9, ModifierKeys.None)], Hotkeys.GesturesOf("Save", overrides));
     }
+
+    [Fact]
+    public void RestoringADefaultTakesTheKeyBack()
+    {
+        var overrides = new Dictionary<string, List<string>>();
+        var esc = new Shortcut(Key.Escape, ModifierKeys.None);
+        Hotkeys.Assign(overrides, "Next", esc);                 // Esc moved to "Next"
+        var losers = Hotkeys.RestoreDefaults(overrides, "Escape");
+        Assert.Equal(["Next"], losers.Select(l => l.Id));
+        Assert.DoesNotContain(esc, Hotkeys.GesturesOf("Next", overrides));
+        Assert.Equal("Escape", Hotkeys.BuildMap(overrides)[esc]);
+    }
+
+    [Fact]
+    public void ChangedCommandWinsOverADefaultInAHandEditedFile()
+    {
+        var overrides = new Dictionary<string, List<string>> { ["Last"] = ["Right"] };
+        Assert.Equal("Last", Hotkeys.BuildMap(overrides)[new Shortcut(Key.Right, ModifierKeys.None)]);
+    }
+
+    [Fact]
+    public void HandEditedSettingsAreNormalized()
+    {
+        var raw = new Dictionary<string, List<string>> { ["save"] = ["F9"], ["Copy"] = null!, ["NoSuchCommand"] = ["F3"] };
+        var clean = Hotkeys.Normalize(raw)!;
+        Assert.Equal(["Save"], clean.Keys);
+        Assert.Equal("Save", Hotkeys.BuildMap(clean)[new Shortcut(Key.F9, ModifierKeys.None)]);
+        // A null list read before normalizing falls back to the defaults instead of crashing.
+        Assert.Equal(Hotkeys.Find("Copy")!.DefaultGestures, Hotkeys.GesturesOf("Copy", raw));
+    }
+
+    [Theory]
+    [InlineData("Ctrl+1")]
+    [InlineData("Shift+999")]
+    [InlineData("-5")]
+    public void NumbersAreNotKeyNames(string text) => Assert.False(Shortcut.TryParse(text, out _));
+
+    [Fact]
+    public void WindowsCombinationsAreReserved()
+    {
+        Assert.True(new Shortcut(Key.F4, ModifierKeys.Alt).IsReserved);
+        Assert.True(new Shortcut(Key.Space, ModifierKeys.Alt).IsReserved);
+        Assert.False(new Shortcut(Key.F4, ModifierKeys.None).IsReserved);
+        Assert.False(new Shortcut(Key.Up, ModifierKeys.Alt).IsReserved);
+    }
 }

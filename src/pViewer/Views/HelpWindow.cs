@@ -61,6 +61,13 @@ public sealed class HelpWindow : Window
             Opacity = 0.6, Margin = new Thickness(0, 16, 0, 0), TextWrapping = TextWrapping.Wrap,
         });
         Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-        KeyDown += (_, e) => { if (e.Key is System.Windows.Input.Key.Escape or System.Windows.Input.Key.F1) Close(); };
+        // Esc, or the keys that opened it (F1 unless changed).
+        var helpKeys = Hotkeys.GesturesOf("Help", hotkeys);
+        KeyDown += (_, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.Escape
+                || helpKeys.Contains(new Shortcut(e.Key == System.Windows.Input.Key.System ? e.SystemKey : e.Key, System.Windows.Input.Keyboard.Modifiers)))
+                Close();
+        };
     }
 }

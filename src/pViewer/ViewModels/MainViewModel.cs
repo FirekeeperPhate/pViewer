@@ -554,8 +554,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _slideshowTimer.Start();
         IsSlideshowRunning = true;
         if (!_view.IsFullscreen) _view.SetFullscreen(true);
-        Toast($"Slideshow every {seconds:0.#} s — Esc or click to stop");
+        string esc = KeyList("Escape");
+        Toast($"Slideshow every {seconds:0.#} s — {(esc.Length > 0 ? esc + " or click" : "click")} to stop");
     }
+
+    /// <summary>"Esc or R": the current keys of the commands, for hints ("" if none has a key).</summary>
+    private string KeyList(params string[] ids) =>
+        string.Join(" or ", ids.Select(id => Hotkeys.DisplayText(id, Settings.Hotkeys)).Where(k => k.Length > 0));
 
     public void StopSlideshow()
     {
@@ -740,7 +745,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (!HasImage) return;
         Tool = Tool == ViewerTool.RedEye ? ViewerTool.None : ViewerTool.RedEye;
         Toast(Tool == ViewerTool.RedEye
-            ? "Red-eye: drag a rectangle around each eye (R or Esc to exit)"
+            ? "Red-eye: drag a rectangle around each eye" + (KeyList("RedEye", "Escape") is { Length: > 0 } keys ? $" ({keys} to exit)" : "")
             : "Red-eye correction off");
     }
 

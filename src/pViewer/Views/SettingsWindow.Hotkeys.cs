@@ -15,7 +15,7 @@ public partial class SettingsWindow
 
     private void LoadHotkeys(AppSettings s)
     {
-        _hotkeys = s.Hotkeys?.ToDictionary(p => p.Key, p => p.Value.ToList()) ?? [];
+        _hotkeys = Hotkeys.Normalize(s.Hotkeys)?.ToDictionary(p => p.Key, p => p.Value.ToList()) ?? [];
         HotkeyNote.Text = null;
         if (_hotkeyBoxes.Count == 0) BuildHotkeyRows();
         RefreshHotkeys();
@@ -38,6 +38,8 @@ public partial class SettingsWindow
 
                 var name = new TextBlock { Text = command.Name, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 8, 0) };
                 var keys = new TextBox { IsReadOnly = true, IsReadOnlyCaretVisible = false, Tag = command.Id, Cursor = Cursors.Arrow };
+                // Keys, not text: with an East Asian input method on, letters would never reach the recording.
+                InputMethod.SetIsInputMethodEnabled(keys, false);
                 keys.PreviewKeyDown += HotkeyBox_PreviewKeyDown;
                 keys.LostKeyboardFocus += (_, _) => { if (_recording == command.Id) StopRecording(); };
                 _hotkeyBoxes[command.Id] = keys;
@@ -45,7 +47,7 @@ public partial class SettingsWindow
                 var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(6, 0, 0, 0) };
                 buttons.Children.Add(SmallButton("+", "Add a shortcut: click, then press the keys", () => StartRecording(command.Id)));
                 buttons.Children.Add(SmallButton("✕", "Remove the shortcuts of this command", () => SetKeys(command.Id, [])));
-                buttons.Children.Add(SmallButton("↺", "Restore the default", () => SetKeys(command.Id, command.DefaultGestures)));
+                buttons.Children.Add(SmallButton("↺", "Restore the default", () => RestoreDefault(command.Id)));
 
                 Grid.SetColumn(keys, 1);
                 Grid.SetColumn(buttons, 2);
@@ -73,6 +75,21 @@ public partial class SettingsWindow
             box.Text = keys.Count == 0 ? "—" : string.Join(",  ", keys.Select(k => k.Display));
             box.ToolTip = box.Text;
         }
+        // The checkboxes that toggle the same things show their current key.
+        ToolbarBox.Content = WithKey("Show the toolbar", "Toolbar");
+        StatusBarBox.Content = WithKey("Show the status bar", "StatusBar");
+    }
+
+    private string WithKey(string label, string id) =>
+        Hotkeys.DisplayText(id, _hotkeys) is { Length: > 0 } key ? $"{label} ({key})" : label;
+
+    private void RestoreDefault(string id)
+    {
+        StopRecording();
+        var losers = Hotkeys.RestoreDefaults(_hotkeys, id);
+        RefreshHotkeys();
+        HotkeyNote.Text = losers.Count == 0 ? null
+            : $"Its default keys were removed from {string.Join(", ", losers.Select(l => $"«{l.Name}»"))}.";
     }
 
     private void SetKeys(string id, IEnumerable<Shortcut> keys)
@@ -89,7 +106,7 @@ public partial class SettingsWindow
         HotkeyNote.Text = null;
         _recording = id;
         var box = _hotkeyBoxes[id];
-        box.Text = "Press the keys…";
+        box.Text = "Press the keys… (Esc to cancel)";
         box.Focus();
     }
 
@@ -103,11 +120,33 @@ public partial class SettingsWindow
     private void HotkeyBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (sender is not TextBox { Tag: string id } || id != _recording) return;
-        // Every key goes to the recording, Tab, Enter and Esc included (not to the dialog).
+        // Every key goes to the recording, Tab and Enter included (not to the dialog).
         e.Handled = true;
-        Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+        Key key = e.Key switch
+        {
+            Key.System => e.SystemKey,
+            Key.ImeProcessed => e.ImeProcessedKey,
+            Key.DeadCharProcessed => e.DeadCharProcessedKey,
+            _ => e.Key,
+        };
         if (Shortcut.IsModifierKey(key)) return; // wait for the key that goes with Ctrl/Shift/Alt
-        var gesture = new Shortcut(key, Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift | ModifierKeys.Alt));
+        var mods = Keyboard.Modifiers;
+        if (key == Key.Escape && mods == ModifierKeys.None)
+        {
+            StopRecording(); // Esc itself stays with its command (↺ gives it back if it was moved)
+            return;
+        }
+        if (mods.HasFlag(ModifierKeys.Windows))
+        {
+            HotkeyNote.Text = "The Windows key belongs to Windows: use Ctrl, Shift or Alt.";
+            return; // still recording
+        }
+        var gesture = new Shortcut(key, mods);
+        if (gesture.IsReserved)
+        {
+            HotkeyNote.Text = $"{gesture.Display} is used by Windows and cannot be assigned.";
+            return;
+        }
         _recording = null;
         var previous = Hotkeys.Assign(_hotkeys, id, gesture);
         RefreshHotkeys();

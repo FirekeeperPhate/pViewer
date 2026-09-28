@@ -114,7 +114,11 @@ public static class SettingsStore
         try
         {
             if (File.Exists(path))
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Json) ?? new AppSettings();
+            {
+                var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Json) ?? new AppSettings();
+                settings.Hotkeys = Hotkeys.Normalize(settings.Hotkeys); // a hand-edited file must not break the keys
+                return settings;
+            }
         }
         catch (Exception)
         {

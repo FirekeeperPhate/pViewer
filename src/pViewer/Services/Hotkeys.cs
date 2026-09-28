@@ -29,9 +29,11 @@ public readonly record struct Shortcut(Key Key, ModifierKeys Modifiers)
                 Key.Escape => "Esc", Key.Return => "Enter", Key.Back => "Backspace",
                 Key.OemPlus => "+", Key.OemMinus => "−", Key.OemComma => ",", Key.OemPeriod => ".",
                 Key.Add => "Num +", Key.Subtract => "Num −", Key.Multiply => "Num *", Key.Divide => "Num /",
-                Key.Decimal => "Num .",
+                Key.Decimal => "Num .", Key.Capital => "Caps Lock", Key.Snapshot => "PrtSc", Key.Apps => "Menu",
+                Key.Cancel => "Break", Key.Scroll => "Scroll Lock", Key.NumLock => "Num Lock",
                 >= Key.D0 and <= Key.D9 => ((char)('0' + (Key - Key.D0))).ToString(),
                 >= Key.NumPad0 and <= Key.NumPad9 => "Num " + (Key - Key.NumPad0),
+                _ when Key.ToString().StartsWith("Oem", StringComparison.Ordinal) => LayoutCharacter(Key) ?? Key.ToString(),
                 _ => Key.ToString(),
             };
             string mods = (Modifiers.HasFlag(ModifierKeys.Control) ? "Ctrl+" : "")
@@ -58,13 +60,31 @@ public readonly record struct Shortcut(Key Key, ModifierKeys Modifiers)
                 default: return false;
             }
         }
-        if (!Enum.TryParse(parts[^1], ignoreCase: true, out Key key) || key == Key.None || IsModifierKey(key)) return false;
-        gesture = new Shortcut(key == Key.Enter ? Key.Return : key, mods);
+        // Key names only: Enum.TryParse would also take numbers ("1" = Key.Cancel).
+        string name = parts[^1];
+        if (name.Length == 0 || char.IsDigit(name[0]) || name[0] == '-') return false;
+        if (!Enum.TryParse(name, ignoreCase: true, out Key key) || !Enum.IsDefined(key) || key == Key.None || IsModifierKey(key))
+            return false;
+        gesture = new Shortcut(key, mods);
         return true;
     }
 
     public static bool IsModifierKey(Key key) => key is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift
         or Key.LeftAlt or Key.RightAlt or Key.LWin or Key.RWin or Key.System or Key.ImeProcessed or Key.DeadCharProcessed;
+
+    /// <summary>Combinations Windows uses for itself (close window, system menu): never bound.</summary>
+    public bool IsReserved => Modifiers == ModifierKeys.Alt && Key is Key.F4 or Key.Space or Key.Tab or Key.Escape;
+
+    /// <summary>The character a punctuation key types on the current layout (ò, ù, ì on Italian).</summary>
+    private static string? LayoutCharacter(Key key)
+    {
+        int vk = KeyInterop.VirtualKeyFromKey(key);
+        uint ch = MapVirtualKey((uint)vk, 2 /* MAPVK_VK_TO_CHAR */) & 0x7FFFFFFF; // high bit = dead key
+        return ch is 0 or < 32 ? null : char.ToUpperInvariant((char)ch).ToString();
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint MapVirtualKey(uint code, uint mapType);
 }
 
 /// <summary>A command that can be bound to keys, with its default keys.</summary>
@@ -105,6 +125,7 @@ public static class Hotkeys
         new("Maximize", "View", "Maximize / restore the window", ["Alt+Enter"]),
         new("WhiteBackground", "View", "White background", ["W"]),
         new("Toolbar", "View", "Show / hide the toolbar", ["T"]),
+        new("StatusBar", "View", "Show / hide the status bar", []),
         new("PauseAnimation", "View", "Pause / resume animations", ["P"]),
         new("Escape", "View", "Stop slideshow, exit a tool or full screen, otherwise close", ["Escape"]),
 
@@ -132,14 +153,14 @@ public static class Hotkeys
         new("Close", "File", "Close pViewer", ["Ctrl+W", "Ctrl+Q"]),
     ];
 
-    private static readonly Dictionary<string, HotkeyCommand> ById = All.ToDictionary(c => c.Id);
+    private static readonly Dictionary<string, HotkeyCommand> ById = All.ToDictionary(c => c.Id, StringComparer.OrdinalIgnoreCase);
 
     public static HotkeyCommand? Find(string id) => ById.GetValueOrDefault(id);
 
     /// <summary>The keys of a command: the user's ones if changed, otherwise the defaults.</summary>
     public static IReadOnlyList<Shortcut> GesturesOf(string id, IReadOnlyDictionary<string, List<string>>? overrides)
     {
-        if (overrides is not null && overrides.TryGetValue(id, out var custom))
+        if (overrides is not null && overrides.TryGetValue(id, out var custom) && custom is not null)
         {
             var list = new List<Shortcut>();
             foreach (string text in custom)
@@ -149,11 +170,14 @@ public static class Hotkeys
         return Find(id)?.DefaultGestures ?? [];
     }
 
-    /// <summary>Key → command. With a hand-edited duplicate, the first command in the list wins.</summary>
+    /// <summary>
+    /// Key → command. If two commands have the same key (a hand-edited file), the one the user
+    /// changed wins over a default.
+    /// </summary>
     public static Dictionary<Shortcut, string> BuildMap(IReadOnlyDictionary<string, List<string>>? overrides)
     {
         var map = new Dictionary<Shortcut, string>();
-        foreach (var command in All)
+        foreach (var command in All.OrderBy(c => overrides?.ContainsKey(c.Id) == true ? 0 : 1))
             foreach (var gesture in GesturesOf(command.Id, overrides))
                 map.TryAdd(gesture, command.Id);
         return map;
@@ -192,5 +216,35 @@ public static class Hotkeys
         var own = GesturesOf(id, overrides);
         if (!own.Contains(gesture)) Set(overrides, id, own.Append(gesture));
         return previous;
+    }
+
+    /// <summary>
+    /// Gives a command back its default keys, taking them from the commands they were moved to
+    /// (otherwise two commands would share a key and only one would ever run).
+    /// </summary>
+    /// <returns>The commands that lost a key.</returns>
+    public static List<HotkeyCommand> RestoreDefaults(Dictionary<string, List<string>> overrides, string id)
+    {
+        var command = Find(id);
+        if (command is null) return [];
+        var losers = new List<HotkeyCommand>();
+        foreach (var gesture in command.DefaultGestures)
+            if (Assign(overrides, id, gesture) is { } previous && !losers.Contains(previous)) losers.Add(previous);
+        Set(overrides, id, command.DefaultGestures); // also drops the keys added by the user
+        return losers;
+    }
+
+    /// <summary>
+    /// Cleans the shortcuts read from settings.json: ids in the catalog's spelling, unknown ids
+    /// and empty entries (a hand-edited "null") dropped.
+    /// </summary>
+    public static Dictionary<string, List<string>>? Normalize(Dictionary<string, List<string>>? overrides)
+    {
+        if (overrides is null) return null;
+        var clean = new Dictionary<string, List<string>>();
+        foreach (var (id, keys) in overrides)
+            if (keys is not null && Find(id) is { } command)
+                clean[command.Id] = keys.Where(k => k is not null).ToList();
+        return clean.Count == 0 ? null : clean;
     }
 }

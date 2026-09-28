@@ -157,7 +157,17 @@ public partial class MainWindow : Window, IMainView
         UpdateBackground();
         _keyMap = Hotkeys.BuildMap(_settings.Hotkeys);
         HotkeyText.Apply(Toolbar, _settings.Hotkeys);
+        WelcomeHint.Text = string.Join(" · ", new[]
+        {
+            "Double-click" + KeyHint("Open", " or {0}") + " to open",
+            KeyHint("Paste", "{0} to paste from clipboard"),
+            KeyHint("Help", "{0} for shortcuts"),
+        }.Where(s => s.Length > 0));
     }
+
+    /// <summary>Formats the current key of a command into a hint, or "" when it has no key.</summary>
+    private string KeyHint(string id, string format) =>
+        Hotkeys.DisplayText(id, _settings.Hotkeys) is { Length: > 0 } key ? string.Format(format, key) : "";
 
     private void UpdateBars()
     {
@@ -212,7 +222,12 @@ public partial class MainWindow : Window, IMainView
             return;
         }
 
-        Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+        Key key = e.Key switch
+        {
+            Key.System => e.SystemKey,                // with Alt
+            Key.ImeProcessed => e.ImeProcessedKey,    // with an East Asian input method on
+            _ => e.Key,
+        };
         if (_keyMap.TryGetValue(new Shortcut(key, Keyboard.Modifiers), out string? id) && _keyActions.TryGetValue(id, out var action))
         {
             e.Handled = true;
@@ -254,6 +269,7 @@ public partial class MainWindow : Window, IMainView
         },
         ["WhiteBackground"] = () => _vm.ToggleWhiteBackgroundCommand.Execute(null),
         ["Toolbar"] = () => ToggleToolbar_Click(this, new RoutedEventArgs()),
+        ["StatusBar"] = () => ToggleStatusBar_Click(this, new RoutedEventArgs()),
         ["PauseAnimation"] = Viewer.ToggleAnimationPause,
         ["Escape"] = HandleEscape,
 
