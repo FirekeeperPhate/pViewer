@@ -1,62 +1,27 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using pViewer.Services;
 
 namespace pViewer.Views;
 
-/// <summary>List of keyboard shortcuts and mouse gestures.</summary>
+/// <summary>List of keyboard shortcuts (the user's current ones) and mouse gestures.</summary>
 public sealed class HelpWindow : Window
 {
-    private static readonly (string Section, (string Keys, string Action)[] Items)[] Shortcuts =
-    [
-        ("Navigation", [
-            ("→  Space  E  PgUp", "Next image"),
-            ("←  Q  PgDn", "Previous image"),
-            ("Home  /  End", "First / last image"),
-            ("M  /  C", "Manga / comic mode (two pages)"),
-            ("F12  /  Shift+F12", "Shift the page pair forward / back by one page"),
-            ("Ctrl+O", "Open a file, folder or archive"),
-            ("Drop a file", "Opens images, folders and archives"),
-        ]),
-        ("View", [
-            ("Wheel  /  +  −", "Zoom (towards the pointer with the wheel)"),
-            ("Drag", "Pan the zoomed image"),
-            ("A", "Actual size ↔ preferred view"),
-            ("Ctrl+0  /  Num 5", "Reset the view"),
-            ("Ctrl+1", "Zoom to 100%"),
-            ("Num 4 8 6 2", "Pan the view"),
-            ("F11  /  double-click", "Full screen"),
-            ("Alt+Enter", "Maximize / restore the window"),
-            ("W", "White background"),
-            ("T", "Show / hide the toolbar"),
-            ("P", "Pause / resume animations (GIF, WebP, APNG)"),
-            ("Esc", "Stops the slideshow, exits the red-eye tool or full screen; otherwise closes pViewer"),
-        ]),
-        ("Edit", [
-            ("↑  /  ↓", "Rotate right / left"),
-            ("Alt+↑  /  Alt+↓", "Flip horizontally / vertically"),
+    /// <summary>Mouse gestures, not configurable: shown after the keys of each section.</summary>
+    private static readonly Dictionary<string, (string Keys, string Action)[]> MouseGestures = new()
+    {
+        ["Navigation"] = [("Drop a file", "Opens images, folders and archives")],
+        ["View"] = [("Wheel", "Zoom towards the pointer"), ("Drag", "Pan the zoomed image"), ("Double-click", "Full screen")],
+        ["Edit"] =
+        [
             ("Ctrl+drag", "Crop"),
             ("Alt+drag", "Draw a rectangle"),
-            ("Tab", "Fill the last rectangle (to hide sensitive data)"),
             ("Shift+click", "Write text (Ctrl+Enter to apply, Esc to cancel)"),
-            ("R", "Red-eye correction (drag around the eye)"),
-            ("Ctrl+R", "Resize"),
-            ("Ctrl+I  /  Ctrl+G", "Invert / grayscale"),
-            ("Ctrl+Z  /  Ctrl+Y", "Undo / redo"),
-            ("F5", "Reload the original (discards changes)"),
-        ]),
-        ("File", [
-            ("Ctrl+S", "Save"),
-            ("Ctrl+Shift+S", "Save as"),
-            ("F2", "Rename"),
-            ("Del", "Delete (to the Recycle Bin)"),
-            ("Ctrl+C  /  Ctrl+V", "Copy the image / paste from the clipboard"),
-            ("I", "EXIF and metadata"),
-            ("Ctrl+W  /  Ctrl+Q", "Close pViewer"),
-        ]),
-    ];
+        ],
+    };
 
-    public HelpWindow()
+    public HelpWindow(IReadOnlyDictionary<string, List<string>>? hotkeys)
     {
         Title = "Keyboard shortcuts";
         Width = 620;
@@ -66,16 +31,21 @@ public sealed class HelpWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
         var panel = new StackPanel { Margin = new Thickness(24, 8, 24, 24) };
-        foreach (var (section, items) in Shortcuts)
+        foreach (var group in Hotkeys.All.GroupBy(c => c.Group))
         {
-            panel.Children.Add(new TextBlock { Text = section, FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 16, 0, 6) });
+            var items = group
+                .Select(c => (Keys: string.Join("  ", Hotkeys.GesturesOf(c.Id, hotkeys).Select(g => g.Display)), Action: c.Name))
+                .Select(i => i.Keys.Length == 0 ? (Keys: "—", i.Action) : i)
+                .Concat(MouseGestures.GetValueOrDefault(group.Key) ?? [])
+                .ToList();
+            panel.Children.Add(new TextBlock { Text = group.Key, FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 16, 0, 6) });
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            for (int i = 0; i < items.Length; i++)
+            for (int i = 0; i < items.Count; i++)
             {
                 grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-                var keys = new TextBlock { Text = items[i].Keys, FontFamily = new FontFamily("Segoe UI Semibold"), Margin = new Thickness(0, 3, 12, 3), Opacity = 0.9 };
+                var keys = new TextBlock { Text = items[i].Keys, FontFamily = new FontFamily("Segoe UI Semibold"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 12, 3), Opacity = 0.9 };
                 var action = new TextBlock { Text = items[i].Action, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 3), Opacity = 0.8 };
                 Grid.SetRow(keys, i);
                 Grid.SetRow(action, i);
@@ -85,6 +55,11 @@ public sealed class HelpWindow : Window
             }
             panel.Children.Add(grid);
         }
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Shortcuts can be changed in Settings › Keyboard shortcuts.",
+            Opacity = 0.6, Margin = new Thickness(0, 16, 0, 0), TextWrapping = TextWrapping.Wrap,
+        });
         Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         KeyDown += (_, e) => { if (e.Key is System.Windows.Input.Key.Escape or System.Windows.Input.Key.F1) Close(); };
     }

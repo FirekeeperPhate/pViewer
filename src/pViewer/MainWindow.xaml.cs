@@ -33,6 +33,7 @@ public partial class MainWindow : Window, IMainView
             var menu = (ContextMenu)Resources["MainMenu"];
             menu.Opened += (_, _) =>
             {
+                HotkeyText.Apply(menu, _settings.Hotkeys);
                 // Names inside a resource do not generate fields: look them up in the menu's logical tree.
                 if (LogicalTreeHelper.FindLogicalNode(menu, "ToolbarMenuItem") is MenuItem toolbar)
                     toolbar.IsChecked = _settings.ShowToolbar;
@@ -72,6 +73,7 @@ public partial class MainWindow : Window, IMainView
         Height = Math.Min(Height, workArea.Height * 0.85);
         _vm = new MainViewModel(this, settings);
         DataContext = _vm;
+        _keyActions = CreateKeyActions();
 
         // The big image menu is built once the first image is on screen, not before.
         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () => Viewer.ContextMenu = MainMenu);
@@ -153,6 +155,8 @@ public partial class MainWindow : Window, IMainView
         Viewer.PixelatedZoom = _settings.PixelatedZoom;
         UpdateBars();
         UpdateBackground();
+        _keyMap = Hotkeys.BuildMap(_settings.Hotkeys);
+        HotkeyText.Apply(Toolbar, _settings.Hotkeys);
     }
 
     private void UpdateBars()
@@ -209,80 +213,73 @@ public partial class MainWindow : Window, IMainView
         }
 
         Key key = e.Key == Key.System ? e.SystemKey : e.Key;
-        ModifierKeys mods = Keyboard.Modifiers;
-        bool none = mods == ModifierKeys.None, ctrl = mods == ModifierKeys.Control, alt = mods == ModifierKeys.Alt;
-        bool shift = mods == ModifierKeys.Shift;
-        e.Handled = true;
-
-        switch (key)
+        if (_keyMap.TryGetValue(new Shortcut(key, Keyboard.Modifiers), out string? id) && _keyActions.TryGetValue(id, out var action))
         {
-            case Key.Right or Key.Space or Key.E or Key.PageUp when none:
-            case Key.Right when alt:
-                _vm.NextCommand.Execute(null); break;
-            case Key.Left or Key.Q or Key.PageDown when none:
-            case Key.Left when alt:
-                _vm.PreviousCommand.Execute(null); break;
-            case Key.Home when none: _vm.FirstCommand.Execute(null); break;
-            case Key.End when none: _vm.LastCommand.Execute(null); break;
-
-            case Key.W or Key.Q when ctrl: Close(); break;
-            case Key.Escape when none: HandleEscape(); break;
-
-            case Key.S when ctrl: _vm.SaveCommand.Execute(null); break;
-            case Key.S when mods == (ModifierKeys.Control | ModifierKeys.Shift) || mods == (ModifierKeys.Control | ModifierKeys.Alt):
-                _vm.SaveAsCommand.Execute(null); break;
-            case Key.O when ctrl: _vm.OpenCommand.Execute(null); break;
-            case Key.F2 when none: _vm.RenameCommand.Execute(null); break;
-            case Key.Delete when none: _vm.DeleteCommand.Execute(null); break;
-            case Key.F5 when none: _vm.ReloadCommand.Execute(null); break;
-
-            case Key.Up when none: _vm.RotateCommand.Execute("90"); break;
-            case Key.Down when none: _vm.RotateCommand.Execute("-90"); break;
-            case Key.Up when alt: _vm.FlipCommand.Execute("H"); break;
-            case Key.Down when alt: _vm.FlipCommand.Execute("V"); break;
-
-            case Key.OemPlus or Key.Add when none || ctrl: Viewer.ZoomIn(); break;
-            case Key.OemMinus or Key.Subtract when none || ctrl: Viewer.ZoomOut(); break;
-            case Key.D0 or Key.NumPad0 when ctrl: Viewer.ResetView(); break;
-            case Key.D1 or Key.NumPad1 when ctrl: Viewer.SetZoom(1); break;
-            case Key.NumPad4 when none: Viewer.Pan(50, 0); break;
-            case Key.NumPad6 when none: Viewer.Pan(-50, 0); break;
-            case Key.NumPad8 when none: Viewer.Pan(0, 50); break;
-            case Key.NumPad2 when none: Viewer.Pan(0, -50); break;
-            case Key.NumPad5 when none: Viewer.ResetView(); break;
-            case Key.A when none: _vm.ToggleActualSizeCommand.Execute(null); break;
-
-            case Key.M when none: _vm.SetLayoutCommand.Execute(PageLayout.Manga); break;
-            case Key.C when none: _vm.SetLayoutCommand.Execute(PageLayout.Comic); break;
-            case Key.F12 when none: _vm.ShiftPageCommand.Execute("1"); break;
-            case Key.F12 when shift: _vm.ShiftPageCommand.Execute("-1"); break;
-
-            case Key.F11 when none: SetFullscreen(!_fullscreen); break;
-            case Key.Enter when alt:
-                if (_fullscreen) SetFullscreen(false);
-                else WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-                break;
-            case Key.W when none: _vm.ToggleWhiteBackgroundCommand.Execute(null); break;
-            case Key.T when none: ToggleToolbar_Click(this, new RoutedEventArgs()); break;
-
-            case Key.Z when ctrl: _vm.UndoCommand.Execute(null); break;
-            case Key.Y when ctrl:
-            case Key.Z when mods == (ModifierKeys.Control | ModifierKeys.Shift):
-                _vm.RedoCommand.Execute(null); break;
-            case Key.C when ctrl: _vm.CopyCommand.Execute(null); break;
-            case Key.V when ctrl: _vm.PasteCommand.Execute(null); break;
-            case Key.I when ctrl: _vm.InvertCommand.Execute(null); break;
-            case Key.G when ctrl: _vm.GrayscaleCommand.Execute(null); break;
-            case Key.R when ctrl: _vm.ResizeCommand.Execute("0"); break;
-            case Key.R when none: _vm.ToggleRedEyeToolCommand.Execute(null); break;
-            case Key.Tab when none: _vm.FillLastRectangleCommand.Execute(null); break;
-            case Key.I when none: _vm.ShowMetadataCommand.Execute(null); break;
-            case Key.P when none: Viewer.ToggleAnimationPause(); break;
-            case Key.F1 when none: Help_Click(this, new RoutedEventArgs()); break;
-
-            default: e.Handled = false; break;
+            e.Handled = true;
+            action();
         }
     }
+
+    /// <summary>Key → command, from the defaults and the user's changes (Settings, Keyboard shortcuts).</summary>
+    private Dictionary<Shortcut, string> _keyMap = [];
+    private readonly Dictionary<string, Action> _keyActions;
+
+    /// <summary>What each command of <see cref="Hotkeys.All"/> does.</summary>
+    private Dictionary<string, Action> CreateKeyActions() => new()
+    {
+        ["Next"] = () => _vm.NextCommand.Execute(null),
+        ["Previous"] = () => _vm.PreviousCommand.Execute(null),
+        ["First"] = () => _vm.FirstCommand.Execute(null),
+        ["Last"] = () => _vm.LastCommand.Execute(null),
+        ["Manga"] = () => _vm.SetLayoutCommand.Execute(PageLayout.Manga),
+        ["Comic"] = () => _vm.SetLayoutCommand.Execute(PageLayout.Comic),
+        ["ShiftForward"] = () => _vm.ShiftPageCommand.Execute("1"),
+        ["ShiftBack"] = () => _vm.ShiftPageCommand.Execute("-1"),
+        ["Open"] = () => _vm.OpenCommand.Execute(null),
+
+        ["ZoomIn"] = Viewer.ZoomIn,
+        ["ZoomOut"] = Viewer.ZoomOut,
+        ["ResetView"] = Viewer.ResetView,
+        ["Zoom100"] = () => Viewer.SetZoom(1),
+        ["ActualSize"] = () => _vm.ToggleActualSizeCommand.Execute(null),
+        ["PanLeft"] = () => Viewer.Pan(50, 0),
+        ["PanRight"] = () => Viewer.Pan(-50, 0),
+        ["PanUp"] = () => Viewer.Pan(0, 50),
+        ["PanDown"] = () => Viewer.Pan(0, -50),
+        ["FullScreen"] = () => SetFullscreen(!_fullscreen),
+        ["Maximize"] = () =>
+        {
+            if (_fullscreen) SetFullscreen(false);
+            else WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        },
+        ["WhiteBackground"] = () => _vm.ToggleWhiteBackgroundCommand.Execute(null),
+        ["Toolbar"] = () => ToggleToolbar_Click(this, new RoutedEventArgs()),
+        ["PauseAnimation"] = Viewer.ToggleAnimationPause,
+        ["Escape"] = HandleEscape,
+
+        ["RotateRight"] = () => _vm.RotateCommand.Execute("90"),
+        ["RotateLeft"] = () => _vm.RotateCommand.Execute("-90"),
+        ["FlipHorizontal"] = () => _vm.FlipCommand.Execute("H"),
+        ["FlipVertical"] = () => _vm.FlipCommand.Execute("V"),
+        ["FillRectangle"] = () => _vm.FillLastRectangleCommand.Execute(null),
+        ["RedEye"] = () => _vm.ToggleRedEyeToolCommand.Execute(null),
+        ["Resize"] = () => _vm.ResizeCommand.Execute("0"),
+        ["Invert"] = () => _vm.InvertCommand.Execute(null),
+        ["Grayscale"] = () => _vm.GrayscaleCommand.Execute(null),
+        ["Undo"] = () => _vm.UndoCommand.Execute(null),
+        ["Redo"] = () => _vm.RedoCommand.Execute(null),
+        ["Reload"] = () => _vm.ReloadCommand.Execute(null),
+
+        ["Save"] = () => _vm.SaveCommand.Execute(null),
+        ["SaveAs"] = () => _vm.SaveAsCommand.Execute(null),
+        ["Rename"] = () => _vm.RenameCommand.Execute(null),
+        ["Delete"] = () => _vm.DeleteCommand.Execute(null),
+        ["Copy"] = () => _vm.CopyCommand.Execute(null),
+        ["Paste"] = () => _vm.PasteCommand.Execute(null),
+        ["Metadata"] = () => _vm.ShowMetadataCommand.Execute(null),
+        ["Help"] = () => Help_Click(this, new RoutedEventArgs()),
+        ["Close"] = Close,
+    };
 
     private static bool IsInsideMenu(DependencyObject element)
     {
@@ -479,6 +476,7 @@ public partial class MainWindow : Window, IMainView
     private void OpenMenuBelow(FrameworkElement target, ContextMenu menu)
     {
         menu.DataContext = DataContext;
+        HotkeyText.Apply(menu, _settings.Hotkeys);
         // An open menu inherits font properties from its PlacementTarget, and the toolbar buttons
         // use the icon font: without this every item would render as empty boxes.
         menu.FontFamily = FontFamily;
@@ -527,7 +525,7 @@ public partial class MainWindow : Window, IMainView
         if (style is not null && Viewer.IsEditingText) Viewer.UpdateTextStyle(style);
     }
 
-    private void Help_Click(object sender, RoutedEventArgs e) => new HelpWindow { Owner = this }.ShowDialog();
+    private void Help_Click(object sender, RoutedEventArgs e) => new HelpWindow(_settings.Hotkeys) { Owner = this }.ShowDialog();
     private void About_Click(object sender, RoutedEventArgs e) => new AboutWindow { Owner = this }.ShowDialog();
 
     // ---- IMainView ----

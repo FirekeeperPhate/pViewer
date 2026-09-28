@@ -55,6 +55,9 @@ public sealed class AppSettings
     public double SlideshowSeconds { get; set; } = 5;
     public string? LastFolder { get; set; }
     public WindowPlacement? Window { get; set; }
+
+    /// <summary>Keyboard shortcuts changed by the user: command id → keys ("Ctrl+S"). Others use the defaults.</summary>
+    public Dictionary<string, List<string>>? Hotkeys { get; set; }
 }
 
 /// <summary>

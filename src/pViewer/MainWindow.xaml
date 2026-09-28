@@ -23,51 +23,51 @@
                       IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.FitWidth}}" />
             <MenuItem IsCheckable="True" Header="Fit height" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.FitHeight}"
                       IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.FitHeight}}" />
-            <MenuItem IsCheckable="True" Header="Actual size" InputGestureText="A" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ActualSize}"
+            <MenuItem IsCheckable="True" Header="Actual size" controls:HotkeyText.Command="ActualSize" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ActualSize}"
                       IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.ActualSize}}" />
         </ContextMenu>
 
         <ContextMenu x:Key="LayoutMenu" Cursor="Arrow">
             <MenuItem IsCheckable="True" Header="Single page" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Single}"
                       IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Single}}" />
-            <MenuItem IsCheckable="True" Header="Manga (right to left)" InputGestureText="M" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Manga}"
+            <MenuItem IsCheckable="True" Header="Manga (right to left)" controls:HotkeyText.Command="Manga" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Manga}"
                       IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Manga}}" />
-            <MenuItem IsCheckable="True" Header="Comic (left to right)" InputGestureText="C" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Comic}"
+            <MenuItem IsCheckable="True" Header="Comic (left to right)" controls:HotkeyText.Command="Comic" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Comic}"
                       IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Comic}}" />
             <Separator />
-            <MenuItem Header="Shift forward one page" InputGestureText="F12" Command="{Binding ShiftPageCommand}" CommandParameter="1" />
-            <MenuItem Header="Shift back one page" InputGestureText="Shift+F12" Command="{Binding ShiftPageCommand}" CommandParameter="-1" />
+            <MenuItem Header="Shift forward one page" controls:HotkeyText.Command="ShiftForward" Command="{Binding ShiftPageCommand}" CommandParameter="1" />
+            <MenuItem Header="Shift back one page" controls:HotkeyText.Command="ShiftBack" Command="{Binding ShiftPageCommand}" CommandParameter="-1" />
         </ContextMenu>
 
         <!-- Full menu (right click) -->
         <ContextMenu x:Key="MainMenu" Cursor="Arrow">
-            <MenuItem Header="Open…" InputGestureText="Ctrl+O" Command="{Binding OpenCommand}">
+            <MenuItem Header="Open…" controls:HotkeyText.Command="Open" Command="{Binding OpenCommand}">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE8E5;" /></MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="Save" InputGestureText="Ctrl+S" Command="{Binding SaveCommand}">
+            <MenuItem Header="Save" controls:HotkeyText.Command="Save" Command="{Binding SaveCommand}">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE74E;" /></MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="Save as…" InputGestureText="Ctrl+Shift+S" Command="{Binding SaveAsCommand}">
+            <MenuItem Header="Save as…" controls:HotkeyText.Command="SaveAs" Command="{Binding SaveAsCommand}">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE792;" /></MenuItem.Icon>
             </MenuItem>
             <Separator />
-            <MenuItem Header="Next" InputGestureText="→" Command="{Binding NextCommand}">
+            <MenuItem Header="Next" controls:HotkeyText.Command="Next" Command="{Binding NextCommand}">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE76C;" /></MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="Previous" InputGestureText="←" Command="{Binding PreviousCommand}">
+            <MenuItem Header="Previous" controls:HotkeyText.Command="Previous" Command="{Binding PreviousCommand}">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE76B;" /></MenuItem.Icon>
             </MenuItem>
             <MenuItem Header="Pages">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE89A;" /></MenuItem.Icon>
                 <MenuItem IsCheckable="True" Header="Single page" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Single}"
                           IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Single}}" />
-                <MenuItem IsCheckable="True" Header="Manga (right to left)" InputGestureText="M" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Manga}"
+                <MenuItem IsCheckable="True" Header="Manga (right to left)" controls:HotkeyText.Command="Manga" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Manga}"
                           IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Manga}}" />
-                <MenuItem IsCheckable="True" Header="Comic (left to right)" InputGestureText="C" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Comic}"
+                <MenuItem IsCheckable="True" Header="Comic (left to right)" controls:HotkeyText.Command="Comic" Command="{Binding SetLayoutCommand}" CommandParameter="{x:Static core:PageLayout.Comic}"
                           IsChecked="{Binding Layout, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static core:PageLayout.Comic}}" />
                 <Separator />
-                <MenuItem Header="Shift forward one page" InputGestureText="F12" Command="{Binding ShiftPageCommand}" CommandParameter="1" />
-                <MenuItem Header="Shift back one page" InputGestureText="Shift+F12" Command="{Binding ShiftPageCommand}" CommandParameter="-1" />
+                <MenuItem Header="Shift forward one page" controls:HotkeyText.Command="ShiftForward" Command="{Binding ShiftPageCommand}" CommandParameter="1" />
+                <MenuItem Header="Shift back one page" controls:HotkeyText.Command="ShiftBack" Command="{Binding ShiftPageCommand}" CommandParameter="-1" />
             </MenuItem>
             <MenuItem Header="Slideshow">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE786;" /></MenuItem.Icon>
@@ -88,44 +88,44 @@
                           IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.FitWidth}}" />
                 <MenuItem IsCheckable="True" Header="Fit height" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.FitHeight}"
                           IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.FitHeight}}" />
-                <MenuItem IsCheckable="True" Header="Actual size" InputGestureText="A" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ActualSize}"
+                <MenuItem IsCheckable="True" Header="Actual size" controls:HotkeyText.Command="ActualSize" Command="{Binding ChangeViewModeCommand}" CommandParameter="{x:Static svc:ViewMode.ActualSize}"
                           IsChecked="{Binding ViewMode, Mode=OneWay, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static svc:ViewMode.ActualSize}}" />
                 <Separator />
-                <MenuItem Header="Full screen" InputGestureText="F11" Click="Fullscreen_Click" />
-                <MenuItem IsCheckable="True" Header="White background" InputGestureText="W" Command="{Binding ToggleWhiteBackgroundCommand}" IsChecked="{Binding WhiteBackground, Mode=OneWay}" />
-                <MenuItem x:Name="ToolbarMenuItem" IsCheckable="True" Header="Toolbar" InputGestureText="T" Click="ToggleToolbar_Click" />
+                <MenuItem Header="Full screen" controls:HotkeyText.Command="FullScreen" Click="Fullscreen_Click" />
+                <MenuItem IsCheckable="True" Header="White background" controls:HotkeyText.Command="WhiteBackground" Command="{Binding ToggleWhiteBackgroundCommand}" IsChecked="{Binding WhiteBackground, Mode=OneWay}" />
+                <MenuItem x:Name="ToolbarMenuItem" IsCheckable="True" Header="Toolbar" controls:HotkeyText.Command="Toolbar" Click="ToggleToolbar_Click" />
                 <MenuItem x:Name="StatusBarMenuItem" IsCheckable="True" Header="Status bar" Click="ToggleStatusBar_Click" />
             </MenuItem>
             <Separator />
             <MenuItem Header="Edit">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE70F;" /></MenuItem.Icon>
-                <MenuItem Header="Undo" InputGestureText="Ctrl+Z" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" />
-                <MenuItem Header="Redo" InputGestureText="Ctrl+Y" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" />
-                <MenuItem Header="Reload original" InputGestureText="F5" Command="{Binding ReloadCommand}" />
+                <MenuItem Header="Undo" controls:HotkeyText.Command="Undo" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" />
+                <MenuItem Header="Redo" controls:HotkeyText.Command="Redo" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" />
+                <MenuItem Header="Reload original" controls:HotkeyText.Command="Reload" Command="{Binding ReloadCommand}" />
                 <Separator />
-                <MenuItem Header="Rotate right" InputGestureText="↑" Command="{Binding RotateCommand}" CommandParameter="90" />
-                <MenuItem Header="Rotate left" InputGestureText="↓" Command="{Binding RotateCommand}" CommandParameter="-90" />
+                <MenuItem Header="Rotate right" controls:HotkeyText.Command="RotateRight" Command="{Binding RotateCommand}" CommandParameter="90" />
+                <MenuItem Header="Rotate left" controls:HotkeyText.Command="RotateLeft" Command="{Binding RotateCommand}" CommandParameter="-90" />
                 <MenuItem Header="Rotate 180°" Command="{Binding RotateCommand}" CommandParameter="180" />
-                <MenuItem Header="Flip horizontally" InputGestureText="Alt+↑" Command="{Binding FlipCommand}" CommandParameter="H" />
-                <MenuItem Header="Flip vertically" InputGestureText="Alt+↓" Command="{Binding FlipCommand}" CommandParameter="V" />
+                <MenuItem Header="Flip horizontally" controls:HotkeyText.Command="FlipHorizontal" Command="{Binding FlipCommand}" CommandParameter="H" />
+                <MenuItem Header="Flip vertically" controls:HotkeyText.Command="FlipVertical" Command="{Binding FlipCommand}" CommandParameter="V" />
                 <Separator />
                 <MenuItem Header="Resize">
                     <MenuItem Header="25%" Command="{Binding ResizeCommand}" CommandParameter="25" />
                     <MenuItem Header="50%" Command="{Binding ResizeCommand}" CommandParameter="50" />
                     <MenuItem Header="75%" Command="{Binding ResizeCommand}" CommandParameter="75" />
-                    <MenuItem Header="Custom size…" InputGestureText="Ctrl+R" Command="{Binding ResizeCommand}" CommandParameter="0" />
+                    <MenuItem Header="Custom size…" controls:HotkeyText.Command="Resize" Command="{Binding ResizeCommand}" CommandParameter="0" />
                 </MenuItem>
                 <MenuItem Header="Crop" InputGestureText="Ctrl+drag" IsEnabled="False" />
                 <MenuItem Header="Rectangle" InputGestureText="Alt+drag" IsEnabled="False" />
-                <MenuItem Header="Fill last rectangle" InputGestureText="Tab" Command="{Binding FillLastRectangleCommand}" />
+                <MenuItem Header="Fill last rectangle" controls:HotkeyText.Command="FillRectangle" Command="{Binding FillLastRectangleCommand}" />
                 <MenuItem Header="Text" InputGestureText="Shift+click" IsEnabled="False" />
                 <MenuItem Header="Text font and color…" Click="TextStyle_Click" />
-                <MenuItem Header="Red-eye correction" InputGestureText="R" Command="{Binding ToggleRedEyeToolCommand}" />
+                <MenuItem Header="Red-eye correction" controls:HotkeyText.Command="RedEye" Command="{Binding ToggleRedEyeToolCommand}" />
                 <MenuItem Header="Add black border" Command="{Binding AddBorderCommand}" CommandParameter="Black" />
                 <MenuItem Header="Add white border" Command="{Binding AddBorderCommand}" CommandParameter="White" />
                 <Separator />
-                <MenuItem Header="Copy image" InputGestureText="Ctrl+C" Command="{Binding CopyCommand}" />
-                <MenuItem Header="Paste" InputGestureText="Ctrl+V" Command="{Binding PasteCommand}" />
+                <MenuItem Header="Copy image" controls:HotkeyText.Command="Copy" Command="{Binding CopyCommand}" />
+                <MenuItem Header="Paste" controls:HotkeyText.Command="Paste" Command="{Binding PasteCommand}" />
             </MenuItem>
             <MenuItem Header="Effects">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE790;" /></MenuItem.Icon>
@@ -134,20 +134,20 @@
                 <MenuItem Header="Sharpen…" Command="{Binding EffectCommand}" CommandParameter="Sharpen" />
                 <MenuItem Header="Blur…" Command="{Binding EffectCommand}" CommandParameter="Blur" />
                 <Separator />
-                <MenuItem Header="Invert" InputGestureText="Ctrl+I" Command="{Binding InvertCommand}" />
-                <MenuItem Header="Grayscale" InputGestureText="Ctrl+G" Command="{Binding GrayscaleCommand}" />
+                <MenuItem Header="Invert" controls:HotkeyText.Command="Invert" Command="{Binding InvertCommand}" />
+                <MenuItem Header="Grayscale" controls:HotkeyText.Command="Grayscale" Command="{Binding GrayscaleCommand}" />
                 <MenuItem Header="Sepia" Command="{Binding SepiaCommand}" />
                 <MenuItem Header="Black and white (1 bit)" Command="{Binding BlackWhiteCommand}" />
             </MenuItem>
             <MenuItem Header="File">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE8B7;" /></MenuItem.Icon>
                 <MenuItem Header="Open with…" Command="{Binding OpenWithCommand}" />
-                <MenuItem Header="Rename…" InputGestureText="F2" Command="{Binding RenameCommand}" />
-                <MenuItem Header="Delete" InputGestureText="Del" Command="{Binding DeleteCommand}" />
+                <MenuItem Header="Rename…" controls:HotkeyText.Command="Rename" Command="{Binding RenameCommand}" />
+                <MenuItem Header="Delete" controls:HotkeyText.Command="Delete" Command="{Binding DeleteCommand}" />
                 <Separator />
                 <MenuItem Header="Show in File Explorer" Command="{Binding ShowInExplorerCommand}" />
                 <MenuItem Header="File properties" Command="{Binding ShowPropertiesCommand}" />
-                <MenuItem Header="EXIF and metadata…" InputGestureText="I" Command="{Binding ShowMetadataCommand}" />
+                <MenuItem Header="EXIF and metadata…" controls:HotkeyText.Command="Metadata" Command="{Binding ShowMetadataCommand}" />
                 <MenuItem Header="Set as desktop background" Command="{Binding SetWallpaperCommand}" />
                 <Separator />
                 <MenuItem Header="Batch processing (resize, rotate, convert…)" Command="{Binding BatchCommand}" />
@@ -159,10 +159,10 @@
             </MenuItem>
             <MenuItem Header="Help">
                 <MenuItem.Icon><TextBlock Style="{StaticResource MenuIcon}" Text="&#xE897;" /></MenuItem.Icon>
-                <MenuItem Header="Keyboard shortcuts" InputGestureText="F1" Click="Help_Click" />
+                <MenuItem Header="Keyboard shortcuts" controls:HotkeyText.Command="Help" Click="Help_Click" />
                 <MenuItem Header="About pViewer" Click="About_Click" />
             </MenuItem>
-            <MenuItem Header="Exit" InputGestureText="Esc" Click="Exit_Click" />
+            <MenuItem Header="Exit" controls:HotkeyText.Command="Close" Click="Exit_Click" />
         </ContextMenu>
     </Window.Resources>
 
@@ -179,33 +179,33 @@
                 <!-- Docked first: in a narrow window the left group is clipped, not these ("All commands" stays reachable) -->
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
                     <Button Style="{StaticResource ToolButton}" Content="&#xE786;" ToolTip="Slideshow" Click="SlideshowButton_Click" />
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE740;" ToolTip="Full screen (F11)" Click="Fullscreen_Click" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE740;" controls:HotkeyText.Label="Full screen" controls:HotkeyText.Command="FullScreen" Click="Fullscreen_Click" />
                     <Button Style="{StaticResource ToolButton}" Content="&#xE713;" ToolTip="Settings" Command="{Binding OpenSettingsCommand}" />
                     <Button Style="{StaticResource ToolButton}" Content="&#xE712;" ToolTip="All commands (right-click the image)" Click="MoreButton_Click" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE8E5;" ToolTip="Open (Ctrl+O)" Command="{Binding OpenCommand}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE8E5;" controls:HotkeyText.Label="Open" controls:HotkeyText.Command="Open" Command="{Binding OpenCommand}" />
                     <Border Style="{StaticResource ToolSeparator}" />
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE76B;" ToolTip="Previous (←)" Command="{Binding PreviousCommand}" />
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE76C;" ToolTip="Next (→, Space)" Command="{Binding NextCommand}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE76B;" controls:HotkeyText.Label="Previous" controls:HotkeyText.Command="Previous" Command="{Binding PreviousCommand}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE76C;" controls:HotkeyText.Label="Next" controls:HotkeyText.Command="Next" Command="{Binding NextCommand}" />
                     <Border Style="{StaticResource ToolSeparator}" />
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE71F;" ToolTip="Zoom out (−)" Click="ZoomOut_Click" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE71F;" controls:HotkeyText.Label="Zoom out" controls:HotkeyText.Command="ZoomOut" Click="ZoomOut_Click" />
                     <Button x:Name="ZoomButton" Style="{StaticResource ToolButton}" FontFamily="Segoe UI" FontSize="12" MinWidth="52"
                             Content="{Binding ZoomText}" ToolTip="View mode" Click="ViewModeButton_Click" />
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE8A3;" ToolTip="Zoom in (+)" Click="ZoomIn_Click" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE8A3;" controls:HotkeyText.Label="Zoom in" controls:HotkeyText.Command="ZoomIn" Click="ZoomIn_Click" />
                     <Border Style="{StaticResource ToolSeparator}" />
-                    <Button Style="{StaticResource ToolButton}" ToolTip="Rotate left (↓)" Command="{Binding RotateCommand}" CommandParameter="-90">
+                    <Button Style="{StaticResource ToolButton}" controls:HotkeyText.Label="Rotate left" controls:HotkeyText.Command="RotateLeft" Command="{Binding RotateCommand}" CommandParameter="-90">
                         <TextBlock Text="&#xE7AD;" RenderTransformOrigin="0.5,0.5">
                             <TextBlock.RenderTransform><ScaleTransform ScaleX="-1" /></TextBlock.RenderTransform>
                         </TextBlock>
                     </Button>
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE7AD;" ToolTip="Rotate right (↑)" Command="{Binding RotateCommand}" CommandParameter="90" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE7AD;" controls:HotkeyText.Label="Rotate right" controls:HotkeyText.Command="RotateRight" Command="{Binding RotateCommand}" CommandParameter="90" />
                     <Button x:Name="LayoutButton" Style="{StaticResource ToolButton}" Content="&#xE89A;" ToolTip="Pages: single, manga, comic" Click="LayoutButton_Click" />
                     <Border Style="{StaticResource ToolSeparator}" />
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE7A7;" ToolTip="Undo (Ctrl+Z)" Command="{Binding UndoCommand}" Opacity="{Binding CanUndo, Converter={StaticResource BoolToOpacity}}" />
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE7A6;" ToolTip="Redo (Ctrl+Y)" Command="{Binding RedoCommand}" Opacity="{Binding CanRedo, Converter={StaticResource BoolToOpacity}}" />
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE74E;" ToolTip="Save (Ctrl+S)" Command="{Binding SaveCommand}" />
-                    <Button Content="&#xE7B3;" ToolTip="Red-eye correction (R)" Command="{Binding ToggleRedEyeToolCommand}">
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE7A7;" controls:HotkeyText.Label="Undo" controls:HotkeyText.Command="Undo" Command="{Binding UndoCommand}" Opacity="{Binding CanUndo, Converter={StaticResource BoolToOpacity}}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE7A6;" controls:HotkeyText.Label="Redo" controls:HotkeyText.Command="Redo" Command="{Binding RedoCommand}" Opacity="{Binding CanRedo, Converter={StaticResource BoolToOpacity}}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE74E;" controls:HotkeyText.Label="Save" controls:HotkeyText.Command="Save" Command="{Binding SaveCommand}" />
+                    <Button Content="&#xE7B3;" controls:HotkeyText.Label="Red-eye correction" controls:HotkeyText.Command="RedEye" Command="{Binding ToggleRedEyeToolCommand}">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource ToolButton}">
                                 <Style.Triggers>

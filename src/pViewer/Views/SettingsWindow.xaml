@@ -134,6 +134,13 @@
                         <TextBlock Text="seconds (toolbar button)" VerticalAlignment="Center" Margin="8,0,0,0" />
                     </StackPanel>
                 </Grid>
+
+                <TextBlock Text="Keyboard shortcuts" Style="{StaticResource Section}" />
+                <TextBlock Text="Click + and press the new key combination (with Ctrl, Shift or Alt if you like). A key already used by another command is moved to this one." Opacity="0.65" TextWrapping="Wrap" Margin="0,0,0,6" />
+                <TextBlock x:Name="HotkeyNote" Foreground="{DynamicResource SystemFillColorCautionBrush}" TextWrapping="Wrap" Margin="0,0,0,6" Visibility="{Binding Text, RelativeSource={RelativeSource Self}, Converter={StaticResource NullToVisibility}}" />
+                <StackPanel x:Name="HotkeysPanel" />
+                <Button Content="Restore all default shortcuts" HorizontalAlignment="Left" Margin="0,10,0,0" Click="ResetHotkeys_Click" />
+
                 <TextBlock x:Name="PathText" TextWrapping="Wrap" Opacity="0.5" FontSize="12" Margin="0,12,0,0" />
             </StackPanel>
         </ScrollViewer>

@@ -30,6 +30,7 @@ public partial class SettingsWindow : Window
         PixelatedBox.IsChecked = s.PixelatedZoom;
         ToolbarBox.IsChecked = s.ShowToolbar;
         StatusBarBox.IsChecked = s.ShowStatusBar;
+        LoadHotkeys(s);
         AutoRotateBox.IsChecked = s.AutoRotateExif;
         ArchiveLayoutBox.SelectedIndex = (int)s.ArchiveLayout;
         ConfirmDeleteBox.IsChecked = s.ConfirmDelete;
@@ -106,6 +107,7 @@ public partial class SettingsWindow : Window
         s.PixelatedZoom = PixelatedBox.IsChecked == true;
         s.ShowToolbar = ToolbarBox.IsChecked == true;
         s.ShowStatusBar = StatusBarBox.IsChecked == true;
+        s.Hotkeys = _hotkeys.Count == 0 ? null : _hotkeys;
         s.AutoRotateExif = AutoRotateBox.IsChecked == true;
         s.ArchiveLayout = (PageLayout)Math.Max(0, ArchiveLayoutBox.SelectedIndex);
         s.ConfirmDelete = ConfirmDeleteBox.IsChecked == true;

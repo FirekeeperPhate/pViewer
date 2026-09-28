@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Settings: "Show the toolbar" and "Show the status bar" options (the same as T and the view menu).
+- Settings: a "Keyboard shortcuts" section to change the keys of every command (the defaults are
+  the usual ones). Menus, toolbar tooltips and the F1 help show the current keys.
 
 ## 2.0.3
 

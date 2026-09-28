@@ -33,7 +33,7 @@ Version 2 is a complete rewrite in **.NET 10 + WPF** of pViewer 1.x (WinForms, .
 - Settings live in `settings.json` next to the executable (if that folder is not writable,
   `%AppData%\pViewer` is used).
 
-All keyboard shortcuts are listed in the app's help (F1).
+All keyboard shortcuts are listed in the app's help (F1) and can be changed in Settings › Keyboard shortcuts.
 
 ## Installing
 
