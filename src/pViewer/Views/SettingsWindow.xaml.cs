@@ -28,6 +28,8 @@ public partial class SettingsWindow : Window
         ThemeBox.SelectedIndex = (int)s.Theme;
         ViewModeBox.SelectedIndex = s.ViewMode == ViewMode.ActualSize ? 0 : (int)s.ViewMode;
         PixelatedBox.IsChecked = s.PixelatedZoom;
+        ToolbarBox.IsChecked = s.ShowToolbar;
+        StatusBarBox.IsChecked = s.ShowStatusBar;
         AutoRotateBox.IsChecked = s.AutoRotateExif;
         ArchiveLayoutBox.SelectedIndex = (int)s.ArchiveLayout;
         ConfirmDeleteBox.IsChecked = s.ConfirmDelete;
@@ -102,6 +104,8 @@ public partial class SettingsWindow : Window
         s.Theme = (AppTheme)Math.Max(0, ThemeBox.SelectedIndex);
         s.ViewMode = (ViewMode)Math.Max(0, ViewModeBox.SelectedIndex);
         s.PixelatedZoom = PixelatedBox.IsChecked == true;
+        s.ShowToolbar = ToolbarBox.IsChecked == true;
+        s.ShowStatusBar = StatusBarBox.IsChecked == true;
         s.AutoRotateExif = AutoRotateBox.IsChecked == true;
         s.ArchiveLayout = (PageLayout)Math.Max(0, ArchiveLayoutBox.SelectedIndex);
         s.ConfirmDelete = ConfirmDeleteBox.IsChecked == true;

@@ -56,6 +56,8 @@
                     </ComboBox>
                 </Grid>
                 <CheckBox x:Name="PixelatedBox" Content="Show sharp pixels when zoomed beyond 250%" Margin="0,10,0,0" />
+                <CheckBox x:Name="ToolbarBox" Content="Show the toolbar (T)" />
+                <CheckBox x:Name="StatusBarBox" Content="Show the status bar" />
 
                 <TextBlock Text="Opening" Style="{StaticResource Section}" />
                 <CheckBox x:Name="AutoRotateBox" Content="Auto-rotate photos (EXIF orientation)" />

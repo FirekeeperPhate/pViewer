@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Settings: "Show the toolbar" and "Show the status bar" options (the same as T and the view menu).
+
 ## 2.0.3
 
 **Faster startup**
