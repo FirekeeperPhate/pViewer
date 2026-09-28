@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 2.0.5
+
+**New**
+- Opening an archive can be cancelled with Esc (a toast says so when it takes a while), and
+  opening something else stops it.
 
 **Fixed**
 - Shortcuts: restoring a default no longer leaves a key on two commands; Esc cancels recording;
@@ -16,9 +20,6 @@
   the F12 pairing of a volume is kept when coming back to it.
 - Ctrl+S on a pasted image already saved says "Nothing to save" instead of asking again.
 - Two-page view redraws when a file saved into the folder shifts the pair.
-
-- Opening an archive can be cancelled with Esc (a toast says so when it takes a while), and
-  opening something else stops it.
 
 **Robustness**
 - Crafted or broken files can no longer crash pViewer (metadata of an endless EXIF chain),
