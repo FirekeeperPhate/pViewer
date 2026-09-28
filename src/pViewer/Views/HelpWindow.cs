@@ -12,7 +12,14 @@ public sealed class HelpWindow : Window
     private static readonly Dictionary<string, (string Keys, string Action)[]> MouseGestures = new()
     {
         ["Navigation"] = [("Drop a file", "Opens images, folders and archives")],
-        ["View"] = [("Wheel", "Zoom towards the pointer"), ("Drag", "Pan the zoomed image"), ("Double-click", "Full screen")],
+        ["View"] =
+        [
+            ("Wheel", "Zoom towards the pointer (scrolls instead in “Fit width” until you zoom)"),
+            ("Ctrl+wheel", "Always zoom"),
+            ("Shift+wheel", "Scroll sideways"),
+            ("Drag", "Pan the zoomed image"),
+            ("Double-click  /  middle click", "Full screen (with no image: open a file)"),
+        ],
         ["Edit"] =
         [
             ("Ctrl+drag", "Crop"),

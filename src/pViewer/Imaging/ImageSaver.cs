@@ -20,7 +20,7 @@ public static class ImageSaver
     {
         string ext = Path.GetExtension(path).ToLowerInvariant();
         if (File.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReadOnly) != 0)
-            throw new IOException($"«{Path.GetFileName(path)}» is read-only.");
+            throw new IOException($"“{Path.GetFileName(path)}” is read-only.");
         string dir = Path.GetDirectoryName(Path.GetFullPath(path))!;
         // Short name: appending to the original name could exceed the 255-character limit.
         string temp = Path.Combine(dir, $".pv{Guid.NewGuid():N}.tmp");

@@ -4,7 +4,7 @@ namespace pViewer.Services;
 
 public static class BatchRenamer
 {
-    /// <summary>Final name of the n-th file: «base-001.jpg».</summary>
+    /// <summary>Final name of the n-th file: “base-001.jpg”.</summary>
     public static string TargetName(BatchRenameOptions o, int index, string extension) =>
         $"{o.BaseName}-{(o.Start + index).ToString().PadLeft(o.Digits, '0')}{extension}";
 
@@ -25,7 +25,7 @@ public static class BatchRenamer
         var sources = new HashSet<string>(files, StringComparer.OrdinalIgnoreCase);
         var clash = plan.FirstOrDefault(p => File.Exists(p.New) && !sources.Contains(p.New));
         if (clash.New is not null)
-            throw new IOException($"«{Path.GetFileName(clash.New)}» already exists and is not part of the list.");
+            throw new IOException($"“{Path.GetFileName(clash.New)}” already exists and is not part of the list.");
 
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var temps = new List<(string Old, string Temp, string New)>();

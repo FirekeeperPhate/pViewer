@@ -132,7 +132,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         if (!isFolder && !ImageFormats.IsArchive(path) && !ImageFormats.IsImage(path))
         {
-            _view.ShowError($"«{Path.GetFileName(path)}» is not a supported format.");
+            _view.ShowError($"“{Path.GetFileName(path)}” is not a supported format.");
             return;
         }
         if (!await ConfirmDiscardEditsAsync()) return;
@@ -202,7 +202,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             StopSlideshow(); // otherwise the error would come back on every tick
             // Remembered, so moving between volumes skips it instead of trying it again forever.
             _brokenArchives.Add(path);
-            _view.ShowError($"Cannot open the archive «{Path.GetFileName(path)}».\n{ex.Message}");
+            _view.ShowError($"Cannot open the archive “{Path.GetFileName(path)}”.\n{ex.Message}");
             // The open may have interrupted the loading of the current page (or cleared its error):
             // show it again, so what is on screen matches the position and the title.
             if (request != _requestId) return;
@@ -325,7 +325,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 HasImage = false;
                 _view.ClearPages();
                 ErrorText = ex is ImageDecodeException ? ex.Message
-                    : $"Cannot open «{_source.Pages[indices[0]].Name}».\n{ex.Message}";
+                    : $"Cannot open “{_source.Pages[indices[0]].Name}”.\n{ex.Message}";
                 UpdateInfo();
                 PrefetchAround();
                 return;
@@ -521,7 +521,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 // Folder renamed, deleted or on a drive that was unplugged.
-                _view.ShowError($"Cannot read the folder «{folder.Location}».\n{ex.Message}");
+                _view.ShowError($"Cannot read the folder “{folder.Location}”.\n{ex.Message}");
                 return;
             }
             int index = current is null ? _nav.Position : fresh.IndexOf(current);
@@ -937,18 +937,18 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // Overwriting a multi-page file (TIFF) would keep only the page shown: save under a new name.
         if (_visible is { Length: 1 } pages && pages[0].PageCount > 1)
         {
-            Toast($"«{Path.GetFileName(path)}» has {pages[0].PageCount} pages: choose a new name to keep the original");
+            Toast($"“{Path.GetFileName(path)}” has {pages[0].PageCount} pages: choose a new name to keep the original");
             return await SaveAsCoreAsync(openSaved);
         }
         // The same for an animation: overwriting it would leave only the edited first frame.
         if (_visible is { Length: 1 } anim && anim[0].IsAnimated)
         {
-            Toast($"«{Path.GetFileName(path)}» is animated: choose a new name to keep the original");
+            Toast($"“{Path.GetFileName(path)}” is animated: choose a new name to keep the original");
             return await SaveAsCoreAsync(openSaved);
         }
         if (Settings.ConfirmOverwrite)
         {
-            var answer = _view.Ask($"Overwrite «{Path.GetFileName(path)}» with your changes?\n\nChoose «No» to save under another name.",
+            var answer = _view.Ask($"Overwrite “{Path.GetFileName(path)}” with your changes?\n\nChoose “No” to save under another name.",
                 "Save", MessageBoxButton.YesNoCancel);
             if (answer == MessageBoxResult.Cancel) return false;
             if (answer == MessageBoxResult.No) return await SaveAsCoreAsync(openSaved);
@@ -1082,7 +1082,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // The window stays usable during the save: an edit made meanwhile is not saved, so stay.
         if (_editsRequested != edits || _edit is { IsModified: true })
         {
-            Toast("The image was changed while saving: stay on it");
+            Toast("The image changed while it was being saved, so it is still shown");
             return false;
         }
         return true;
@@ -1118,13 +1118,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         string? path = CurrentFilePath;
         if (!IsSingleFilePage || path is null)
         {
-            _view.ShowError("Only an image file shown on its own can be deleted (not a page pair, an archive or a clipboard image).");
+            ExplainNotAFile("deleted");
             return;
         }
         if (Settings.ConfirmDelete)
         {
             string where = Settings.DeleteToRecycleBin ? "Move to the Recycle Bin" : "Permanently delete";
-            if (_view.Ask($"{where} «{Path.GetFileName(path)}»?", "Delete", MessageBoxButton.YesNo,
+            if (_view.Ask($"{where} “{Path.GetFileName(path)}”?", "Delete", MessageBoxButton.YesNo,
                     Settings.DeleteToRecycleBin ? MessageBoxImage.Question : MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
         }
@@ -1150,7 +1150,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         string? path = CurrentFilePath;
         if (!IsSingleFilePage || path is null)
         {
-            Toast(_detached ? "Not available for pasted or joined images" : "Only an image file shown on its own can be renamed");
+            ExplainNotAFile("renamed");
             return;
         }
         if (!await ConfirmDiscardEditsAsync()) return;
@@ -1206,7 +1206,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var fresh = FolderSource.Open(folder.Location);
         int index = current is not null && renamed.TryGetValue(current, out var np) ? fresh.IndexOf(np) : _nav.Position;
         await SetSourceAsync(fresh, Math.Max(0, index), null);
-        if (renamed.Count > 0) Toast($"Renamed {renamed.Count} files");
+        if (renamed.Count > 0) Toast($"Renamed {renamed.Count} {(renamed.Count == 1 ? "file" : "files")}");
     }
 
     [RelayCommand]
@@ -1219,6 +1219,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     private void NotAFile() => Toast("Not available for pasted or joined images: save the image first");
+
+    /// <summary>Why a file command did nothing (and nothing at all when no image is shown).</summary>
+    private void ExplainNotAFile(string done)
+    {
+        if (!HasImage) return;
+        if (_detached) NotAFile();
+        else Toast($"Only an image shown on its own can be {done} (not a page pair or an archive page)");
+    }
 
     [RelayCommand]
     private void OpenWith()

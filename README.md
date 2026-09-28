@@ -57,7 +57,7 @@ dotnet build
 dotnet test
 ```
 
-To build the two installers (needs [Inno Setup](https://jrsoftware.org/isinfo.php) 6 or 7) into
+To build the two installers (needs [Inno Setup](https://jrsoftware.org/isinfo.php) 6.6 or later) into
 `installer\Output\` — the script runs the tests first, then publishes both editions:
 
 ```bash

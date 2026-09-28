@@ -89,7 +89,7 @@ public partial class SettingsWindow
         var losers = Hotkeys.RestoreDefaults(_hotkeys, id);
         RefreshHotkeys();
         HotkeyNote.Text = losers.Count == 0 ? null
-            : $"Its default keys were removed from {string.Join(", ", losers.Select(l => $"«{l.Name}»"))}.";
+            : $"Its default keys were removed from {string.Join(", ", losers.Select(l => $"“{l.Name}”"))}.";
     }
 
     private void SetKeys(string id, IEnumerable<Shortcut> keys)
@@ -151,7 +151,7 @@ public partial class SettingsWindow
         var previous = Hotkeys.Assign(_hotkeys, id, gesture);
         RefreshHotkeys();
         HotkeyNote.Text = previous is null ? null
-            : $"{gesture.Display} was removed from «{previous.Name}».";
+            : $"{gesture.Display} was removed from “{previous.Name}”.";
     }
 
     private void ResetHotkeys_Click(object sender, RoutedEventArgs e)

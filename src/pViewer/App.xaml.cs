@@ -9,9 +9,13 @@ public partial class App : Application
 {
     private readonly Task<AppSettings> _startupSettings;
 
+    /// <summary>Tells the installer and the uninstaller that pViewer is running (AppMutex in pViewer.iss).</summary>
+    private static Mutex? _runningMutex;
+
     public App()
     {
         StartupTrace.Mark("app created");
+        _runningMutex = new Mutex(false, "pViewer.Running");
         // While WPF loads the theme (App.xaml), read the settings and start decoding the image
         // passed on the command line (double-click in Explorer) in the background.
         string[] args = Environment.GetCommandLineArgs();

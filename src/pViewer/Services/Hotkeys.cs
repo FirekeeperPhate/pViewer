@@ -150,7 +150,7 @@ public static class Hotkeys
         new("Paste", "File", "Paste from the clipboard", ["Ctrl+V"]),
         new("Metadata", "File", "EXIF and metadata", ["I"]),
         new("Help", "File", "Keyboard shortcuts", ["F1"]),
-        new("Close", "File", "Close pViewer", ["Ctrl+W", "Ctrl+Q"]),
+        new("Close", "File", "Exit", ["Ctrl+W", "Ctrl+Q"]),
     ];
 
     private static readonly Dictionary<string, HotkeyCommand> ById = All.ToDictionary(c => c.Id, StringComparer.OrdinalIgnoreCase);

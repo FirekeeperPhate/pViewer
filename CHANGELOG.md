@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+**Fixed**
+- Shortcuts: restoring a default no longer leaves a key on two commands; Esc cancels recording;
+  Alt+F4, Alt+Space and Windows-key combinations are refused; punctuation keys are shown as the
+  character of the keyboard layout; a hand-edited settings file can no longer crash pViewer.
+- Files dropped while a dialog is open are refused (they could replace the image being saved).
+- A hidden image opened from Explorer is the one shown.
+- A maximized window saved on a larger monitor fits the current one when restored.
+- In full screen, T no longer hides the toolbar of the normal window unseen.
+- Batch rename after saving changes into the folder renames the right list of files.
+
+**Installer**
+- Setup and uninstall ask to close a running pViewer; an interrupted upgrade no longer leaves a
+  program that cannot start.
+- Unticking "Open with" on an upgrade removes the registrations; uninstall leaves no empty
+  registry key.
+- The Light edition finds the .NET runtime also in per-user and custom locations.
+
+**Other**
+- A "Status bar" command that can be given a key; hints and help show the current keys; the
+  help lists all mouse actions; English quotation marks in messages.
+
 ## 2.0.4
 
 - Settings: "Show the toolbar" and "Show the status bar" options (the same as T and the view menu).

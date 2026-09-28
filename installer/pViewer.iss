@@ -16,6 +16,8 @@
 
 #define AppName "pViewer"
 #define AppExe "pViewer.exe"
+; Extensions registered by the "Open with" task (also removed when it is unticked on an upgrade)
+#define OpenWithExts ".jpg .jpeg .jpe .jfif .png .gif .bmp .dib .tif .tiff .ico .webp .heic .heif .avif .jxl .jxr .wdp .tga .qoi .cbz .cbr .cb7"
 #define SourceDir AddBackslash(SourcePath) + "..\publish\" + LowerCase(Flavor)
 
 ; Registry lines that add pViewer to the "Open with" list of an extension.
@@ -54,6 +56,8 @@ WizardStyle=modern dynamic
 Compression=lzma2/ultra64
 SolidCompression=yes
 CloseApplications=yes
+; Created by the running app: setup and uninstall ask to close pViewer first
+AppMutex=pViewer.Running
 ChangesAssociations=yes
 
 [Languages]
@@ -76,6 +80,8 @@ Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
 [Registry]
+; Parent of Capabilities: removed at uninstall once empty
+Root: HKA; Subkey: "Software\pViewer"; Flags: uninsdeletekeyifempty
 ; ProgIds used by "Open with" and by Settings > Default apps
 Root: HKA; Subkey: "Software\Classes\pViewer.Image"; ValueType: string; ValueData: "Image"; Flags: uninsdeletekey; Tasks: openwith
 Root: HKA; Subkey: "Software\Classes\pViewer.Image\DefaultIcon"; ValueType: string; ValueData: "{app}\{#AppExe},0"; Tasks: openwith
@@ -133,6 +139,10 @@ begin
      (CompareText(AddBackslash(WizardForm.PrevAppDir), App) <> 0) or
      not FileExists(App + '{#AppExe}') then
     Exit;
+  { The program itself first: if it cannot be deleted pViewer is still running, and nothing else
+    must be removed (an interrupted setup would leave a program that cannot start). }
+  if not DeleteFile(App + '{#AppExe}') then
+    Exit;
   if FindFirst(App + '*', FindRec) then
   begin
     try
@@ -149,26 +159,52 @@ begin
   end;
 end;
 
+{ The "Open with" task unticked on an upgrade: Inno skips the registry lines of an unselected
+  task, so the registrations of the previous install would stay until uninstall. }
+procedure RemoveOpenWith;
+var
+  Exts: String;
+  Ext: String;
+  P: Integer;
+begin
+  RegDeleteKeyIncludingSubkeys(HKA, 'Software\Classes\pViewer.Image');
+  RegDeleteKeyIncludingSubkeys(HKA, 'Software\Classes\pViewer.Comic');
+  RegDeleteKeyIncludingSubkeys(HKA, 'Software\Classes\Applications\{#AppExe}');
+  RegDeleteKeyIncludingSubkeys(HKA, 'Software\pViewer\Capabilities');
+  RegDeleteValue(HKA, 'Software\RegisteredApplications', 'pViewer');
+  Exts := '{#OpenWithExts} ';
+  while Length(Exts) > 0 do
+  begin
+    P := Pos(' ', Exts);
+    Ext := Copy(Exts, 1, P - 1);
+    Delete(Exts, 1, P);
+    if Ext <> '' then
+    begin
+      RegDeleteValue(HKA, 'Software\Classes\' + Ext + '\OpenWithProgids', 'pViewer.Image');
+      RegDeleteValue(HKA, 'Software\Classes\' + Ext + '\OpenWithProgids', 'pViewer.Comic');
+    end;
+  end;
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssInstall then
     CleanProgramFolder;
+  if (CurStep = ssPostInstall) and not WizardIsTaskSelected('openwith') then
+    RemoveOpenWith;
 end;
 
 #if Flavor == "Light"
 { Looks for a release (not preview) x64 .NET 10 Desktop Runtime. On ARM64 Windows the x64 runtime
   lives in dotnet\x64, the plain dotnet folder holds the native ARM64 one. }
-function IsDesktopRuntimeInstalled: Boolean;
+function HasDesktopRuntime(Root: String): Boolean;
 var
   FindRec: TFindRec;
-  Root: String;
 begin
   Result := False;
-  if IsArm64 then
-    Root := ExpandConstant('{commonpf64}\dotnet\x64')
-  else
-    Root := ExpandConstant('{commonpf64}\dotnet');
-  if FindFirst(Root + '\shared\Microsoft.WindowsDesktop.App\10.*', FindRec) then
+  if Root = '' then
+    Exit;
+  if FindFirst(AddBackslash(Root) + 'shared\Microsoft.WindowsDesktop.App\10.*', FindRec) then
   begin
     try
       repeat
@@ -182,6 +218,27 @@ begin
       FindClose(FindRec);
     end;
   end;
+end;
+
+{ The places the app host itself looks in: DOTNET_ROOT, the registered install location, the
+  standard folder, and a per-user install. }
+function IsDesktopRuntimeInstalled: Boolean;
+var
+  Registered: String;
+begin
+  Result := HasDesktopRuntime(GetEnv('DOTNET_ROOT_X64')) or HasDesktopRuntime(GetEnv('DOTNET_ROOT'));
+  if Result then
+    Exit;
+  if RegQueryStringValue(HKLM32, 'SOFTWARE\dotnet\Setup\InstalledVersions\x64', 'InstallLocation', Registered) then
+    Result := HasDesktopRuntime(Registered);
+  if Result then
+    Exit;
+  if IsArm64 then
+    Result := HasDesktopRuntime(ExpandConstant('{commonpf64}\dotnet\x64'))
+  else
+    Result := HasDesktopRuntime(ExpandConstant('{commonpf64}\dotnet'));
+  if not Result then
+    Result := HasDesktopRuntime(ExpandConstant('{localappdata}\Microsoft\dotnet'));
 end;
 
 function InitializeSetup: Boolean;

@@ -229,7 +229,7 @@
                         Visibility="{Binding ShowWelcome, Converter={StaticResource BoolToVisibility}}">
                 <TextBlock Text="&#xEB9F;" FontFamily="{StaticResource IconFont}" FontSize="56" Opacity="0.35" HorizontalAlignment="Center" />
                 <TextBlock Text="pViewer" FontSize="28" FontWeight="SemiBold" Opacity="0.8" HorizontalAlignment="Center" Margin="0,14,0,6" />
-                <TextBlock Text="Drop an image, a folder or an archive here (zip, rar, 7z, cbz, cbr)" Opacity="0.6" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" />
+                <TextBlock Text="Drop an image, a folder or an archive here (zip, rar, 7z, cbz, cbr, cb7)" Opacity="0.6" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" />
                 <TextBlock x:Name="WelcomeHint" Opacity="0.45" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="0,4,0,0" />
             </StackPanel>
 
