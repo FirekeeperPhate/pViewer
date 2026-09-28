@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.0.4
 
 - Settings: "Show the toolbar" and "Show the status bar" options (the same as T and the view menu).
 - Settings: a "Keyboard shortcuts" section to change the keys of every command (the defaults are
