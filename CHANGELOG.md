@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.0.6
 
 - THIRD-PARTY-NOTICES.txt with the licenses of the bundled components, installed next to pViewer
   and linked from the About window; the Full edition also installs the .NET runtime's license
