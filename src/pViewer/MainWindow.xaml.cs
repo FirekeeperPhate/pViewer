@@ -310,6 +310,7 @@ public partial class MainWindow : Window, IMainView
     private void HandleEscape()
     {
         if (Viewer.CancelDrag()) return; // a crop or red-eye selection being drawn: only cancel it
+        if (_vm.CancelOpening()) return;  // an archive still opening: stop that and stay on the current image
         if (_vm.IsSlideshowRunning) { _vm.StopSlideshow(); if (_fullscreen) SetFullscreen(false); }
         else if (_vm.Tool != ViewerTool.None) _vm.ToggleRedEyeToolCommand.Execute(null);
         else if (_fullscreen) SetFullscreen(false);

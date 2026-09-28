@@ -17,6 +17,9 @@
 - Ctrl+S on a pasted image already saved says "Nothing to save" instead of asking again.
 - Two-page view redraws when a file saved into the folder shifts the pair.
 
+- Opening an archive can be cancelled with Esc (a toast says so when it takes a while), and
+  opening something else stops it.
+
 **Robustness**
 - Crafted or broken files can no longer crash pViewer (metadata of an endless EXIF chain),
   allocate gigabytes (tiny TGA/QOI/PPM files claiming huge sizes, oversized archive pages or

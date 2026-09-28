@@ -127,7 +127,7 @@ public static class Hotkeys
         new("Toolbar", "View", "Show / hide the toolbar", ["T"]),
         new("StatusBar", "View", "Show / hide the status bar", []),
         new("PauseAnimation", "View", "Pause / resume animations", ["P"]),
-        new("Escape", "View", "Stop slideshow, exit a tool or full screen, otherwise close", ["Escape"]),
+        new("Escape", "View", "Cancel opening, stop slideshow, exit a tool or full screen, otherwise close", ["Escape"]),
 
         new("RotateRight", "Edit", "Rotate right", ["Up"]),
         new("RotateLeft", "Edit", "Rotate left", ["Down"]),

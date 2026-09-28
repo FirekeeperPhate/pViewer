@@ -107,4 +107,17 @@ public class Regression7Tests
         Assert.Equal([0], nav.VisibleIndices());
         Assert.Equal(3, nav.LastPosition()); // [3,4], as the pairs were read
     }
+
+    [Fact]
+    public void OpeningAnArchiveCanBeCancelled()
+    {
+        using var tmp = new TempFolder();
+        string path = tmp.File("a.cbz");
+        TestImages.Zip(path, ("001.png", TestImages.Png(4, 4)), ("002.png", TestImages.Png(4, 4)));
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        Assert.ThrowsAny<OperationCanceledException>(() => ArchiveSource.Open(path, cancelled.Token));
+        using var opened = ArchiveSource.Open(path, CancellationToken.None); // the file is not left locked
+        Assert.Equal(2, opened.Pages.Count);
+    }
 }

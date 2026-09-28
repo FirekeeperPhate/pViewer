@@ -192,10 +192,25 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Tool = ViewerTool.None;
         UpdateEditFlags();
         UpdateInfo();
+        // An earlier opening still running is not needed any more: stop it.
+        CancelArchiveOpening();
+        var cancellation = new CancellationTokenSource();
+        _archiveOpenCts = cancellation;
+        _ = ShowOpeningHintAsync(request, path);
         ArchiveSource archive;
         try
         {
-            archive = await Task.Run(() => ArchiveSource.Open(path));
+            archive = await Task.Run(() => ArchiveSource.Open(path, cancellation.Token));
+        }
+        catch (OperationCanceledException)
+        {
+            // Esc, or replaced by something opened meanwhile (then nothing more to do here).
+            if (request != _requestId) return;
+            IsLoading = false;
+            StopSlideshow(); // it was moving to this volume
+            Toast($"Opening of “{Path.GetFileName(path)}” cancelled");
+            await ShowAgainAfterFailedOpenAsync(request);
+            return;
         }
         catch (Exception ex)
         {
@@ -205,23 +220,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             // Remembered, so moving between volumes skips it instead of trying it again forever.
             _brokenArchives.Add(path);
             _view.ShowError($"Cannot open the archive “{Path.GetFileName(path)}”.\n{ex.Message}");
-            // The open may have interrupted the loading of the current page (or cleared its error):
-            // show it again, so what is on screen matches the position and the title.
-            if (request != _requestId) return;
-            if (_source is not null) await ShowCurrentAsync();
-            else
-            {
-                // Only a pasted image could be on screen, and its changes were given up above.
-                ResetEditState();
-                _view.ClearPages();
-                HasImage = false;
-                UpdateInfo();
-            }
+            await ShowAgainAfterFailedOpenAsync(request);
             return;
         }
         finally
         {
             if (_archiveOpenRequest == request) _archiveOpenRequest = -1;
+            if (ReferenceEquals(_archiveOpenCts, cancellation)) _archiveOpenCts = null;
+            cancellation.Dispose();
         }
         // Something else was opened meanwhile (a folder dropped, another archive): this one is stale.
         if (request != _requestId)
@@ -248,10 +254,51 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         await SetSourceAsync(archive, start, _archiveIndex, alignment);
     }
 
+    /// <summary>Stops the archive being opened, if any (Esc, or something else opened instead).</summary>
+    private CancellationTokenSource? _archiveOpenCts;
+
+    private void CancelArchiveOpening() => _archiveOpenCts?.Cancel();
+
+    /// <summary>Esc while an archive opens: stop it and stay on what was shown. False if none was opening.</summary>
+    public bool CancelOpening()
+    {
+        if (!IsOpeningArchive) return false;
+        CancelArchiveOpening();
+        return true;
+    }
+
+    /// <summary>A slow opening (big, solid or nested archive) says how to cancel it.</summary>
+    private async Task ShowOpeningHintAsync(int request, string path)
+    {
+        await Task.Delay(600);
+        if (_archiveOpenRequest != request) return;
+        string esc = KeyList("Escape");
+        Toast($"Opening “{Path.GetFileName(path)}”…" + (esc.Length > 0 ? $" ({esc} to cancel)" : ""));
+    }
+
+    /// <summary>
+    /// After an opening that failed or was cancelled: it may have interrupted the loading of the
+    /// current page (or cleared its error), so show it again and screen, position and title agree.
+    /// </summary>
+    private async Task ShowAgainAfterFailedOpenAsync(int request)
+    {
+        if (request != _requestId) return;
+        if (_source is not null) await ShowCurrentAsync();
+        else
+        {
+            // Only a pasted image could be on screen, and its changes were given up before opening.
+            ResetEditState();
+            _view.ClearPages();
+            HasImage = false;
+            UpdateInfo();
+        }
+    }
+
     private readonly Dictionary<string, int> _volumeAlignment = new(StringComparer.OrdinalIgnoreCase);
 
     private async Task SetSourceAsync(IImageSource source, int index, int? archiveIndex, int? alignment = null)
     {
+        CancelArchiveOpening(); // a folder opened while an archive was still opening
         if (_disposed)
         {
             // Finished opening after the window closed (e.g. a slow archive).
@@ -892,6 +939,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             }
             if (!await ConfirmDiscardEditsAsync()) return;
             StopSlideshow();
+            CancelArchiveOpening(); // the pasted image replaces whatever was being opened
             ++_requestId;
             ErrorText = null;
             IsLoading = false;
@@ -1377,6 +1425,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        CancelArchiveOpening();
         _slideshowTimer.Stop();
         _toastTimer.Stop();
         _cache?.Dispose();

@@ -40,7 +40,8 @@ public sealed class ArchiveSource : IImageSource
     public bool IsArchive => true;
     public IReadOnlyList<PageInfo> Pages => _pages;
 
-    public static ArchiveSource Open(string path)
+    /// <param name="ct">Stops the opening (big or deeply nested archives can take long).</param>
+    public static ArchiveSource Open(string path, CancellationToken ct = default)
     {
         var owned = new List<IDisposable>();
         var slots = new List<Slot>();
@@ -51,7 +52,7 @@ public sealed class ArchiveSource : IImageSource
             owned.Add(root);
             if (SafeIsEncrypted(root))
                 throw new InvalidDataException("The archive is password protected: not supported.");
-            Collect(root, "", slots, owned, 0);
+            Collect(root, "", slots, owned, 0, ct);
         }
         catch
         {
@@ -84,10 +85,12 @@ public sealed class ArchiveSource : IImageSource
             || Path.GetFileName(norm).StartsWith("._", StringComparison.Ordinal);
     }
 
-    private static void Collect(IArchive archive, string prefix, List<Slot> slots, List<IDisposable> owned, int depth)
+    private static void Collect(IArchive archive, string prefix, List<Slot> slots, List<IDisposable> owned, int depth,
+        CancellationToken ct)
     {
         foreach (var entry in archive.Entries)
         {
+            ct.ThrowIfCancellationRequested();
             if (entry.IsDirectory || string.IsNullOrEmpty(entry.Key) || IsJunk(entry.Key)) continue;
 
             if (ImageFormats.IsImage(entry.Key))
@@ -104,17 +107,18 @@ public sealed class ArchiveSource : IImageSource
                 innerOwned.Add(ms);
                 try
                 {
-                    using (var s = entry.OpenEntryStream()) CopyLimited(s, ms, MaxNestedArchiveBytes);
+                    using (var s = entry.OpenEntryStream()) CopyLimited(s, ms, MaxNestedArchiveBytes, ct);
                     ms.Position = 0;
                     var inner = ArchiveFactory.OpenArchive(ms, new ReaderOptions());
                     innerOwned.Insert(0, inner);
-                    Collect(inner, prefix + entry.Key + "/", innerSlots, innerOwned, depth + 1);
+                    Collect(inner, prefix + entry.Key + "/", innerSlots, innerOwned, depth + 1, ct);
                     slots.AddRange(innerSlots);
                     owned.AddRange(innerOwned);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     foreach (var d in innerOwned) d.Dispose();
+                    if (ex is OperationCanceledException) throw; // the whole opening stops, not just this part
                 }
             }
         }
@@ -202,13 +206,14 @@ public sealed class ArchiveSource : IImageSource
     /// Copies at most <paramref name="limit"/> bytes, counting what is really read (the size an
     /// archive declares may lie).
     /// </summary>
-    private static void CopyLimited(Stream from, Stream to, long limit)
+    private static void CopyLimited(Stream from, Stream to, long limit, CancellationToken ct = default)
     {
         var buffer = new byte[81920];
         long total = 0;
         int read;
         while ((read = from.Read(buffer, 0, buffer.Length)) > 0)
         {
+            ct.ThrowIfCancellationRequested();
             if ((total += read) > limit)
                 throw new InvalidDataException($"Archive entry larger than {limit / (1024 * 1024)} MB.");
             to.Write(buffer, 0, read);
