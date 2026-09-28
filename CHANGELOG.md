@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- THIRD-PARTY-NOTICES.txt with the licenses of the bundled components, installed next to pViewer
+  and linked from the About window; the Full edition also installs the .NET runtime's license
+  and notices. README and About name the licenses as granted (ImageSharp: Apache 2.0) and list
+  XmpCore.
+
 ## 2.0.5
 
 **New**

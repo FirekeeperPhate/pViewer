@@ -78,11 +78,19 @@ powershell -ExecutionPolicy Bypass -File installer\build.ps1
 
 ## Libraries
 
-[ImageSharp](https://github.com/SixLabors/ImageSharp) 3.1 (Six Labors Split License; 4.x requires
-a license key), [SharpCompress](https://github.com/adamhathcock/sharpcompress) (MIT),
-[MetadataExtractor](https://github.com/drewnoakes/metadata-extractor-dotnet) (Apache 2.0),
-[CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) (MIT).
+| Library | License |
+|---|---|
+| [ImageSharp](https://github.com/SixLabors/ImageSharp) 3.1 | Apache 2.0 (granted to open-source projects by the Six Labors Split License; 4.x requires a license key) |
+| [MetadataExtractor](https://github.com/drewnoakes/metadata-extractor-dotnet) | Apache 2.0 |
+| [XmpCore](https://github.com/drewnoakes/xmp-core-dotnet) (used by MetadataExtractor) | BSD 3-Clause |
+| [SharpCompress](https://github.com/adamhathcock/sharpcompress) | MIT |
+| [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | MIT |
+| [.NET runtime](https://github.com/dotnet/runtime) (Full edition only) | MIT |
+
+Their copyright notices and license texts are in [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt),
+which is installed next to pViewer and linked from its About window; the Full edition also
+installs the .NET runtime's own `dotnet-LICENSE.txt` and `dotnet-THIRD-PARTY-NOTICES.txt`.
 
 ## License
 
-GNU GPL v3 — see [LICENSE](LICENSE).
+pViewer is released under the GNU GPL v3 — see [LICENSE](LICENSE).

@@ -41,6 +41,15 @@ foreach ($f in $flavors) {
     Write-Host "== Publish $f $version (self-contained: $selfContained)" -ForegroundColor Cyan
     dotnet publish $project -c Release -r win-x64 --self-contained $selfContained -o $out -nologo
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish ($f) failed." }
+    if ($f -eq 'Full') {
+        # The .NET runtime ships with the Full edition: its license and notices go with it.
+        $deps = Get-Content (Join-Path $out 'pViewer.deps.json') -Raw
+        if ($deps -notmatch 'runtimepack\.Microsoft\.NETCore\.App\.Runtime\.win-x64/([\d.]+)') { throw 'Runtime pack version not found.' }
+        $packs = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget\packages' }
+        $pack = Join-Path $packs "microsoft.netcore.app.runtime.win-x64\$($Matches[1])"
+        Copy-Item (Join-Path $pack 'LICENSE.TXT') (Join-Path $out 'dotnet-LICENSE.txt')
+        Copy-Item (Join-Path $pack 'THIRD-PARTY-NOTICES.TXT') (Join-Path $out 'dotnet-THIRD-PARTY-NOTICES.txt')
+    }
 
     Write-Host "== Installer $f" -ForegroundColor Cyan
     & $iscc /Q "/DFlavor=$f" "/DAppVersion=$version" (Join-Path $PSScriptRoot 'pViewer.iss')

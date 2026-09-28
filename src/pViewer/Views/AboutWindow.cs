@@ -42,13 +42,22 @@ public sealed class AboutWindow : Window
         var credits = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 14, 0, 0), Opacity = 0.7, FontSize = 12 };
         credits.Inlines.Add(new Run("Uses: "));
         AddLink(credits, "ImageSharp", "https://github.com/SixLabors/ImageSharp");
-        credits.Inlines.Add(new Run(" (Six Labors Split License), "));
+        credits.Inlines.Add(new Run(" (Apache 2.0), "));
         AddLink(credits, "SharpCompress", "https://github.com/adamhathcock/sharpcompress");
         credits.Inlines.Add(new Run(" (MIT), "));
         AddLink(credits, "MetadataExtractor", "https://github.com/drewnoakes/metadata-extractor-dotnet");
         credits.Inlines.Add(new Run(" (Apache 2.0), "));
+        AddLink(credits, "XmpCore", "https://github.com/drewnoakes/xmp-core-dotnet");
+        credits.Inlines.Add(new Run(" (BSD), "));
         AddLink(credits, "CommunityToolkit.Mvvm", "https://github.com/CommunityToolkit/dotnet");
         credits.Inlines.Add(new Run(" (MIT)."));
+        // Installed next to the program: the licenses these components require to be shown.
+        string notices = Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.txt");
+        if (File.Exists(notices))
+        {
+            credits.Inlines.Add(new Run(" "));
+            AddLink(credits, "Third-party notices", notices);
+        }
         panel.Children.Add(credits);
 
         var ok = new Button { Content = "OK", IsDefault = true, IsCancel = true, MinWidth = 90, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 20, 0, 0) };
@@ -59,7 +68,8 @@ public sealed class AboutWindow : Window
     private static void AddLink(TextBlock target, string text, string url)
     {
         var link = new Hyperlink(new Run(text)) { NavigateUri = new Uri(url) };
-        link.RequestNavigate += (_, e) => { Shell.OpenUrl(e.Uri.AbsoluteUri); e.Handled = true; };
+        // A local file (the notices) opens by its path, with the program associated to .txt.
+        link.RequestNavigate += (_, e) => { Shell.OpenUrl(e.Uri.IsFile ? e.Uri.LocalPath : e.Uri.AbsoluteUri); e.Handled = true; };
         target.Inlines.Add(link);
     }
 }
