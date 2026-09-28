@@ -19,10 +19,11 @@ public sealed class ColorPickerDialog : Window
 
     private readonly TextBox _hex = new() { Width = 120 };
     private readonly Border _preview = new() { Width = 40, Height = 28, CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1), BorderBrush = Brushes.Gray };
-    private readonly TextBlock _error = new() { Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x6B, 0x5E)), Margin = new Thickness(0, 6, 0, 0) };
+    private readonly TextBlock _error = new() { Margin = new Thickness(0, 6, 0, 0) };
 
     public ColorPickerDialog(Color initial)
     {
+        _error.SetResourceReference(TextBlock.ForegroundProperty, "SystemFillColorCriticalBrush"); // readable in both themes
         Title = "Color";
         SizeToContent = SizeToContent.WidthAndHeight;
         ResizeMode = ResizeMode.NoResize;

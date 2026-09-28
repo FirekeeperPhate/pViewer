@@ -15,11 +15,15 @@ public sealed class FolderSource : IImageSource
     public bool IsArchive => false;
     public IReadOnlyList<PageInfo> Pages => _pages;
 
-    public static FolderSource Open(string folder)
+    /// <param name="include">A file opened explicitly (double-click on a hidden image): listed even
+    /// if hidden, so it is the one shown.</param>
+    public static FolderSource Open(string folder, string? include = null)
     {
         // DirectoryInfo brings the attributes with the enumeration: no extra call per file.
         var files = new DirectoryInfo(folder).EnumerateFiles()
-            .Where(f => ImageFormats.IsImage(f.Name) && (f.Attributes & FileAttributes.Hidden) == 0)
+            .Where(f => ImageFormats.IsImage(f.Name)
+                        && ((f.Attributes & FileAttributes.Hidden) == 0
+                            || string.Equals(f.FullName, include, StringComparison.OrdinalIgnoreCase)))
             .Select(f => f.FullName)
             .ToList();
         files.Sort(NaturalComparer.Instance);

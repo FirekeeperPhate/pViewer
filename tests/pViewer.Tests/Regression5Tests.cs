@@ -151,3 +151,22 @@ public class StartupPreloadTests
         Assert.False(pViewer.Services.StartupPreload.TryTake(tmp.File("b.png"), true, out _, out _));
     }
 }
+
+public class HiddenFileTests
+{
+    [Fact]
+    public void AHiddenImageOpenedExplicitlyIsListed()
+    {
+        using var tmp = new TempFolder();
+        File.WriteAllBytes(tmp.File("a.png"), TestImages.Png(4, 4));
+        string hidden = tmp.File("b.png");
+        File.WriteAllBytes(hidden, TestImages.Png(4, 4));
+        File.SetAttributes(hidden, FileAttributes.Hidden);
+
+        using var normal = pViewer.Core.Sources.FolderSource.Open(tmp.Path);
+        Assert.Equal(-1, normal.IndexOf(hidden));               // hidden files stay out of browsing…
+        using var opened = pViewer.Core.Sources.FolderSource.Open(tmp.Path, include: hidden);
+        Assert.Equal(1, opened.IndexOf(hidden));                // …except the one asked for
+        File.SetAttributes(hidden, FileAttributes.Normal);
+    }
+}

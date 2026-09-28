@@ -110,15 +110,19 @@ public static class SettingsStore
 
     public static AppSettings Load(string? path = null)
     {
-        path ??= FilePath;
+        var settings = Read(path ?? FilePath);
+        // Outside the read: a hand-edited file must not break the keys, and a problem here must not
+        // send the whole file to .bad.
+        settings.Hotkeys = Hotkeys.Normalize(settings.Hotkeys);
+        return settings;
+    }
+
+    private static AppSettings Read(string path)
+    {
         try
         {
             if (File.Exists(path))
-            {
-                var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Json) ?? new AppSettings();
-                settings.Hotkeys = Hotkeys.Normalize(settings.Hotkeys); // a hand-edited file must not break the keys
-                return settings;
-            }
+                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Json) ?? new AppSettings();
         }
         catch (Exception)
         {

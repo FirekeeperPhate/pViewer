@@ -162,10 +162,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             {
                 string folder = Path.GetDirectoryName(path)!;
                 Settings.LastFolder = folder;
-                var source = FolderSource.Open(folder);
+                var source = FolderSource.Open(folder, include: path);
                 StartupTrace.Mark("folder listed");
                 int index = source.IndexOf(path);
-                if (index < 0) index = 0; // hidden file or changed list: start from the beginning
+                if (index < 0) index = 0; // changed list: start from the beginning
                 Layout = PageLayout.Single;
                 await SetSourceAsync(source, index, null);
             }
@@ -517,7 +517,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             string? current = _nav.Count > 0 ? folder.Pages[_nav.Position].FilePath : null;
             FolderSource fresh;
-            try { fresh = FolderSource.Open(folder.Location); }
+            try { fresh = FolderSource.Open(folder.Location, include: current); }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 // Folder renamed, deleted or on a drive that was unplugged.
@@ -614,9 +614,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private int _pendingWork;
     /// <summary>A save is queued or running: a second Ctrl+S must not ask again or save twice.</summary>
     private int _savesQueued;
-    /// <summary>Work items queued so far, and the count when the last save was queued: an edit queued
-    /// after that save still needs its own.</summary>
-    private int _queuedTotal, _queuedAtLastSave;
+    /// <summary>Edits requested so far, and the count when the last save was queued: an edit made
+    /// after that save still needs its own. (Only edits: a wallpaper export changes nothing.)</summary>
+    private int _editsRequested, _editsAtLastSave;
 
     /// <summary>Opening or pasting another image waits for running edits and saves (they belong to this one).</summary>
     public bool WaitingForWork()
@@ -633,7 +633,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task<T> RunExclusiveAsync<T>(Func<Task<T>> work)
     {
         _pendingWork++;
-        _queuedTotal++;
         IsBusy = true;
         await _editGate.WaitAsync();
         try
@@ -653,6 +652,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         // The edit belongs to the image shown when it was requested: if another image is shown by
         // the time its turn comes (paste, open…), it is dropped instead of landing on that one.
+        _editsRequested++;
         int request = _requestId;
         return RunExclusiveAsync(async () =>
         {
@@ -920,7 +920,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (!HasImage) return false;
         // Before any redirect to Save As too (pasted image, archive page): no second dialog.
-        if (_savesQueued > 0 && _queuedTotal == _queuedAtLastSave)
+        if (_savesQueued > 0 && _editsRequested == _editsAtLastSave)
         {
             Toast("Already saving…");
             return true;
@@ -1054,7 +1054,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 _savesQueued--;
             }
         });
-        _queuedAtLastSave = _queuedTotal;
+        _editsAtLastSave = _editsRequested;
         return task;
     }
 
@@ -1077,9 +1077,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (answer == MessageBoxResult.Cancel) return false;
         if (answer != MessageBoxResult.Yes) return true;
         // Saving on the way to another image: a Save As must not also switch to the saved file.
+        int edits = _editsRequested;
         if (!await SaveCoreAsync(openSaved: false)) return false;
         // The window stays usable during the save: an edit made meanwhile is not saved, so stay.
-        if (IsBusy || _edit is { IsModified: true })
+        if (_editsRequested != edits || _edit is { IsModified: true })
         {
             Toast("The image was changed while saving: stay on it");
             return false;
@@ -1095,7 +1096,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // The page under the view, even when the image is detached (joined pages, pasted image):
         // a file saved into the folder may shift the indices.
         string? current = _nav.Count > 0 ? folder.Pages[_nav.Position].FilePath : null;
-        var fresh = FolderSource.Open(folder.Location);
+        var fresh = FolderSource.Open(folder.Location, include: current);
         // Same list: no need to rebuild the cache.
         if (fresh.Pages.Select(p => p.FilePath).SequenceEqual(folder.Pages.Select(p => p.FilePath), StringComparer.OrdinalIgnoreCase))
             return;
@@ -1176,7 +1177,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _view.ShowError($"Cannot rename the file.\n{ex.Message}");
             return;
         }
-        var fresh = FolderSource.Open(dir);
+        var fresh = FolderSource.Open(dir, include: newPath);
         await SetSourceAsync(fresh, Math.Max(0, fresh.IndexOf(newPath)), null);
     }
 
@@ -1186,6 +1187,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (IsBusy || IsOpeningArchive) return; // the archive being opened would replace the folder mid-operation
         if (_source is not FolderSource folder || folder.Pages.Count == 0) return;
         if (!await ConfirmDiscardEditsAsync()) return;
+        // Again: saving the changes into this folder (Save As) has refreshed its list.
+        if (_source is not FolderSource { Pages.Count: > 0 } refreshed) return;
+        folder = refreshed;
         var options = _view.ShowBatchRenameDialog(Path.GetFileName(folder.Location), folder.Pages.Count);
         if (options is null) return;
         string? current = CurrentFilePath;

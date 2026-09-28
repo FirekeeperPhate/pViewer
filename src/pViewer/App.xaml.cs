@@ -59,12 +59,17 @@ public partial class App : Application
         window.Show();
         StartupTrace.Mark("window shown");
         if (e.Args.Length > 0) _ = OpenFromCommandLineAsync(window, e.Args[0]);
+        else StartupTrace.OpenFinished();
     }
 
     private static async Task OpenFromCommandLineAsync(MainWindow window, string path)
     {
         try { await window.OpenAsync(path); }
-        finally { StartupPreload.Discard(); } // not taken (e.g. the file is hidden from the list): free it
+        finally
+        {
+            StartupPreload.Discard();
+            StartupTrace.OpenFinished();
+        } // not taken (e.g. the file is hidden from the list): free it
     }
 
     public static void ApplyTheme(AppTheme theme)

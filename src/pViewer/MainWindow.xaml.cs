@@ -370,8 +370,10 @@ public partial class MainWindow : Window, IMainView
         Top = p.Top;
         Width = p.Width;
         Height = p.Height;
+        // Fitted before maximizing too: these bounds are the ones un-maximizing goes back to.
+        FitToMonitor();
         if (p.Maximized) WindowState = WindowState.Maximized;
-        else Loaded += (_, _) => FitToMonitor();
+        else Loaded += (_, _) => FitToMonitor(); // again with the DPI of the monitor it landed on
     }
 
     /// <summary>
@@ -453,8 +455,11 @@ public partial class MainWindow : Window, IMainView
             _ = Dispatcher.BeginInvoke(Close);
             return;
         }
-        SavePlacement();
-        SettingsStore.Save(_settings);
+        if (!StartupTrace.Enabled) // timing runs open off-screen: never save that placement
+        {
+            SavePlacement();
+            SettingsStore.Save(_settings);
+        }
         _vm.Dispose();
     }
 
@@ -462,16 +467,21 @@ public partial class MainWindow : Window, IMainView
 
     private void Window_DragOver(object sender, DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
+        // Not while a dialog is open: the new image would replace the one the dialog is working on.
+        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) && !HasModalDialog ? DragDropEffects.Copy : DragDropEffects.None;
         e.Handled = true;
     }
 
     // async void on purpose: unexpected errors reach the app error handler instead of being lost.
-    private async void OpenDropped(string path) => await _vm.OpenPathAsync(path);
+    private async void OpenDropped(string path)
+    {
+        if (HasModalDialog) return; // a dialog opened between the drop and now
+        await _vm.OpenPathAsync(path);
+    }
 
     private void Window_Drop(object sender, DragEventArgs e)
     {
-        if (e.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } files)
+        if (!HasModalDialog && e.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } files)
         {
             Activate();
             // Opened after the drop has returned: a "save changes?" prompt inside the OLE drop
@@ -525,12 +535,14 @@ public partial class MainWindow : Window, IMainView
 
     private void ToggleToolbar_Click(object sender, RoutedEventArgs e)
     {
+        if (_fullscreen) return; // the bars are hidden there: the setting would change unseen
         _settings.ShowToolbar = !_settings.ShowToolbar;
         UpdateBars();
     }
 
     private void ToggleStatusBar_Click(object sender, RoutedEventArgs e)
     {
+        if (_fullscreen) return;
         _settings.ShowStatusBar = !_settings.ShowStatusBar;
         UpdateBars();
     }
