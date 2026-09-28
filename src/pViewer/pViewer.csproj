@@ -10,7 +10,7 @@
     <AssemblyName>pViewer</AssemblyName>
     <ApplicationIcon>Assets\pv.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>2.0.6</Version>
+    <Version>2.0.7</Version>
     <Product>pViewer</Product>
     <Authors>Phate</Authors>
     <Copyright>Copyright (C) 2013-2026 Phate</Copyright>

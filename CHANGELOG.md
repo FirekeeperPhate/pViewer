@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.0.7
 
 **New**
 - Automatic updates: once a day (after startup, in the background) pViewer looks for a newer
