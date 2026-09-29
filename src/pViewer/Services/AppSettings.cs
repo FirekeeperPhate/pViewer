@@ -31,6 +31,10 @@ public sealed class WindowPlacement
 
 public sealed class AppSettings
 {
+    /// <summary>settings.json exists but was held by another program: these are the defaults, never saved over it.</summary>
+    [JsonIgnore]
+    public bool NotLoaded { get; init; }
+
     public AppTheme Theme { get; set; } = AppTheme.Dark;
     public ViewMode ViewMode { get; set; } = ViewMode.ShrinkToFit;
     public bool AutoRotateExif { get; set; } = true;
@@ -150,22 +154,38 @@ public static class SettingsStore
 
     private static AppSettings Read(string path)
     {
-        try
+        for (int attempt = 0; ; attempt++)
         {
-            if (File.Exists(path))
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Json) ?? new AppSettings();
+            try
+            {
+                if (File.Exists(path))
+                    return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), Json) ?? new AppSettings();
+                return new AppSettings();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Held by another program (sync client, backup, antivirus): try again for a moment,
+                // then go on with the defaults without ever writing them over the real settings.
+                if (attempt < 5)
+                {
+                    Thread.Sleep(200);
+                    continue;
+                }
+                return new AppSettings { NotLoaded = true };
+            }
+            catch (Exception)
+            {
+                // Unreadable file: start over from the defaults, but keep a copy instead of silently
+                // overwriting it on exit.
+                try { File.Copy(path, path + ".bad", overwrite: true); } catch (Exception) { }
+                return new AppSettings();
+            }
         }
-        catch (Exception)
-        {
-            // Unreadable file: start over from the defaults, but keep a copy instead of silently
-            // overwriting it on exit.
-            try { File.Copy(path, path + ".bad", overwrite: true); } catch (Exception) { }
-        }
-        return new AppSettings();
     }
 
     public static void Save(AppSettings settings, string? path = null)
     {
+        if (settings.NotLoaded) return; // the real file could not be read: keep it as it is
         path ??= FilePath;
         try
         {

@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+**Fixed**
+- Two-page view without edits: Ctrl+S says there is nothing to save, and Save As proposes a
+  name like "p0-p1.png" instead of the first page's own file (accepting it replaced that page
+  with the spread, and the view went on showing the old pages).
+- The page pairing (F12) is kept after F5, Delete, Rename and batch rename; deleting the last
+  page alone no longer splits the spread before it.
+- A folder passed on the command line as "C:\Pics\" (which arrives as C:\Pics") opens, and a
+  trailing backslash no longer stops Save As into that folder from updating the list.
+- A settings.json briefly held by another program (sync client, backup, antivirus) is read
+  again for a moment, and if it stays locked pViewer never writes its defaults over it.
+- PNG: many compressed chunks just under the size limit share one budget (they added up to GBs
+  in the metadata window); the status bar shows the real file size of a PNG whose oversized
+  chunks were left out.
+- A corrupt or oversized archive page is no longer read again each time it is prefetched.
+- Rename and Set as wallpaper wait until the next image is shown, like Delete.
+- Updates: another user's pViewer counts for an all-users install in any folder; a release
+  with an odd installer size is ignored instead of showing an error.
+- Light setup: a per-user .NET runtime in %LocalAppData%, which pViewer cannot use, no longer
+  counts as installed.
+
 ## 2.0.8
 
 **Fixed**

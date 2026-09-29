@@ -53,7 +53,7 @@ public static class UpdateService
         string self = Environment.ProcessPath ?? "";
         int id = Environment.ProcessId;
         int session = System.Diagnostics.Process.GetCurrentProcess().SessionId;
-        bool shared = AppContext.BaseDirectory.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), StringComparison.OrdinalIgnoreCase);
+        bool shared = IsAllUsersInstall();
         foreach (var process in System.Diagnostics.Process.GetProcessesByName("pViewer"))
         {
             using (process)
@@ -76,6 +76,28 @@ public static class UpdateService
             }
         }
         return false;
+    }
+
+    /// <summary>
+    /// Installed for all users: the setup registered it under HKLM (in any folder the user chose),
+    /// or it lives in Program Files.
+    /// </summary>
+    private static bool IsAllUsersInstall()
+    {
+        string here = Path.TrimEndingDirectorySeparator(AppContext.BaseDirectory);
+        if (here.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), StringComparison.OrdinalIgnoreCase))
+            return true;
+        try
+        {
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{03AEDA4F-AF78-4EC2-89CB-CE68A794A15F}_is1");
+            return key?.GetValue("InstallLocation") is string location
+                   && string.Equals(Path.TrimEndingDirectorySeparator(location), here, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+        {
+            return false;
+        }
     }
 
     private static string DownloadFolder => Path.Combine(Path.GetTempPath(), "pViewer-update");
@@ -131,7 +153,11 @@ public static class UpdateService
             string? sha = asset.TryGetProperty("digest", out var digest) && digest.GetString() is { } d
                           && d.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) ? d[7..] : null;
             string page = release.TryGetProperty("html_url", out var html) && html.GetString() is { } h && IsGitHubUrl(h) ? h : ReleasesPage;
-            return new UpdateInfo(version, page, wanted, url, asset.GetProperty("size").GetInt64(), sha);
+            // Without a usable size the download could not be checked: no update rather than an error.
+            if (!asset.TryGetProperty("size", out var size) || size.ValueKind != JsonValueKind.Number
+                || !size.TryGetInt64(out long bytes) || bytes <= 0)
+                return null;
+            return new UpdateInfo(version, page, wanted, url, bytes, sha);
         }
         return null;
     }

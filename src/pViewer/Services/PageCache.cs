@@ -51,10 +51,13 @@ public sealed class PageCache : IDisposable
             }
             if (_entries.TryGetValue(index, out var existing))
             {
-                // A file that could not be read (still being copied, locked by another program) or a
-                // load that was cancelled is tried again; a file that was read but cannot be
-                // decoded stays failed (decoding it again would give the same error).
-                if (!existing.Bytes.IsFaulted && !existing.Bytes.IsCanceled && !existing.Image.IsCanceled) return existing;
+                // A load that was cancelled, or a file of a folder that could not be read (still being
+                // copied, locked by another program), is tried again. Other failures stay: a file
+                // that cannot be decoded, or an archive entry that is corrupt or too large, would
+                // only fail again (and an oversized entry costs a second to find out).
+                bool transient = existing.Bytes.IsCanceled || existing.Image.IsCanceled
+                                 || (_source is FolderSource && existing.Bytes.Exception?.InnerException is IOException or UnauthorizedAccessException);
+                if (!transient) return existing;
                 Drop(index);
             }
             // Each page has its own cancellation, so pages passed while scrolling fast are dropped.

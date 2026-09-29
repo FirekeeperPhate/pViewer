@@ -276,8 +276,9 @@ begin
   end;
 end;
 
-{ The places the app host itself looks in: DOTNET_ROOT, the registered install location, the
-  standard folder, and a per-user install. }
+{ The places the app host itself looks in: DOTNET_ROOT, the registered install location and the
+  standard folder. A per-user copy (dotnet-install in %LocalAppData%) is not among them: pViewer
+  would not start with it, so it does not count. }
 function IsDesktopRuntimeInstalled: Boolean;
 var
   Registered: String;
@@ -293,8 +294,6 @@ begin
     Result := HasDesktopRuntime(ExpandConstant('{commonpf64}\dotnet\x64'))
   else
     Result := HasDesktopRuntime(ExpandConstant('{commonpf64}\dotnet'));
-  if not Result then
-    Result := HasDesktopRuntime(ExpandConstant('{localappdata}\Microsoft\dotnet'));
 end;
 
 function InitializeSetup: Boolean;

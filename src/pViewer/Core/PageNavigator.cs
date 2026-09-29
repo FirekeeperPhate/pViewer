@@ -117,14 +117,17 @@ public sealed class PageNavigator
     public void Last() => Position = LastPosition();
 
     /// <summary>Position that shows the last view (the last pair in two-page mode).</summary>
-    public int LastPosition()
+    public int LastPosition() => LastPositionOf(Count, IsDouble, _alignment);
+
+    /// <summary>The position of the last view of <paramref name="count"/> pages with a pairing.</summary>
+    public static int LastPositionOf(int count, bool isDouble, int alignment)
     {
-        if (Count == 0) return 0;
-        if (!IsDouble) return Count - 1;
+        if (count == 0) return 0;
+        if (!isDouble) return count - 1;
         // Keep the pairing used going forward:
         // with 5 pages and pairs [0,1] [2,3], the last view is [4] alone, not [3,4].
-        int last = Count - 1;
-        if (last % 2 != _alignment) last--;
+        int last = count - 1;
+        if (last % 2 != (alignment & 1)) last--;
         return Math.Max(0, last);
     }
 

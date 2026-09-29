@@ -119,7 +119,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (WaitingForWork()) return;
         // Relative paths (command line "pViewer comic.cbz" or "pViewer .") would break the folder
         // comparisons, the sibling volumes and the saved LastFolder.
-        try { path = Path.GetFullPath(path); }
+        // "C:\Pics\" on a command line arrives as C:\Pics" (the backslash escapes the quote). A trailing
+        // separator is removed too (roots keep theirs): the folder is compared with the directory of
+        // saved files, which never ends with one.
+        path = path.TrimEnd('"');
+        try { path = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path)); }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
             _view.ShowError($"Invalid path:\n{path}");
@@ -602,7 +606,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 return;
             }
             int index = current is null ? _nav.Position : fresh.IndexOf(current);
-            await SetSourceAsync(fresh, index < 0 ? Math.Min(_nav.Position, Math.Max(0, fresh.Pages.Count - 1)) : index, null);
+            // The page pairing (F12) stays as it was.
+            await SetSourceAsync(fresh, index < 0 ? Math.Min(_nav.Position, Math.Max(0, fresh.Pages.Count - 1)) : index, null, _nav.Alignment);
         }
         else
         {
@@ -1016,6 +1021,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             Toast("Nothing to save");
             return true;
         }
+        // Two pages shown and not edited: each is already its own file.
+        if (!_detached && _visible is { Length: > 1 } && !IsBusy && (_edit is null || !_edit.IsModified))
+        {
+            Toast("Nothing to save");
+            return true;
+        }
         if (_detached || path is null || !IsSingleFilePage || !ImageFormats.CanSave(path)) return await SaveAsCoreAsync(openSaved);
         // With edits still queued (e.g. ↑ then Ctrl+S right away) the image is not modified yet:
         // the save is queued after them and checks again when its turn comes.
@@ -1053,9 +1064,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         var bitmap = CurrentBitmapForExport();
         if (bitmap is null) return false;
+        int[] shown = _source is null ? [] : _nav.VisibleIndices();
         string name = _detached || _source is null
             ? $"{_detachedName} {DateTime.Now:yyyy-MM-dd HH.mm.ss}.png"
-            : ImageFormats.SafeFileName(_source.Pages[_nav.Position].Name);
+            : shown.Length > 1
+                // Two pages joined: never the name of one of them (Save would replace that page).
+                ? string.Join("-", shown.Order().Select(i => Path.GetFileNameWithoutExtension(ImageFormats.SafeFileName(_source.Pages[i].Name)))) + ".png"
+                : ImageFormats.SafeFileName(_source.Pages[_nav.Position].Name);
+        // A file on screen replaced by the save (e.g. a spread saved over its first page): shown again.
+        var shownFiles = _source is FolderSource ? shown.Select(i => _source.Pages[i].FilePath).ToList() : [];
         if (!ImageFormats.CanSave(name)) name = Path.ChangeExtension(name, ".png");
         string? dir = _source is null ? Settings.LastFolder
             : _source is ArchiveSource ? Path.GetDirectoryName(_source.Location) : _source.Location;
@@ -1081,7 +1098,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             if (openSaved && !IsBusy && _source is FolderSource current)
             {
                 int index = current.IndexOf(Path.GetFullPath(path));
-                if (index >= 0 && (index != _nav.Position || _detached))
+                bool replacedShown = shownFiles.Count > 1 && shownFiles.Contains(Path.GetFullPath(path), StringComparer.OrdinalIgnoreCase);
+                if (index >= 0 && (index != _nav.Position || _detached || replacedShown))
                 {
                     _nav.GoTo(index);
                     await ShowCurrentAsync();
@@ -1198,7 +1216,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _source = fresh;
         _cache = new PageCache(fresh, Settings.AutoRotateExif);
         int index = current is null ? -1 : fresh.IndexOf(current);
-        _nav.Reset(fresh.Pages.Count, index < 0 ? _nav.Position : index);
+        _nav.Reset(fresh.Pages.Count, index < 0 ? _nav.Position : index, _nav.Alignment);
         UpdateInfo();
         // A page was loading from the old cache (now cancelled): load it again from the new one.
         // Also a page pair whose second page is now another file (a file added in between), unless
@@ -1238,7 +1256,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         int position = _nav.Position;
         var fresh = FolderSource.Open(_source!.Location);
-        await SetSourceAsync(fresh, Math.Min(position, Math.Max(0, fresh.Pages.Count - 1)), null);
+        // Same pairing; after the last page, the last view of that pairing (the spread before it
+        // stays a spread).
+        int alignment = _nav.Alignment;
+        if (position >= fresh.Pages.Count) position = PageNavigator.LastPositionOf(fresh.Pages.Count, _nav.IsDouble, alignment);
+        await SetSourceAsync(fresh, position, null, alignment);
         Toast(Settings.DeleteToRecycleBin ? "Moved to the Recycle Bin" : "File deleted");
     }
 
@@ -1246,6 +1268,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task Rename()
     {
         if (IsBusy || IsOpeningArchive) return; // the archive being opened would replace the folder mid-operation
+        if (IsLoading) return; // the previous image is still on screen: it would rename one not seen yet
         string? path = CurrentFilePath;
         if (!IsSingleFilePage || path is null)
         {
@@ -1277,7 +1300,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
         var fresh = FolderSource.Open(dir, include: newPath);
-        await SetSourceAsync(fresh, Math.Max(0, fresh.IndexOf(newPath)), null);
+        await SetSourceAsync(fresh, Math.Max(0, fresh.IndexOf(newPath)), null, _nav.Alignment);
     }
 
     [RelayCommand(AllowConcurrentExecutions = true)]
@@ -1304,7 +1327,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
         var fresh = FolderSource.Open(folder.Location, include: current is not null && renamed.TryGetValue(current, out var renamedCurrent) ? renamedCurrent : current);
         int index = current is not null && renamed.TryGetValue(current, out var np) ? fresh.IndexOf(np) : _nav.Position;
-        await SetSourceAsync(fresh, Math.Max(0, index), null);
+        await SetSourceAsync(fresh, Math.Max(0, index), null, _nav.Alignment);
         if (renamed.Count > 0) Toast($"Renamed {renamed.Count} {(renamed.Count == 1 ? "file" : "files")}");
     }
 
@@ -1358,6 +1381,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task SetWallpaper()
     {
+        if (IsLoading) return; // the previous image is still on screen
         string? path = CurrentFilePath;
         try
         {

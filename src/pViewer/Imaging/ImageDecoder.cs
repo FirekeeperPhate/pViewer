@@ -47,7 +47,7 @@ public sealed class LoadedImage
     public bool LosslessWebp { get; internal set; }
 
     public string FormatName { get; init; } = "";
-    public long FileSize { get; init; }
+    public long FileSize { get; internal set; }
     public int PixelWidth => Bitmap.PixelWidth;
     public int PixelHeight => Bitmap.PixelHeight;
 }
@@ -75,6 +75,7 @@ public static class ImageDecoder
     {
         var image = DecodeAny(data, name, autoOrient);
         image.LosslessWebp = IsLosslessWebp(data);
+        image.FileSize = data.LongLength; // the file as it is, even when chunks were left out to decode it
         return image;
     }
 
@@ -270,6 +271,9 @@ public static class ImageDecoder
     /// <summary>Compressed text (XMP included) is at most a few MB in real files.</summary>
     private const int MaxTextBytes = 8 * 1024 * 1024;
 
+    /// <summary>All the compressed chunks of a PNG together.</summary>
+    private const int MaxInflatedTotal = 32 * 1024 * 1024;
+
     /// <summary>
     /// A PNG without the compressed chunks that inflate to absurd sizes: WIC inflates the color
     /// profile and the compressed text chunks even when nothing asks for them, and the metadata
@@ -282,6 +286,7 @@ public static class ImageDecoder
         if (d.Length < 8 || d[0] != 0x89 || d[1] != 'P' || d[2] != 'N' || d[3] != 'G') return d;
         static int BigEndian(byte[] b, int at) => (b[at] << 24) | (b[at + 1] << 16) | (b[at + 2] << 8) | b[at + 3];
         List<(int Start, int Length)>? drop = null;
+        long budget = MaxInflatedTotal;
         int pos = 8;
         while (pos + 12 <= d.Length)
         {
@@ -309,8 +314,15 @@ public static class ImageDecoder
                     if (translated >= 0) compressed = translated + 1;
                 }
             }
-            if (compressed >= 0 && InflatesBeyond(d, compressed, end - compressed, limit))
-                (drop ??= []).Add((pos, 12 + length));
+            if (compressed >= 0)
+            {
+                // Each chunk has its limit, and all of them together share one budget: many chunks
+                // just under the limit would add up to GBs as well.
+                long cap = Math.Min(limit, budget);
+                long inflated = InflatedSize(d, compressed, end - compressed, cap);
+                if (inflated > cap) (drop ??= []).Add((pos, 12 + length));
+                else budget -= inflated;
+            }
             pos += 12 + length;
         }
         if (drop is null) return d;
@@ -325,20 +337,21 @@ public static class ImageDecoder
         return copy.ToArray();
     }
 
-    private static bool InflatesBeyond(byte[] d, int offset, int count, long limit)
+    /// <returns>The inflated size, or cap + 1 as soon as it goes beyond cap.</returns>
+    private static long InflatedSize(byte[] d, int offset, int count, long cap)
     {
+        long total = 0;
         try
         {
             using var inflate = new System.IO.Compression.ZLibStream(
                 new MemoryStream(d, offset, count, writable: false), System.IO.Compression.CompressionMode.Decompress);
             var buffer = new byte[81920];
-            long total = 0;
             int read;
             while ((read = inflate.Read(buffer, 0, buffer.Length)) > 0)
-                if ((total += read) > limit) return true;
+                if ((total += read) > cap) return cap + 1;
         }
-        catch (InvalidDataException) { } // broken data: let the decoders deal with it
-        return false;
+        catch (InvalidDataException) { } // broken data: what inflated so far counts, the decoders deal with the rest
+        return total;
     }
 
     private static TimeSpan FrameDelay(SixLabors.ImageSharp.ImageFrame frame, SixLabors.ImageSharp.Formats.IImageFormat? format)
