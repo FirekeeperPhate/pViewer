@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.0.8
 
 **Fixed**
 - Updates: edits made while the update downloads are asked about before pViewer closes, and a
