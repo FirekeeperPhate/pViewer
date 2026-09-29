@@ -43,6 +43,9 @@ public sealed class LoadedImage
 
     public bool IsAnimated => Animation is not null || FrameCount > 1;
 
+    /// <summary>A lossless WebP: saving over it must not turn it into a lossy one.</summary>
+    public bool LosslessWebp { get; internal set; }
+
     public string FormatName { get; init; } = "";
     public long FileSize { get; init; }
     public int PixelWidth => Bitmap.PixelWidth;
@@ -70,10 +73,39 @@ public static class ImageDecoder
 
     public static LoadedImage Decode(byte[] data, string name, bool autoOrient)
     {
-        // WIC inflates a PNG's color profile even when told to ignore it: a crafted 300 KB profile
-        // that expands to hundreds of MB would take half a minute to decode.
-        if (data.Length > 8 && data[0] == 0x89 && data[1] == 'P' && PngProfileTooLarge(data))
-            throw new ImageDecodeException(FriendlyError(name), new InvalidDataException("Oversized color profile."));
+        var image = DecodeAny(data, name, autoOrient);
+        image.LosslessWebp = IsLosslessWebp(data);
+        return image;
+    }
+
+    /// <summary>
+    /// RIFF/WEBP whose image is a VP8L (lossless) chunk, plain or after a VP8X header; for an
+    /// animation, its first frame.
+    /// </summary>
+    internal static bool IsLosslessWebp(byte[] d)
+    {
+        if (d.Length < 20 || d[0] != 'R' || d[1] != 'I' || d[2] != 'F' || d[3] != 'F'
+            || d[8] != 'W' || d[9] != 'E' || d[10] != 'B' || d[11] != 'P')
+            return false;
+        long pos = 12;
+        while (pos + 8 <= d.Length)
+        {
+            string type = System.Text.Encoding.ASCII.GetString(d, (int)pos, 4);
+            long size = BitConverter.ToUInt32(d, (int)pos + 4);
+            if (type == "VP8L") return true;
+            if (type == "VP8 ") return false;
+            // An animation frame: 16 bytes of frame header, then the frame's own chunks.
+            if (type == "ANMF") { pos += 8 + 16; continue; }
+            pos += 8 + size + (size & 1);
+        }
+        return false;
+    }
+
+    private static LoadedImage DecodeAny(byte[] data, string name, bool autoOrient)
+    {
+        // WIC inflates a PNG's color profile and compressed text even when told to ignore them: a
+        // crafted 300 KB chunk that expands to hundreds of MB would take half a minute to decode.
+        data = WithoutPngBombs(data);
 
         int frameCount = 1;
         if (MayBeAnimated(data))
@@ -235,37 +267,77 @@ public static class ImageDecoder
     /// <summary>Real color profiles are at most a few MB.</summary>
     private const int MaxProfileBytes = 16 * 1024 * 1024;
 
-    /// <summary>True if the PNG's iCCP chunk inflates beyond <see cref="MaxProfileBytes"/>.</summary>
-    private static bool PngProfileTooLarge(byte[] d)
+    /// <summary>Compressed text (XMP included) is at most a few MB in real files.</summary>
+    private const int MaxTextBytes = 8 * 1024 * 1024;
+
+    /// <summary>
+    /// A PNG without the compressed chunks that inflate to absurd sizes: WIC inflates the color
+    /// profile and the compressed text chunks even when nothing asks for them, and the metadata
+    /// reader does too, so a crafted 200 KB chunk that expands to hundreds of MB would take tens of
+    /// seconds and GBs of memory. Those chunks are left out (the image itself still opens); any
+    /// other file is returned unchanged.
+    /// </summary>
+    internal static byte[] WithoutPngBombs(byte[] d)
     {
+        if (d.Length < 8 || d[0] != 0x89 || d[1] != 'P' || d[2] != 'N' || d[3] != 'G') return d;
         static int BigEndian(byte[] b, int at) => (b[at] << 24) | (b[at + 1] << 16) | (b[at + 2] << 8) | b[at + 3];
+        List<(int Start, int Length)>? drop = null;
         int pos = 8;
-        while (pos + 8 <= d.Length)
+        while (pos + 12 <= d.Length)
         {
             int length = BigEndian(d, pos);
-            if (length < 0 || pos + 12L + length > d.Length) return false;
+            if (length < 0 || pos + 12L + length > d.Length) break;
             string type = System.Text.Encoding.ASCII.GetString(d, pos + 4, 4);
-            if (type == "IDAT") return false; // the profile comes before the image data
-            if (type == "iCCP")
+            if (type == "IEND") break;
+            int start = pos + 8, end = start + length;
+            int compressed = -1, limit = MaxTextBytes;
+            if (type is "iCCP" or "zTXt")
             {
-                int start = pos + 8, end = start + length;
+                // keyword, NUL, compression method, compressed data
                 int nul = Array.IndexOf(d, (byte)0, start, Math.Min(80, length));
-                if (nul < 0 || nul + 2 > end) return false;
-                try
-                {
-                    using var inflate = new System.IO.Compression.ZLibStream(
-                        new MemoryStream(d, nul + 2, end - nul - 2, writable: false), System.IO.Compression.CompressionMode.Decompress);
-                    var buffer = new byte[81920];
-                    long total = 0;
-                    int read;
-                    while ((read = inflate.Read(buffer, 0, buffer.Length)) > 0)
-                        if ((total += read) > MaxProfileBytes) return true;
-                }
-                catch (InvalidDataException) { } // a broken profile: let the decoders deal with it
-                return false;
+                if (nul >= 0 && nul + 2 <= end) compressed = nul + 2;
+                if (type == "iCCP") limit = MaxProfileBytes;
             }
+            else if (type == "iTXt")
+            {
+                // keyword, NUL, compressed flag, method, language, NUL, translated keyword, NUL, text
+                int nul = Array.IndexOf(d, (byte)0, start, Math.Min(80, length));
+                if (nul >= 0 && nul + 3 <= end && d[nul + 1] == 1)
+                {
+                    int lang = Array.IndexOf(d, (byte)0, nul + 3, end - nul - 3);
+                    int translated = lang < 0 ? -1 : Array.IndexOf(d, (byte)0, lang + 1, end - lang - 1);
+                    if (translated >= 0) compressed = translated + 1;
+                }
+            }
+            if (compressed >= 0 && InflatesBeyond(d, compressed, end - compressed, limit))
+                (drop ??= []).Add((pos, 12 + length));
             pos += 12 + length;
         }
+        if (drop is null) return d;
+        var copy = new List<byte>(d.Length);
+        int from = 0;
+        foreach (var (s, l) in drop)
+        {
+            copy.AddRange(new ArraySegment<byte>(d, from, s - from));
+            from = s + l;
+        }
+        copy.AddRange(new ArraySegment<byte>(d, from, d.Length - from));
+        return copy.ToArray();
+    }
+
+    private static bool InflatesBeyond(byte[] d, int offset, int count, long limit)
+    {
+        try
+        {
+            using var inflate = new System.IO.Compression.ZLibStream(
+                new MemoryStream(d, offset, count, writable: false), System.IO.Compression.CompressionMode.Decompress);
+            var buffer = new byte[81920];
+            long total = 0;
+            int read;
+            while ((read = inflate.Read(buffer, 0, buffer.Length)) > 0)
+                if ((total += read) > limit) return true;
+        }
+        catch (InvalidDataException) { } // broken data: let the decoders deal with it
         return false;
     }
 
@@ -396,6 +468,9 @@ public static class ImageDecoder
     /// <returns>The thumbnail and the size of the full image (already rotated upright).</returns>
     public static (BitmapSource Thumbnail, int FullWidth, int FullHeight)? TryDecodeEmbeddedPreview(byte[] data, bool autoOrient)
     {
+        // Only JPEGs carry a preview; other formats are not even opened here (WIC would read a
+        // PNG's chunks, see WithoutPngBombs).
+        if (data.Length < 3 || data[0] != 0xFF || data[1] != 0xD8) return null;
         try
         {
             var ms = new MemoryStream(data, writable: false);

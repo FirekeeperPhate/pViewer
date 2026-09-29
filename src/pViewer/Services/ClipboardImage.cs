@@ -34,7 +34,9 @@ public static class ClipboardImage
         {
             try
             {
-                var decoder = BitmapDecoder.Create(png, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+                var bytes = Imaging.ImageDecoder.WithoutPngBombs(png.ToArray());
+                var decoder = BitmapDecoder.Create(new MemoryStream(bytes, writable: false),
+                    BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
                 var frame = decoder.Frames[0];
                 frame.Freeze();
                 return frame;

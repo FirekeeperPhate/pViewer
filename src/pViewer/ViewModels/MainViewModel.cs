@@ -308,8 +308,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             // Only a pasted image could be on screen, and its changes were given up before opening.
             ResetEditState();
+            HasImage = false; // first: clearing reports the zoom, which must not show on the welcome screen
             _view.ClearPages();
-            HasImage = false;
             UpdateInfo();
         }
     }
@@ -620,11 +620,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (!HasImage || _source is null) return;
         if (seconds <= 0)
         {
+            // The decimal separator of the user's language, like in Settings ("2,5" in Italian);
+            // a point is also accepted.
+            static bool TryReadSeconds(string s, out double v) =>
+                double.TryParse(s, NumberStyles.Float, CultureInfo.CurrentCulture, out v)
+                || double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v);
             string? text = _view.AskText("Slideshow", "Seconds between images:",
-                Settings.SlideshowSeconds.ToString("0.###", CultureInfo.InvariantCulture),
-                s => double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out double v) && v >= 0.5 && v <= 3600 ? null : "Enter a number between 0.5 and 3600.");
-            if (text is null) return;
-            seconds = double.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);
+                Settings.SlideshowSeconds.ToString("0.###", CultureInfo.CurrentCulture),
+                s => TryReadSeconds(s, out double v) && v >= 0.5 && v <= 3600 ? null : "Enter a number between 0.5 and 3600.");
+            if (text is null || !TryReadSeconds(text, out seconds)) return;
             Settings.SlideshowSeconds = seconds;
         }
         _slideshowTimer.Interval = TimeSpan.FromSeconds(seconds);
@@ -1102,6 +1106,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var loaded = !_detached && _visible is { Length: 1 } ? _visible[0] : null;
         var meta = loaded?.JpegMetadata;
         var colorContexts = loaded?.ColorContexts;
+        bool lossless = loaded?.LosslessWebp ?? false;
         int quality = Settings.JpegQuality;
         // Pixels are upright only if they were decoded with auto-rotation (the setting may have
         // changed since): otherwise the original Orientation tag is kept.
@@ -1122,7 +1127,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                     return true;
                 }
                 var session = _edit;
-                await StaTask.Run(() => { ImageSaver.Save(bitmap, path, quality, meta, resetOrientation, colorContexts); return true; });
+                await StaTask.Run(() => { ImageSaver.Save(bitmap, path, quality, meta, resetOrientation, colorContexts, lossless); return true; });
                 // Mark as saved only the state that was written (not one reached by a later undo).
                 if (session is not null && ReferenceEquals(session.Current, bitmap)) session.MarkSaved();
                 InvalidateCachedFile(path);
@@ -1481,12 +1486,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // The installer cannot replace the program while another pViewer window is open.
         if (UpdateService.OtherInstancesRunning())
         {
-            _view.ShowError("Other pViewer windows are open. Close them, then choose Help › Check for updates again.");
+            _view.ShowError("pViewer is also open in another window (or for another user signed in to this PC). Close it, then choose Help › Check for updates again.");
             return;
         }
         // The update closes pViewer: unsaved changes first, and nothing still being written.
         if (!await ConfirmDiscardEditsAsync()) return;
         int editsConfirmed = _editsRequested;
+        var sessionConfirmed = _edit;
+        var stateConfirmed = _edit?.Current;
         string installer;
         try
         {
@@ -1503,7 +1510,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // opened finish, and ask again about changes made meanwhile.
         while (!_disposed && (IsBusy || IsOpeningArchive || _view.HasModalDialog)) await Task.Delay(200);
         if (_disposed) return;
-        if (_editsRequested != editsConfirmed && !await ConfirmDiscardEditsAsync()) return;
+        // Undo and redo change the image without counting as new edits.
+        bool changed = _editsRequested != editsConfirmed || !ReferenceEquals(_edit, sessionConfirmed)
+                       || !ReferenceEquals(_edit?.Current, stateConfirmed);
+        if (changed && !await ConfirmDiscardEditsAsync()) return;
         while (IsBusy) await Task.Delay(100);
         Toast($"Installing pViewer {version}…");
         if (!await _view.CloseForUpdateAsync(installer, CurrentContainerOrFile))

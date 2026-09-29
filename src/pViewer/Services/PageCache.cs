@@ -49,7 +49,14 @@ public sealed class PageCache : IDisposable
                 return new Entry { Bytes = cancelled, Image = Task.FromCanceled<LoadedImage>(new CancellationToken(true)),
                                    Cancellation = new CancellationTokenSource() };
             }
-            if (_entries.TryGetValue(index, out var existing)) return existing;
+            if (_entries.TryGetValue(index, out var existing))
+            {
+                // A file that could not be read (still being copied, locked by another program) or a
+                // load that was cancelled is tried again; a file that was read but cannot be
+                // decoded stays failed (decoding it again would give the same error).
+                if (!existing.Bytes.IsFaulted && !existing.Bytes.IsCanceled && !existing.Image.IsCanceled) return existing;
+                Drop(index);
+            }
             // Each page has its own cancellation, so pages passed while scrolling fast are dropped.
             var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
             var token = cancellation.Token;

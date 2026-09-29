@@ -28,6 +28,7 @@ public static class MetadataService
     public static IReadOnlyList<MetadataGroup> Read(byte[] data)
     {
         if (HasEndlessIfdChain(data)) return []; // crafted file: no metadata rather than a crash
+        data = Imaging.ImageDecoder.WithoutPngBombs(data); // chunks inflating to GBs are left out
         using var ms = new MemoryStream(data, writable: false);
         IReadOnlyList<MetadataExtractor.Directory> directories;
         try

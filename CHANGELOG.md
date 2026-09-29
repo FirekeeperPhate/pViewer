@@ -24,6 +24,21 @@
   be batch-processed and saved.
 - "ActualSize" as the default view in a hand-edited settings file is reset (the A toggle had
   nothing to go back to).
+- A PNG with a crafted compressed text chunk (or color profile) that inflates to hundreds of MB
+  opens at once without that chunk, instead of taking tens of seconds and GBs of memory (also
+  in the metadata window and when pasting).
+- Saving a lossless WebP keeps it lossless (it was re-encoded as lossy).
+- A page that could not be read (still being copied, locked by another program) is read again
+  when shown, instead of repeating the error until F5.
+- Fit height: scrolling sideways no longer stops the image from refitting when the window
+  changes size, and the scroll position is kept, as in fit width.
+- Zooming while dragging the image no longer makes it jump on the next mouse move.
+- Resize: a side derived from the other (or from the percentage) never becomes 0.
+- Slideshow › Custom accepts the decimal comma, like Settings.
+- Holding Esc no longer goes on from leaving full screen to closing the window.
+- Updates: undo or redo during the download is also asked about; another user's pViewer no
+  longer blocks the update of a per-user install.
+- The welcome screen no longer shows a stale zoom after a failed open.
 
 ## 2.0.7
 

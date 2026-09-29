@@ -14,9 +14,10 @@ public static class ImageSaver
     /// so a failure halfway never destroys the original. If the original was a JPEG its metadata
     /// (date taken, camera, GPS…) is kept; the orientation is reset when the pixels were rotated upright.
     /// The color profile of the original, if any, is written again when the format can hold it.
+    /// <paramref name="losslessWebp"/>: the original was a lossless WebP (kept lossless in WebP).
     /// </summary>
     public static void Save(BitmapSource bitmap, string path, int jpegQuality, BitmapMetadata? jpegMetadata = null,
-        bool resetOrientation = true, IReadOnlyList<ColorContext>? colorContexts = null)
+        bool resetOrientation = true, IReadOnlyList<ColorContext>? colorContexts = null, bool losslessWebp = false)
     {
         string ext = Path.GetExtension(path).ToLowerInvariant();
         if (File.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReadOnly) != 0)
@@ -30,7 +31,12 @@ public static class ImageSaver
             {
                 using var img = ImageBridge.ToImageSharp(bitmap);
                 if (MatchingProfile(colorContexts, PixelFormats.Bgra32) is { } icc) img.Metadata.IccProfile = new IccProfile(ProfileBytes(icc));
-                img.Save(temp, new WebpEncoder { Quality = Math.Clamp(jpegQuality, 1, 100) });
+                // A lossless original stays lossless (ImageSharp would otherwise pick lossy).
+                img.Save(temp, new WebpEncoder
+                {
+                    Quality = Math.Clamp(jpegQuality, 1, 100),
+                    FileFormat = losslessWebp ? WebpFileFormatType.Lossless : WebpFileFormatType.Lossy,
+                });
             }
             else if (ext == ".gif")
             {

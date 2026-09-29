@@ -28,7 +28,11 @@ public partial class ResizeDialog : Window
     private void Set(TextBox box, double value)
     {
         _updating = true;
-        box.Text = Math.Round(value).ToString(CultureInfo.CurrentCulture);
+        // A derived side never rounds to 0 (a 1 px wide image at 50%, a thin banner made smaller):
+        // OK would refuse it. The percentage keeps its decimals.
+        box.Text = box == PercentBox
+            ? Math.Round(value, 2).ToString("0.##", CultureInfo.CurrentCulture)
+            : Math.Max(1, Math.Round(value, MidpointRounding.AwayFromZero)).ToString(CultureInfo.CurrentCulture);
         _updating = false;
     }
 

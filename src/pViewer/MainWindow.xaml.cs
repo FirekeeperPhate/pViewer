@@ -240,8 +240,9 @@ public partial class MainWindow : Window, IMainView
         if (_keyMap.TryGetValue(new Shortcut(key, Keyboard.Modifiers), out string? id) && _keyActions.TryGetValue(id, out var action))
         {
             e.Handled = true;
-            // A held key must not delete one file after another, or close/reload repeatedly.
-            if (e.IsRepeat && id is "Delete" or "Close" or "Reload") return;
+            // A held key must not delete one file after another, close/reload repeatedly, or go from
+            // "leave full screen" on to "close the window" (Esc).
+            if (e.IsRepeat && id is "Delete" or "Close" or "Reload" or "Escape") return;
             action();
         }
     }

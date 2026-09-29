@@ -44,11 +44,16 @@ public static class UpdateService
     /// <summary>Installed with the setup (its uninstaller is there): it can update itself.</summary>
     public static bool IsInstalled => File.Exists(Path.Combine(AppContext.BaseDirectory, "unins000.exe"));
 
-    /// <summary>Another pViewer process from this same program folder (the installer could not replace it).</summary>
+    /// <summary>
+    /// Another pViewer process from this same program folder (the installer could not replace it).
+    /// Another user's pViewer counts only for an all-users install: a per-user one has its own folder.
+    /// </summary>
     public static bool OtherInstancesRunning()
     {
         string self = Environment.ProcessPath ?? "";
         int id = Environment.ProcessId;
+        int session = System.Diagnostics.Process.GetCurrentProcess().SessionId;
+        bool shared = AppContext.BaseDirectory.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), StringComparison.OrdinalIgnoreCase);
         foreach (var process in System.Diagnostics.Process.GetProcessesByName("pViewer"))
         {
             using (process)
@@ -56,6 +61,11 @@ public static class UpdateService
                 if (process.Id == id) continue;
                 try
                 {
+                    if (process.SessionId != session)
+                    {
+                        if (shared) return true; // cannot be inspected; may be using the same files
+                        continue;
+                    }
                     if (string.Equals(process.MainModule?.FileName, self, StringComparison.OrdinalIgnoreCase)) return true;
                 }
                 catch (System.ComponentModel.Win32Exception)

@@ -281,6 +281,19 @@ public sealed class ImageViewer : Border
         _scale = newScale;
         _userAdjusted = true;
         ClampAndApply();
+        RebasePan();
+    }
+
+    /// <summary>
+    /// Zoomed or resized while dragging to pan: the pan goes on from here, otherwise the next mouse
+    /// move would put back the offset (at the old scale) the drag started from.
+    /// </summary>
+    private void RebasePan()
+    {
+        if (_drag != DragMode.Pan) return;
+        // The press point stays (the pan threshold is measured from it); the offset is rebased so
+        // that the next move continues from the current one.
+        _dragStartOffset = _offset - (Mouse.GetPosition(this) - _dragStartViewport);
     }
 
     private Point ViewportCenter => new(ActualWidth / 2, ActualHeight / 2);
@@ -299,14 +312,16 @@ public sealed class ImageViewer : Border
 
     /// <summary>
     /// Scrolls. It counts as a manual adjustment (auto-fit off) only if the image really moved, and
-    /// not for vertical scrolling in "fit width".
+    /// not for scrolling along the long side in "fit width" (vertical) or "fit height" (horizontal).
     /// </summary>
     private void MoveBy(Vector delta)
     {
         var before = _offset;
         _offset += delta;
         ClampAndApply();
-        if (_offset != before && !(ViewMode == ViewMode.FitWidth && _offset.X == before.X))
+        bool alongFit = (ViewMode == ViewMode.FitWidth && _offset.X == before.X)
+                        || (ViewMode == ViewMode.FitHeight && _offset.Y == before.Y);
+        if (_offset != before && !alongFit)
             _userAdjusted = true;
     }
 
@@ -347,6 +362,7 @@ public sealed class ImageViewer : Border
         base.OnRenderSizeChanged(sizeInfo);
         if (_userAdjusted) ClampAndApply();
         else ResetKeepingScroll();
+        RebasePan();
     }
 
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
@@ -355,22 +371,24 @@ public sealed class ImageViewer : Border
         // Also when zoomed by hand: the zoom text and the pixelated/smooth switch depend on the DPI.
         if (_userAdjusted) ClampAndApply();
         else ResetKeepingScroll();
+        RebasePan();
     }
 
     /// <summary>
-    /// Refits after a size change. In "fit width" the scroll position is kept (hiding the toolbar or
-    /// resizing the window must not jump back to the top of a long strip).
+    /// Refits after a size change. In "fit width" and "fit height" the scroll position is kept
+    /// (hiding the toolbar or resizing the window must not jump back to the top of a long strip).
     /// </summary>
     private void ResetKeepingScroll()
     {
-        if (ViewMode != ViewMode.FitWidth || _scale <= 0)
+        if (ViewMode is not (ViewMode.FitWidth or ViewMode.FitHeight) || _scale <= 0)
         {
             ResetView();
             return;
         }
-        double topInImage = -_offset.Y / _scale;
+        double topInImage = -_offset.Y / _scale, leftInImage = -_offset.X / _scale;
         ResetView();
-        _offset.Y = -topInImage * _scale;
+        if (ViewMode == ViewMode.FitWidth) _offset.Y = -topInImage * _scale;
+        else _offset.X = -leftInImage * _scale;
         ClampAndApply();
     }
 
