@@ -43,4 +43,17 @@ public static class ImageFormats
     public static bool CanSave(string path) =>
         Path.GetExtension(path).ToLowerInvariant() is ".jpg" or ".jpeg" or ".jpe" or ".jfif" or ".png" or ".webp"
             or ".bmp" or ".gif" or ".tif" or ".tiff" or ".jxr" or ".wdp";
+
+    /// <summary>
+    /// The file name of an archive entry, usable on Windows: pages made on other systems may
+    /// contain ":" or "?" (replaced with "_"), or end with dots or spaces.
+    /// </summary>
+    public static string SafeFileName(string entryName)
+    {
+        string name = Path.GetFileName(entryName.Replace('/', '\\'));
+        var invalid = Path.GetInvalidFileNameChars();
+        var chars = name.Select(c => Array.IndexOf(invalid, c) >= 0 ? '_' : c).ToArray();
+        name = new string(chars).TrimEnd('.', ' ');
+        return name.Length == 0 ? "page" : name;
+    }
 }

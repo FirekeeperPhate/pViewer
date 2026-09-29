@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased
+
+**Fixed**
+- Updates: edits made while the update downloads are asked about before pViewer closes, and a
+  dialog, a save or an archive being opened is allowed to finish first. pViewer closes only once
+  the installer has really started, so refusing the UAC prompt of an all-users install leaves it
+  open; the installer then waits for pViewer to exit instead of stopping with "pViewer is
+  running". Other open pViewer windows are reported before downloading. A download that stops
+  responding fails after 30 s instead of waiting forever. Old downloaded installers are
+  deleted. A clock that had been set ahead no longer stops the daily check.
+- Archives: the "Opening… (Esc to cancel)" hint disappears when the opening ends (Esc then did
+  something else, like closing the window); Esc pressed just as an archive finished opening
+  still cancels it; a slideshow stops at the last volume when the next one cannot be opened;
+  the page pairing of a volume is remembered only from two-page modes.
+- A rectangle lower than its pen (an underline) no longer fails; Brightness/Contrast and
+  Hue/Saturation with the sliders at zero no longer mark the image as changed.
+- Holding Delete no longer deletes the images that follow one after another before they are
+  shown (the same for Exit and Reload).
+- Shortcuts: a key moved away and back leaves the command on its defaults; a misspelt key in
+  settings.json keeps the command's default keys.
+- Archive pages named with characters Windows does not allow (made on a Mac or on Linux) can
+  be batch-processed and saved.
+- "ActualSize" as the default view in a hand-edited settings file is reset (the A toggle had
+  nothing to go back to).
+
 ## 2.0.7
 
 **New**

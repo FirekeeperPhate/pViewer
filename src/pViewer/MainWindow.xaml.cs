@@ -114,6 +114,8 @@ public partial class MainWindow : Window, IMainView
         {
             if (StartupTrace.Enabled) return;
             await Task.Delay(TimeSpan.FromSeconds(8));
+            // By now the installer of an update that just reopened pViewer has ended.
+            _ = Task.Run(UpdateService.CleanUp);
             await _vm.CheckForUpdatesAsync(manual: false);
         };
 
@@ -238,6 +240,8 @@ public partial class MainWindow : Window, IMainView
         if (_keyMap.TryGetValue(new Shortcut(key, Keyboard.Modifiers), out string? id) && _keyActions.TryGetValue(id, out var action))
         {
             e.Handled = true;
+            // A held key must not delete one file after another, or close/reload repeatedly.
+            if (e.IsRepeat && id is "Delete" or "Close" or "Reload") return;
             action();
         }
     }
@@ -583,23 +587,35 @@ public partial class MainWindow : Window, IMainView
         string[]? buttonLabels = null) =>
         MessageDialog.Show(this, message, title, buttons, icon, buttonLabels);
 
-    public void CloseForUpdate(string installer, string? reopen)
+    public async Task<bool> CloseForUpdateAsync(string installer, string? reopen)
     {
         // /SILENT shows only the progress; /RELAUNCH and /OPEN make the new version start again on
-        // the same file (see [Run] in pViewer.iss). The installer waits for this process to end
-        // (AppMutex), so the window closes right after starting it.
-        string args = "/SILENT /NORESTART /RELAUNCH=1" + (reopen is null ? "" : $" /OPEN=\"{reopen}\"");
+        // the same file (see [Run] in pViewer.iss). The installer signals the event once it really
+        // starts (an all-users install asks for UAC first) and then waits for this process to end.
+        using var ready = new EventWaitHandle(false, EventResetMode.ManualReset, $"pViewer.UpdateReady.{Environment.ProcessId}");
+        string args = $"/SILENT /NORESTART /RELAUNCH=1 /NOTIFYPID={Environment.ProcessId}" + (reopen is null ? "" : $" /OPEN=\"{reopen}\"");
+        System.Diagnostics.Process? setup;
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(installer, args) { UseShellExecute = true });
+            setup = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(installer, args) { UseShellExecute = true });
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException)
         {
-            ShowError($"Could not start the update.\n{ex.Message}"); // e.g. UAC refused for an all-users install
-            return;
+            ShowError($"Could not start the update.\n{ex.Message}");
+            return false;
+        }
+        if (setup is not null)
+        {
+            using (setup)
+            {
+                while (!ready.WaitOne(0) && !setup.HasExited) await Task.Delay(100);
+                // Setup ended without starting (UAC refused, or cancelled): pViewer stays open.
+                if (!ready.WaitOne(0)) return false;
+            }
         }
         _closeConfirmed = true; // the changes were already confirmed or discarded
         Close();
+        return true;
     }
 
     public void ShowError(string message) =>

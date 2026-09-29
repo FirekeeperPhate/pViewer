@@ -54,7 +54,7 @@ public static class BatchProcessor
         for (int i = 0; i < total; i++)
         {
             if (ct.IsCancellationRequested) return new BatchResult(written, skipped, errors, true);
-            string name = Path.GetFileName(source.Pages[i].Name.Replace('/', '\\'));
+            string name = ImageFormats.SafeFileName(source.Pages[i].Name);
             progress?.Report(new BatchProgress(i, total, name));
 
             string ext = job.Operation == BatchOperation.Convert && job.ConvertExtension is not null

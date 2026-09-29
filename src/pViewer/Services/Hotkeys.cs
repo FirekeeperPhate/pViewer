@@ -194,7 +194,9 @@ public static class Hotkeys
     {
         var list = gestures.Distinct().ToList();
         var command = Find(id);
-        if (command is not null && list.SequenceEqual(command.DefaultGestures)) overrides.Remove(id);
+        // The default keys in another order (a key moved away and back) are still the defaults.
+        if (command is not null && list.Count == command.DefaultGestures.Count && !list.Except(command.DefaultGestures).Any())
+            overrides.Remove(id);
         else overrides[id] = list.Select(g => g.ToString()).ToList();
     }
 
@@ -236,15 +238,20 @@ public static class Hotkeys
 
     /// <summary>
     /// Cleans the shortcuts read from settings.json: ids in the catalog's spelling, unknown ids
-    /// and empty entries (a hand-edited "null") dropped.
+    /// and empty entries (a hand-edited "null") dropped. An entry whose keys are all misspelt is
+    /// dropped too, so the command keeps its defaults instead of losing them all ("[]" unbinds it).
     /// </summary>
     public static Dictionary<string, List<string>>? Normalize(Dictionary<string, List<string>>? overrides)
     {
         if (overrides is null) return null;
         var clean = new Dictionary<string, List<string>>();
         foreach (var (id, keys) in overrides)
-            if (keys is not null && Find(id) is { } command)
-                clean[command.Id] = keys.Where(k => k is not null).ToList();
+        {
+            if (keys is null || Find(id) is not { } command) continue;
+            var valid = keys.Where(k => k is not null).ToList();
+            if (valid.Count > 0 && !valid.Any(k => Shortcut.TryParse(k, out _))) continue;
+            clean[command.Id] = valid;
+        }
         return clean.Count == 0 ? null : clean;
     }
 }

@@ -189,6 +189,43 @@ begin
   end;
 end;
 
+function OpenEvent(dwDesiredAccess: DWORD; bInheritHandle: BOOL; lpName: String): THandle;
+external 'OpenEventW@kernel32.dll stdcall';
+function SetEvent(hEvent: THandle): BOOL;
+external 'SetEvent@kernel32.dll stdcall';
+function CloseHandle(hObject: THandle): BOOL;
+external 'CloseHandle@kernel32.dll stdcall';
+
+{ Update started by pViewer (/NOTIFYPID=<its process id>): tell it that setup is really starting
+  (after the UAC prompt of an all-users install; if that is refused, pViewer stays open), then
+  give it time to close before the AppMutex check, which comes after InitializeSetup. }
+procedure ReleasePViewer;
+var
+  Pid: Integer;
+  Ready: THandle;
+  Waited: Integer;
+begin
+  Pid := StrToIntDef(ExpandConstant('{param:NOTIFYPID|0}'), 0);
+  if Pid > 0 then
+  begin
+    Ready := OpenEvent($0002 { EVENT_MODIFY_STATE }, False, 'pViewer.UpdateReady.' + IntToStr(Pid));
+    if Ready <> 0 then
+    begin
+      SetEvent(Ready);
+      CloseHandle(Ready);
+    end;
+  end;
+  if ExpandConstant('{param:RELAUNCH|0}') = '1' then
+  begin
+    Waited := 0;
+    while CheckForMutexes('pViewer.Running') and (Waited < 15000) do
+    begin
+      Sleep(250);
+      Waited := Waited + 250;
+    end;
+  end;
+end;
+
 function ShouldRelaunch: Boolean;
 begin
   Result := WizardSilent and (ExpandConstant('{param:RELAUNCH|0}') = '1');
@@ -265,16 +302,23 @@ var
   ErrorCode: Integer;
 begin
   Result := True;
-  if IsDesktopRuntimeInstalled then
-    Exit;
-  case SuppressibleMsgBox(CustomMessage('RuntimeMissing'), mbConfirmation, MB_YESNOCANCEL, IDNO) of
-    IDYES:
-      begin
-        ShellExec('open', 'https://dotnet.microsoft.com/download/dotnet/10.0', '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
+  if not IsDesktopRuntimeInstalled then
+    case SuppressibleMsgBox(CustomMessage('RuntimeMissing'), mbConfirmation, MB_YESNOCANCEL, IDNO) of
+      IDYES:
+        begin
+          ShellExec('open', 'https://dotnet.microsoft.com/download/dotnet/10.0', '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
+          Result := False;
+        end;
+      IDCANCEL:
         Result := False;
-      end;
-    IDCANCEL:
-      Result := False;
-  end;
+    end;
+  if Result then
+    ReleasePViewer;
+end;
+#else
+function InitializeSetup: Boolean;
+begin
+  ReleasePViewer;
+  Result := True;
 end;
 #endif

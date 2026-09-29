@@ -132,7 +132,8 @@ public static class SettingsStore
     {
         var d = new AppSettings();
         if (!Enum.IsDefined(s.Theme)) s.Theme = d.Theme;
-        if (!Enum.IsDefined(s.ViewMode)) s.ViewMode = d.ViewMode;
+        // Actual size is a toggle (A), never the default mode: the toggle would have nothing to go back to.
+        if (!Enum.IsDefined(s.ViewMode) || s.ViewMode == ViewMode.ActualSize) s.ViewMode = d.ViewMode;
         if (!Enum.IsDefined(s.ArchiveLayout)) s.ArchiveLayout = d.ArchiveLayout;
         s.JpegQuality = Math.Clamp(s.JpegQuality, 10, 100);
         s.RectangleThickness = Math.Clamp(s.RectangleThickness, 1, 500);

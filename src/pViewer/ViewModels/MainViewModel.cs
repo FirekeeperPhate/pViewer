@@ -196,48 +196,62 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         CancelArchiveOpening();
         var cancellation = new CancellationTokenSource();
         _archiveOpenCts = cancellation;
-        _ = ShowOpeningHintAsync(request, path);
-        ArchiveSource archive;
+        _ = ShowOpeningHintAsync(request, path, cancellation.Token);
+        ArchiveSource? archive = null;
+        Exception? failure = null;
+        bool cancelled = false;
         try
         {
             archive = await Task.Run(() => ArchiveSource.Open(path, cancellation.Token));
         }
         catch (OperationCanceledException)
         {
-            // Esc, or replaced by something opened meanwhile (then nothing more to do here).
-            if (request != _requestId) return;
+            cancelled = true;
+        }
+        catch (Exception ex)
+        {
+            failure = ex;
+        }
+        // Esc pressed after the archive was read but before this point still cancels.
+        cancelled |= cancellation.IsCancellationRequested;
+        // The opening is over (before any dialog below): no hint, and Esc goes back to its usual job.
+        if (_archiveOpenRequest == request) _archiveOpenRequest = -1;
+        if (ReferenceEquals(_archiveOpenCts, cancellation)) _archiveOpenCts = null;
+        cancellation.Dispose();
+        if (_openingHintRequest == request)
+        {
+            if (ToastText == _openingHint) ToastText = null;
+            _openingHint = null;
+        }
+        // Something else was opened meanwhile (a folder dropped, another archive): this one is stale.
+        if (request != _requestId)
+        {
+            archive?.Dispose();
+            return;
+        }
+        if (cancelled)
+        {
+            // Esc: stay on what was shown.
+            archive?.Dispose();
             IsLoading = false;
             StopSlideshow(); // it was moving to this volume
             Toast($"Opening of “{Path.GetFileName(path)}” cancelled");
             await ShowAgainAfterFailedOpenAsync(request);
             return;
         }
-        catch (Exception ex)
+        if (failure is not null || archive is null)
         {
-            if (request != _requestId) return;
             IsLoading = false;
             StopSlideshow(); // otherwise the error would come back on every tick
             // Remembered, so moving between volumes skips it instead of trying it again forever.
             _brokenArchives.Add(path);
-            _view.ShowError($"Cannot open the archive “{Path.GetFileName(path)}”.\n{ex.Message}");
+            _view.ShowError($"Cannot open the archive “{Path.GetFileName(path)}”.\n{failure?.Message}");
             await ShowAgainAfterFailedOpenAsync(request);
             return;
         }
-        finally
-        {
-            if (_archiveOpenRequest == request) _archiveOpenRequest = -1;
-            if (ReferenceEquals(_archiveOpenCts, cancellation)) _archiveOpenCts = null;
-            cancellation.Dispose();
-        }
-        // Something else was opened meanwhile (a folder dropped, another archive): this one is stale.
-        if (request != _requestId)
-        {
-            archive.Dispose();
-            return;
-        }
-        // The pairing chosen with F12 in the volume being left, and the one of this volume if it was
-        // read before: going back shows the spreads paired as they were.
-        if (_source is ArchiveSource previous) _volumeAlignment[previous.Location] = _nav.Alignment;
+        // The pairing chosen with F12 in the volume being left (in single page there is none), and
+        // the one of this volume if it was read before: going back shows the spreads as they were.
+        if (_source is ArchiveSource previous && _nav.IsDouble) _volumeAlignment[previous.Location] = _nav.Alignment;
         int? alignment = _volumeAlignment.TryGetValue(path, out int a) ? a : null;
         _brokenArchives.Remove(path); // repaired since the last attempt
         Settings.LastFolder = Path.GetDirectoryName(path);
@@ -268,13 +282,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>A slow opening (big, solid or nested archive) says how to cancel it.</summary>
-    private async Task ShowOpeningHintAsync(int request, string path)
+    private async Task ShowOpeningHintAsync(int request, string path, CancellationToken cancellation)
     {
         await Task.Delay(600);
-        if (_archiveOpenRequest != request) return;
+        if (_archiveOpenRequest != request || !IsOpeningArchive || cancellation.IsCancellationRequested) return;
         string esc = KeyList("Escape");
-        Toast($"Opening “{Path.GetFileName(path)}”…" + (esc.Length > 0 ? $" ({esc} to cancel)" : ""));
+        _openingHint = $"Opening “{Path.GetFileName(path)}”…" + (esc.Length > 0 ? $" ({esc} to cancel)" : "");
+        _openingHintRequest = request;
+        Toast(_openingHint);
     }
+
+    /// <summary>The hint on screen for the archive being opened: removed when the opening ends.</summary>
+    private string? _openingHint;
+    private int _openingHintRequest = -1;
 
     /// <summary>
     /// After an opening that failed or was cancelled: it may have interrupted the loading of the
@@ -533,6 +553,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                     volume += step; // skip volumes that already failed to open
                 if (volume < 0 || volume >= _archiveSiblings.Count)
                 {
+                    StopSlideshow(); // it would stay on this last page, repeating the message
                     Toast(step > 0 ? "No further volume can be opened" : "No previous volume can be opened");
                     break;
                 }
@@ -1030,7 +1051,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (bitmap is null) return false;
         string name = _detached || _source is null
             ? $"{_detachedName} {DateTime.Now:yyyy-MM-dd HH.mm.ss}.png"
-            : Path.GetFileName(_source.Pages[_nav.Position].Name.Replace('/', '\\'));
+            : ImageFormats.SafeFileName(_source.Pages[_nav.Position].Name);
         if (!ImageFormats.CanSave(name)) name = Path.ChangeExtension(name, ".png");
         string? dir = _source is null ? Settings.LastFolder
             : _source is ArchiveSource ? Path.GetDirectoryName(_source.Location) : _source.Location;
@@ -1186,6 +1207,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private async Task Delete()
     {
         if (IsBusy || IsOpeningArchive) return; // the archive being opened would replace the folder mid-operation
+        // Still loading: the previous image is on screen, the file would be deleted unseen.
+        if (IsLoading) return;
         string? path = CurrentFilePath;
         if (!IsSingleFilePage || path is null)
         {
@@ -1394,7 +1417,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         if (_checkingForUpdates || _disposed) return;
         if (!manual && (!Settings.CheckForUpdates
-                        || Settings.LastUpdateCheck is { } last && DateTime.Now - last < UpdateService.CheckInterval))
+                        || Settings.LastUpdateCheck is { } last && last <= DateTime.Now && DateTime.Now - last < UpdateService.CheckInterval))
             return;
         _checkingForUpdates = true;
         try
@@ -1455,9 +1478,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
+        // The installer cannot replace the program while another pViewer window is open.
+        if (UpdateService.OtherInstancesRunning())
+        {
+            _view.ShowError("Other pViewer windows are open. Close them, then choose Help › Check for updates again.");
+            return;
+        }
         // The update closes pViewer: unsaved changes first, and nothing still being written.
         if (!await ConfirmDiscardEditsAsync()) return;
-        while (IsBusy) await Task.Delay(100);
+        int editsConfirmed = _editsRequested;
         string installer;
         try
         {
@@ -1470,8 +1499,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _view.ShowError($"Could not download the update.\n{ex.Message}\n\nIt can also be downloaded from {update.PageUrl}");
             return;
         }
+        // The window stayed usable during the download: let a dialog, a save or an archive being
+        // opened finish, and ask again about changes made meanwhile.
+        while (!_disposed && (IsBusy || IsOpeningArchive || _view.HasModalDialog)) await Task.Delay(200);
+        if (_disposed) return;
+        if (_editsRequested != editsConfirmed && !await ConfirmDiscardEditsAsync()) return;
+        while (IsBusy) await Task.Delay(100);
         Toast($"Installing pViewer {version}…");
-        _view.CloseForUpdate(installer, CurrentContainerOrFile);
+        if (!await _view.CloseForUpdateAsync(installer, CurrentContainerOrFile))
+            Toast($"pViewer {version} was not installed");
     }
 
     [RelayCommand(AllowConcurrentExecutions = true)]

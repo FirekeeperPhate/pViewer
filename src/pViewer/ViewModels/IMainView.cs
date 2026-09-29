@@ -47,8 +47,11 @@ public interface IMainView
     bool HasModalDialog { get; }
     void SetFullscreen(bool fullscreen);
 
-    /// <summary>Starts the downloaded installer and closes the window (changes already confirmed).</summary>
+    /// <summary>
+    /// Starts the downloaded installer and, once it is running, closes the window (changes already
+    /// confirmed). false = the installer did not start (e.g. UAC refused): the window stays open.
+    /// </summary>
     /// <param name="reopen">File or archive to open again once the update is installed.</param>
-    void CloseForUpdate(string installer, string? reopen);
+    Task<bool> CloseForUpdateAsync(string installer, string? reopen);
     IntPtr WindowHandle { get; }
 }

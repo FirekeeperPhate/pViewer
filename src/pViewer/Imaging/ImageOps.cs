@@ -81,6 +81,7 @@ public static class ImageOps
     /// <param name="brightness">-100..100</param>
     /// <param name="contrast">-100..100</param>
     public static BitmapSource BrightnessContrast(BitmapSource src, double brightness, double contrast) =>
+        brightness == 0 && contrast == 0 ? src :
         ImageBridge.Process(src, i => i.Mutate(x =>
         {
             if (brightness != 0) x.Brightness((float)(1 + brightness / 100));
@@ -96,6 +97,7 @@ public static class ImageOps
     /// <param name="hue">-180..180 degrees</param>
     /// <param name="saturation">-100..100</param>
     public static BitmapSource HueSaturation(BitmapSource src, double hue, double saturation) =>
+        hue == 0 && saturation == 0 ? src :
         ImageBridge.Process(src, i => i.Mutate(x =>
         {
             if (hue != 0) x.Hue((float)hue);
@@ -167,8 +169,13 @@ public static class ImageOps
                 int outerW = rect.Width + t, outerH = rect.Height + t;
                 dc.DrawRectangle(brush, null, new Rect(left, top, outerW, t));                    // top
                 dc.DrawRectangle(brush, null, new Rect(left, top + outerH - t, outerW, t));       // bottom
-                dc.DrawRectangle(brush, null, new Rect(left, top + t, t, outerH - 2 * t));        // left
-                dc.DrawRectangle(brush, null, new Rect(left + outerW - t, top + t, t, outerH - 2 * t)); // right
+                // A rectangle lower than the pen: top and bottom already cover it all.
+                int sideH = outerH - 2 * t;
+                if (sideH > 0)
+                {
+                    dc.DrawRectangle(brush, null, new Rect(left, top + t, t, sideH));               // left
+                    dc.DrawRectangle(brush, null, new Rect(left + outerW - t, top + t, t, sideH));  // right
+                }
             }
         }, aliased: true));
     }
