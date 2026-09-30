@@ -1,5 +1,9 @@
 # pViewer
 
+[![Latest release](https://img.shields.io/github/v/release/MarcoTrombetta/pViewer)](https://github.com/MarcoTrombetta/pViewer/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/MarcoTrombetta/pViewer/total)](https://github.com/MarcoTrombetta/pViewer/releases)
+[![License: GPL v3](https://img.shields.io/github/license/MarcoTrombetta/pViewer)](LICENSE)
+
 Image viewer and small editor for Windows, with comic and manga reading straight from
 archives.
 
