@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.0.9
 
 **Fixed**
 - Two-page view without edits: Ctrl+S says there is nothing to save, and Save As proposes a
