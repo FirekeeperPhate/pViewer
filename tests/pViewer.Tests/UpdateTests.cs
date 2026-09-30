@@ -11,12 +11,12 @@ public class UpdateTests
         string json = $$"""
             {
               "tag_name": "{{tag}}", "draft": {{(draft ? "true" : "false")}}, "prerelease": {{(prerelease ? "true" : "false")}},
-              "html_url": "https://github.com/MarcoTrombetta/pViewer/releases/tag/{{tag}}",
+              "html_url": "https://github.com/FirekeeperPhate/pViewer/releases/tag/{{tag}}",
               "assets": [
                 { "name": "pViewer-Setup-{{tag.TrimStart('v')}}-Full.exe", "size": 46000000,
-                  "browser_download_url": "https://{{host}}/MarcoTrombetta/pViewer/releases/download/{{tag}}/pViewer-Setup-{{tag.TrimStart('v')}}-Full.exe"{{digestJson}} },
+                  "browser_download_url": "https://{{host}}/FirekeeperPhate/pViewer/releases/download/{{tag}}/pViewer-Setup-{{tag.TrimStart('v')}}-Full.exe"{{digestJson}} },
                 { "name": "pViewer-Setup-{{tag.TrimStart('v')}}-Light.exe", "size": 4200000,
-                  "browser_download_url": "https://{{host}}/MarcoTrombetta/pViewer/releases/download/{{tag}}/pViewer-Setup-{{tag.TrimStart('v')}}-Light.exe"{{digestJson}} }
+                  "browser_download_url": "https://{{host}}/FirekeeperPhate/pViewer/releases/download/{{tag}}/pViewer-Setup-{{tag.TrimStart('v')}}-Light.exe"{{digestJson}} }
               ]
             }
             """;

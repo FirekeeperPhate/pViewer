@@ -82,7 +82,7 @@ public class Regression10Tests
     {
         var json = JsonDocument.Parse($$"""
             { "tag_name": "v9.0.0", "assets": [ { "name": "pViewer-Setup-9.0.0-Light.exe", "size": {{size}},
-              "browser_download_url": "https://github.com/MarcoTrombetta/pViewer/releases/download/v9.0.0/pViewer-Setup-9.0.0-Light.exe" } ] }
+              "browser_download_url": "https://github.com/FirekeeperPhate/pViewer/releases/download/v9.0.0/pViewer-Setup-9.0.0-Light.exe" } ] }
             """);
         Assert.Null(UpdateService.ParseRelease(json.RootElement, new Version(2, 0, 8), fullEdition: false));
     }

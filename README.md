@@ -1,8 +1,8 @@
 # pViewer
 
-[![Latest release](https://img.shields.io/github/v/release/MarcoTrombetta/pViewer)](https://github.com/MarcoTrombetta/pViewer/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/MarcoTrombetta/pViewer/total)](https://github.com/MarcoTrombetta/pViewer/releases)
-[![License: GPL v3](https://img.shields.io/github/license/MarcoTrombetta/pViewer)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/FirekeeperPhate/pViewer)](https://github.com/FirekeeperPhate/pViewer/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/FirekeeperPhate/pViewer/total)](https://github.com/FirekeeperPhate/pViewer/releases)
+[![License: GPL v3](https://img.shields.io/github/license/FirekeeperPhate/pViewer)](LICENSE)
 
 Image viewer and small editor for Windows, with comic and manga reading straight from
 archives.
@@ -49,7 +49,7 @@ All keyboard shortcuts are listed in the app's help (F1) and can be changed in S
 
 ## Installing
 
-Download an installer from the [releases](https://github.com/MarcoTrombetta/pViewer/releases):
+Download an installer from the [releases](https://github.com/FirekeeperPhate/pViewer/releases):
 
 - **Full** (`pViewer-Setup-<version>-Full.exe`): includes the .NET runtime, no prerequisites.
 - **Light** (`pViewer-Setup-<version>-Light.exe`): much smaller, needs the

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.10
+
+- The GitHub account moved from MarcoTrombetta to FirekeeperPhate: updates, links and the
+  release page now point to https://github.com/FirekeeperPhate/pViewer.
+
 ## 2.0.9
 
 **Fixed**

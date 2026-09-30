@@ -15,8 +15,8 @@ public sealed record UpdateInfo(Version Version, string PageUrl, string Installe
 /// </summary>
 public static class UpdateService
 {
-    private const string LatestReleaseApi = "https://api.github.com/repos/MarcoTrombetta/pViewer/releases/latest";
-    public const string ReleasesPage = "https://github.com/MarcoTrombetta/pViewer/releases";
+    private const string LatestReleaseApi = "https://api.github.com/repos/FirekeeperPhate/pViewer/releases/latest";
+    public const string ReleasesPage = "https://github.com/FirekeeperPhate/pViewer/releases";
 
     /// <summary>Automatic checks happen at most this often.</summary>
     public static readonly TimeSpan CheckInterval = TimeSpan.FromDays(1);
