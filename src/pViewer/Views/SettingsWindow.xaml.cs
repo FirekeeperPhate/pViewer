@@ -38,6 +38,13 @@ public partial class SettingsWindow : Window
         ConfirmOverwriteBox.IsChecked = s.ConfirmOverwrite;
         ConfirmDiscardBox.IsChecked = s.ConfirmDiscardEdits;
         UpdatesBox.IsChecked = s.CheckForUpdates;
+        KeepReadyBox.IsChecked = s.KeepReady;
+        // Only an installed copy waits in the background (its uninstaller knows how to stop it).
+        if (!Standby.Allowed)
+        {
+            KeepReadyBox.IsEnabled = false;
+            KeepReadyNote.Text = "Only for a pViewer installed with the setup.";
+        }
         QualitySlider.Value = Math.Clamp(s.JpegQuality, 10, 100);
         _cropColor = MainViewModel.ParseColor(s.CropColor, Colors.Red);
         _rectColor = MainViewModel.ParseColor(s.RectangleColor, Colors.Red);
@@ -116,6 +123,7 @@ public partial class SettingsWindow : Window
         s.ConfirmOverwrite = ConfirmOverwriteBox.IsChecked == true;
         s.ConfirmDiscardEdits = ConfirmDiscardBox.IsChecked == true;
         s.CheckForUpdates = UpdatesBox.IsChecked == true;
+        s.KeepReady = KeepReadyBox.IsChecked == true;
         s.JpegQuality = (int)QualitySlider.Value;
         s.CropColor = _cropColor.ToString();
         s.RectangleColor = _rectColor.ToString();

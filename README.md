@@ -22,6 +22,9 @@ Version 2 is a complete rewrite in **.NET 10 + WPF** of pViewer 1.x (WinForms, .
 - **Fast viewing**: nearby images are preloaded, large photos show their EXIF thumbnail
   instantly, photos are auto-rotated from their EXIF orientation, files are sorted like in
   File Explorer.
+- **Ready in the background**: an installed pViewer keeps one hidden copy of itself started, so
+  the next image opens almost at once (also after the window is closed). It can be turned off in
+  Settings › Startup.
 - **Formats**: animated GIF, WebP and PNG (P pauses), JPEG, PNG, GIF, BMP, TIFF, ICO, JPEG XR,
   WebP, TGA, QOI, PBM and, with the Windows extensions, HEIC/HEIF, AVIF, JPEG XL and RAW.
 - **Comics and manga**: opens zip/cbz, rar/cbr, 7z/cb7 (nested archives too) reading pages in

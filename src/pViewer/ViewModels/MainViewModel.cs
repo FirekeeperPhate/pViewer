@@ -1507,6 +1507,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
+        // The hidden copy kept ready would be in the way too: it ends now (the installer also asks it to).
+        Standby.RequestExit(waitMs: 3000);
         // The installer cannot replace the program while another pViewer window is open.
         if (UpdateService.OtherInstancesRunning())
         {
@@ -1550,6 +1552,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         bool autoOrient = Settings.AutoRotateExif;
         if (!_view.ShowSettingsDialog(Settings)) return;
         SettingsStore.Save(Settings);
+        // The copy kept ready in the background follows its option at once.
+        if (Settings.KeepReady) Standby.EnsureRunning(Settings);
+        else Standby.RequestExit();
         ViewMode = Settings.ViewMode;
         // Auto-rotation changed: cached images must be decoded again (also for the pages that come
         // after a pasted/joined image). The current page is reloaded only if that loses nothing.

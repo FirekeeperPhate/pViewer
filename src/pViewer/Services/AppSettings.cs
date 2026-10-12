@@ -61,6 +61,8 @@ public sealed class AppSettings
     public WindowPlacement? Window { get; set; }
 
     /// <summary>Look for a newer version on GitHub once a day (after startup, in the background).</summary>
+    /// <summary>A hidden pViewer waits in the background, so that the next one opens at once (see Standby).</summary>
+    public bool KeepReady { get; set; } = true;
     public bool CheckForUpdates { get; set; } = true;
     public DateTime? LastUpdateCheck { get; set; }
     /// <summary>A version the user chose to skip: not offered again automatically.</summary>

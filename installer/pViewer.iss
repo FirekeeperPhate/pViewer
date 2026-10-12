@@ -196,6 +196,33 @@ external 'SetEvent@kernel32.dll stdcall';
 function CloseHandle(hObject: THandle): BOOL;
 external 'CloseHandle@kernel32.dll stdcall';
 
+{ "Keep pViewer ready in the background": a hidden pViewer.exe --standby may be waiting, with the
+  program files open and no window to close. It exits when this event is set (Standby.cs). }
+procedure StopStandby;
+var
+  ExitEvent: THandle;
+  Waited: Integer;
+begin
+  ExitEvent := OpenEvent($0002 { EVENT_MODIFY_STATE }, False, 'pViewer.Standby.Exit');
+  if ExitEvent <> 0 then
+  begin
+    SetEvent(ExitEvent);
+    CloseHandle(ExitEvent);
+  end;
+  Waited := 0;
+  while CheckForMutexes('pViewer.Standby') and (Waited < 5000) do
+  begin
+    Sleep(100);
+    Waited := Waited + 100;
+  end;
+end;
+
+function InitializeUninstall: Boolean;
+begin
+  StopStandby;
+  Result := True;
+end;
+
 { Update started by pViewer (/NOTIFYPID=<its process id>): tell it that setup is really starting
   (after the UAC prompt of an all-users install; if that is refused, pViewer stays open), then
   give it time to close before the AppMutex check, which comes after InitializeSetup. }
@@ -205,6 +232,7 @@ var
   Ready: THandle;
   Waited: Integer;
 begin
+  StopStandby;
   Pid := StrToIntDef(ExpandConstant('{param:NOTIFYPID|0}'), 0);
   if Pid > 0 then
   begin

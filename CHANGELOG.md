@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.0
+
+**New**
+- Keep pViewer ready in the background: after the first use one hidden pViewer, already started,
+  waits for the next image you open and shows it at once (about 0.2 s instead of 0.7 s from the
+  double-click to the picture, on the PC it was measured on). It stays after the window is
+  closed, keeps about 20 MB of RAM while it waits, and does nothing else. Each window is still
+  its own process. On by default for a pViewer installed with the setup; Settings › Startup turns
+  it off. Setup, updates and uninstall stop it by themselves.
+
 ## 2.0.10
 
 - The GitHub account moved from MarcoTrombetta to FirekeeperPhate: updates, links and the

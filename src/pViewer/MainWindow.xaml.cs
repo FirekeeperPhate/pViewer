@@ -49,6 +49,12 @@ public partial class MainWindow : Window, IMainView
     private bool _closeConfirmed;
     private bool _closeWhenIdle;
 
+    /// <summary>
+    /// The window that the copy kept in the background opens off-screen to get ready (see App.Standby.cs):
+    /// it saves no settings and looks for no updates.
+    /// </summary>
+    internal bool WarmUp { get; init; }
+
     static MainWindow()
     {
         // The Fluent theme draws the check mark only on checkable menu items, and a checkable item
@@ -112,7 +118,7 @@ public partial class MainWindow : Window, IMainView
         // The update check waits until the window is up and the first image is shown: startup stays fast.
         ContentRendered += async (_, _) =>
         {
-            if (StartupTrace.Enabled) return;
+            if (StartupTrace.Enabled || WarmUp) return;
             await Task.Delay(TimeSpan.FromSeconds(8));
             // By now the installer of an update that just reopened pViewer has ended.
             _ = Task.Run(UpdateService.CleanUp);
@@ -468,7 +474,7 @@ public partial class MainWindow : Window, IMainView
             _ = Dispatcher.BeginInvoke(Close);
             return;
         }
-        if (!StartupTrace.Enabled) // timing runs open off-screen: never save that placement
+        if (!StartupTrace.Enabled && !WarmUp) // timing runs and the warm-up open off-screen: never save that placement
         {
             SavePlacement();
             SettingsStore.Save(_settings);

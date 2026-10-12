@@ -135,6 +135,10 @@
                     </StackPanel>
                 </Grid>
 
+                <TextBlock Text="Startup" Style="{StaticResource Section}" />
+                <CheckBox x:Name="KeepReadyBox" Content="Keep pViewer ready in the background (images open faster)" />
+                <TextBlock x:Name="KeepReadyNote" Text="A hidden pViewer waits for the next image you open, also after the window is closed. It uses some memory; nothing else runs." Opacity="0.65" TextWrapping="Wrap" Margin="0,4,0,0" />
+
                 <TextBlock Text="Updates" Style="{StaticResource Section}" />
                 <CheckBox x:Name="UpdatesBox" Content="Check for new versions automatically (once a day)" />
                 <TextBlock Text="Help › Check for updates looks right away. Nothing is installed without asking." Opacity="0.65" TextWrapping="Wrap" Margin="0,4,0,0" />
