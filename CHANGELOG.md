@@ -10,6 +10,16 @@
   its own process. On by default for a pViewer installed with the setup; Settings › Startup turns
   it off. Setup, updates and uninstall stop it by themselves.
 
+**Changed**
+- ImageSharp, whose 3.1 line no longer gets security fixes (five advisories in October 2026,
+  fixed only in the version that needs a license key), is replaced by Skia (through SkiaSharp)
+  and by code of pViewer itself. What you see stays the same: animated GIF, WebP and PNG, TGA,
+  QOI and PBM/PGM/PPM files, the effects, resizing, saving WebP and GIF. Reducing a photo to the
+  256 colors of a GIF is a little more accurate than before. The installers are about 3 MB
+  larger.
+- BigTIFF files (TIFF larger than 4 GB, a rare variant) no longer open: Windows does not read
+  them and Skia reads no TIFF. Ordinary TIFF is read by Windows as before.
+
 ## 2.0.10
 
 - The GitHub account moved from MarcoTrombetta to FirekeeperPhate: updates, links and the

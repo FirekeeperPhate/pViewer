@@ -1,9 +1,5 @@
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Gif;
-using SixLabors.ImageSharp.Formats.Webp;
-using SixLabors.ImageSharp.Metadata.Profiles.Icc;
 
 namespace pViewer.Imaging;
 
@@ -29,36 +25,15 @@ public static class ImageSaver
         {
             if (ext == ".webp")
             {
-                using var img = ImageBridge.ToImageSharp(bitmap);
-                if (MatchingProfile(colorContexts, PixelFormats.Bgra32) is { } icc) img.Metadata.IccProfile = new IccProfile(ProfileBytes(icc));
-                // A lossless original stays lossless (ImageSharp would otherwise pick lossy).
-                img.Save(temp, new WebpEncoder
-                {
-                    Quality = Math.Clamp(jpegQuality, 1, 100),
-                    FileFormat = losslessWebp ? WebpFileFormatType.Lossless : WebpFileFormatType.Lossy,
-                });
+                byte[]? icc = MatchingProfile(colorContexts, PixelFormats.Bgra32) is { } profile ? ProfileBytes(profile) : null;
+                // A lossless original stays lossless.
+                File.WriteAllBytes(temp, SkiaImaging.EncodeWebp(ImageBridge.ToPixels(bitmap), jpegQuality, losslessWebp, icc));
             }
             else if (ext == ".gif")
             {
-                // ImageSharp quantizes with a transparent colour and an adaptive palette; the WIC GIF
-                // encoder would drop transparency and use a fixed palette.
-                using var img = ImageBridge.ToImageSharp(bitmap);
-                // GIF transparency is on/off: normalize alpha, and flag the frame, otherwise the
-                // encoder writes no transparent colour at all.
-                bool anyTransparent = false;
-                img.ProcessPixelRows(rows =>
-                {
-                    for (int y = 0; y < rows.Height; y++)
-                    {
-                        foreach (ref var p in rows.GetRowSpan(y))
-                        {
-                            if (p.A < 128) { p = default; anyTransparent = true; }
-                            else p.A = 255;
-                        }
-                    }
-                });
-                if (anyTransparent) img.Frames.RootFrame.Metadata.GetGifMetadata().HasTransparency = true;
-                img.Save(temp, new GifEncoder());
+                // Written here: the GIF encoder of Windows would drop transparency and use a fixed palette.
+                using var fs = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None);
+                GifWriter.Write(bitmap, fs);
             }
             else
             {

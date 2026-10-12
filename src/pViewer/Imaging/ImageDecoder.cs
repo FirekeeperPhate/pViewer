@@ -2,10 +2,6 @@ using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using ISImage = SixLabors.ImageSharp.Image;
 
 namespace pViewer.Imaging;
 
@@ -69,7 +65,7 @@ public static class ImageDecoder
     /// <summary>From this many frames on the file is shown still: each frame also costs objects and UI work.</summary>
     public const int MaxAnimationFrames = 5000;
 
-    /// <summary>Largest image decoded (the ImageSharp fallback would otherwise allocate whatever a header claims).</summary>
+    /// <summary>Largest image decoded (the decoders of small formats would otherwise allocate whatever a header claims).</summary>
     public const long MaxPixels = 400_000_000;
 
     public static LoadedImage Decode(byte[] data, string name, bool autoOrient)
@@ -119,18 +115,19 @@ public static class ImageDecoder
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                // Animated file ImageSharp cannot read: try it as a static image.
+                // An animation that cannot be read: try it as a static image.
             }
         }
 
         Exception? firstError = null;
-        if (frameCount > 1)
+        if (frameCount > 1 && data[0] != 0x89)
         {
             // An animation not played (too many or too large frames): its first frame only. WIC would
-            // load every frame first (half a minute for a million-frame GIF).
+            // load every frame first (half a minute for a million-frame GIF). Not for a PNG: there
+            // WIC reads just the plain image.
             try
             {
-                var still = DecodeImageSharp(data, autoOrient, firstFrameOnly: true);
+                var still = DecodeOtherwise(data, name, autoOrient);
                 still.FrameCount = frameCount;
                 return still;
             }
@@ -150,7 +147,7 @@ public static class ImageDecoder
 
         try
         {
-            var still = DecodeImageSharp(data, autoOrient);
+            var still = DecodeOtherwise(data, name, autoOrient);
             still.FrameCount = Math.Max(still.FrameCount, frameCount);
             return still;
         }
@@ -186,37 +183,43 @@ public static class ImageDecoder
     {
         frameCount = 1;
         int width, height;
-        if (data[0] == 0x89)
+        string format;
+        bool png = data[0] == 0x89;
+        if (png)
         {
-            // PNG: ImageSharp 3.1 Identify rejects valid APNGs, so the chunks are read directly.
             if (!TryReadApngInfo(data, out width, out height, out frameCount)) return null;
+            format = "PNG";
         }
         else
         {
-            // MaxFrames: a file with a million tiny frames must not be parsed to the end just to be counted.
-            var info = ISImage.Identify(new SixLabors.ImageSharp.Formats.DecoderOptions { MaxFrames = MaxAnimationFrames + 2 }, data);
-            (width, height, frameCount) = (info.Width, info.Height, info.FrameMetadataCollection.Count);
+            if (SkiaImaging.Identify(data) is not { } info) return null;
+            (width, height, frameCount, format) = info;
         }
         if (frameCount < 2 || frameCount >= MaxAnimationFrames || (long)width * height * 4 * frameCount > MaxAnimationBytes) return null;
 
-        using var img = ISImage.Load<Bgra32>(new SixLabors.ImageSharp.Formats.DecoderOptions { MaxFrames = MaxAnimationFrames }, data);
-        var format = img.Metadata.DecodedImageFormat;
-        var frames = new List<BitmapSource>(img.Frames.Count);
-        var delays = new List<TimeSpan>(img.Frames.Count);
-        var buffer = new byte[img.Width * img.Height * 4];
-        foreach (var frame in img.Frames)
+        List<PixelBuffer> pictures;
+        List<int> durations;
+        if (png)
         {
-            frame.CopyPixelDataTo(buffer);
-            var bmp = BitmapSource.Create(img.Width, img.Height, 96, 96, PixelFormats.Bgra32, null, buffer, img.Width * 4);
-            bmp.Freeze();
-            frames.Add(bmp);
-            delays.Add(FrameDelay(frame, format));
+            // Each frame is a small PNG of its own, decoded like any other.
+            var animation = Apng.Decode(data, MaxAnimationFrames, frame => SkiaImaging.DecodeStill(frame, MaxPixels, out _, out _));
+            (pictures, durations) = (animation.Frames, animation.DurationsMs);
         }
+        else
+        {
+            var animation = SkiaImaging.DecodeAnimation(data);
+            (pictures, durations) = (animation.Frames, animation.DurationsMs);
+        }
+        if (pictures.Count < 2) return null; // only one frame could be read: shown as a still image
+        var frames = pictures.ConvertAll(p => ImageBridge.ToBitmapSource(p));
         return new LoadedImage
         {
             Bitmap = frames[0],
-            Animation = new ImageAnimation(frames, delays),
-            FormatName = format?.Name ?? "",
+            Animation = new ImageAnimation(
+                frames,
+                // Like browsers: near-zero durations become 100 ms (many GIFs use 0 or 1 hundredth).
+                [.. durations.Select(ms => TimeSpan.FromMilliseconds(ms < 20 ? 100 : ms))]),
+            FormatName = format,
             FileSize = data.LongLength,
         };
     }
@@ -338,45 +341,6 @@ public static class ImageDecoder
         return copy.ToArray();
     }
 
-    /// <summary>Real BigTIFF directories hold a few dozen entries.</summary>
-    private const int MaxBigTiffEntries = 1024;
-
-    /// <summary>
-    /// A BigTIFF that must not reach ImageSharp 3.1 (GHSA-wmxv-xphr-5c9g, fixed only in 4.1.2).
-    /// Its reader counts up to the 64-bit number of entries a directory declares even when the
-    /// file has no bytes left for them: 24 bytes are enough to keep the decoding thread busy
-    /// forever. It also compares each entry with all the ones before it, seconds for tens of
-    /// thousands of them, so a directory beyond <see cref="MaxBigTiffEntries"/> is refused as well.
-    /// The directories are followed the way that reader follows them. Classic TIFF counts its
-    /// entries in 16 bits and is not looked at.
-    /// </summary>
-    internal static bool IsUnsafeBigTiff(byte[] d)
-    {
-        if (d.Length < 16) return false; // no room for the offset of a directory: none is read
-        bool little = d[0] == 'I' && d[1] == 'I' && d[2] == 43 && d[3] == 0 && d[4] == 8 && d[5] == 0;
-        bool big = d[0] == 'M' && d[1] == 'M' && d[2] == 0 && d[3] == 43 && d[4] == 0 && d[5] == 8;
-        if ((!little && !big) || d[6] != 0 || d[7] != 0) return false;
-        ulong length = (ulong)d.LongLength;
-        ulong U64(ulong at) => little
-            ? BinaryPrimitives.ReadUInt64LittleEndian(d.AsSpan((int)at, 8))
-            : BinaryPrimitives.ReadUInt64BigEndian(d.AsSpan((int)at, 8));
-
-        ulong directory = U64(8);
-        // 65534: the reader gives up after that many directories.
-        for (int read = 0; read < 65534 && directory != 0 && directory < length; read++)
-        {
-            if (length - directory < 8) return false; // no room for a count: read as an empty, last directory
-            ulong count = U64(directory), entries = directory + 8;
-            // 20 bytes per entry; with fewer left the reader moves on to the next entry without reading.
-            if (count > MaxBigTiffEntries || count > (length - entries) / 20) return true;
-            ulong link = entries + count * 20;
-            ulong next = length - link < 8 ? 0 : U64(link);
-            if (next <= directory) return false; // the last one, or a loop the reader refuses by itself
-            directory = next;
-        }
-        return false;
-    }
-
     /// <returns>The inflated size, or cap + 1 as soon as it goes beyond cap.</returns>
     private static long InflatedSize(byte[] d, int offset, int count, long cap)
     {
@@ -393,22 +357,6 @@ public static class ImageDecoder
         catch (InvalidDataException) { } // broken data: what inflated so far counts, the decoders deal with the rest
         return total;
     }
-
-    private static TimeSpan FrameDelay(SixLabors.ImageSharp.ImageFrame frame, SixLabors.ImageSharp.Formats.IImageFormat? format)
-    {
-        double ms = format switch
-        {
-            SixLabors.ImageSharp.Formats.Gif.GifFormat => frame.Metadata.GetGifMetadata().FrameDelay * 10.0,
-            SixLabors.ImageSharp.Formats.Webp.WebpFormat => frame.Metadata.GetWebpMetadata().FrameDelay,
-            SixLabors.ImageSharp.Formats.Png.PngFormat => RationalMs(frame.Metadata.GetPngMetadata().FrameDelay),
-            _ => 100,
-        };
-        // Like browsers: near-zero durations become 100 ms (many GIFs use 0 or 1 hundredth).
-        return TimeSpan.FromMilliseconds(ms < 20 ? 100 : ms);
-    }
-
-    private static double RationalMs(SixLabors.ImageSharp.Rational r) =>
-        r.Denominator == 0 ? 0 : r.Numerator * 1000.0 / r.Denominator;
 
     private static LoadedImage DecodeWic(byte[] data, bool autoOrient, BitmapCreateOptions options)
     {
@@ -496,21 +444,23 @@ public static class ImageDecoder
         catch (Exception) { return ""; }
     }
 
-    private static LoadedImage DecodeImageSharp(byte[] data, bool autoOrient, bool firstFrameOnly = false)
+    /// <summary>
+    /// What Windows could not read: the small formats pViewer decodes itself (QOI, PBM, TGA), then
+    /// Skia (WebP, GIF, PNG, JPEG, BMP and icons, also when Windows lacks their codec). Of an
+    /// animation, the first frame.
+    /// </summary>
+    private static LoadedImage DecodeOtherwise(byte[] data, string name, bool autoOrient)
     {
-        // WIC does not read BigTIFF, so every such file ends up here: some never come back.
-        if (IsUnsafeBigTiff(data)) throw new InvalidDataException("The BigTIFF directory is not valid.");
-        var options = new SixLabors.ImageSharp.Formats.DecoderOptions { MaxFrames = firstFrameOnly ? 1u : uint.MaxValue };
-        // The size first: a 70-byte TGA may claim 30000 × 30000 pixels.
-        var info = ISImage.Identify(options, data);
-        if ((long)info.Width * info.Height > MaxPixels)
-            throw new InvalidDataException($"The image is too large ({info.Width} × {info.Height}).");
-        using var img = ISImage.Load<Bgra32>(options, data);
-        if (autoOrient) img.Mutate(x => x.AutoOrient());
+        ushort orientation = 1;
+        // Both check the size first: a 70-byte TGA may claim 30000 × 30000 pixels.
+        var pixels = SimpleDecoders.TryDecode(data, name, MaxPixels, out string format)
+                     ?? SkiaImaging.DecodeStill(data, MaxPixels, out format, out orientation);
+        var bitmap = ImageBridge.ToBitmapSource(pixels);
+        if (autoOrient && orientation > 1) bitmap = ApplyOrientation(bitmap, orientation);
         return new LoadedImage
         {
-            Bitmap = ImageBridge.ToBitmapSource(img),
-            FormatName = img.Metadata.DecodedImageFormat?.Name ?? "",
+            Bitmap = bitmap,
+            FormatName = format,
             FileSize = data.LongLength,
             AutoOriented = autoOrient,
         };

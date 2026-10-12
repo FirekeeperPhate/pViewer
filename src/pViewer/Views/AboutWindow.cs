@@ -41,8 +41,8 @@ public sealed class AboutWindow : Window
 
         var credits = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 14, 0, 0), Opacity = 0.7, FontSize = 12 };
         credits.Inlines.Add(new Run("Uses: "));
-        AddLink(credits, "ImageSharp", "https://github.com/SixLabors/ImageSharp");
-        credits.Inlines.Add(new Run(" (Apache 2.0), "));
+        AddLink(credits, "SkiaSharp", "https://github.com/mono/SkiaSharp");
+        credits.Inlines.Add(new Run(" (MIT), "));
         AddLink(credits, "SharpCompress", "https://github.com/adamhathcock/sharpcompress");
         credits.Inlines.Add(new Run(" (MIT), "));
         AddLink(credits, "MetadataExtractor", "https://github.com/drewnoakes/metadata-extractor-dotnet");

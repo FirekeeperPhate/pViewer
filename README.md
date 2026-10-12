@@ -84,7 +84,7 @@ powershell -ExecutionPolicy Bypass -File installer\build.ps1
 | Folder | Contents |
 |---|---|
 | `src/pViewer/Core` | Formats, natural sorting, image sources (folder/archive), manga/comic navigation |
-| `src/pViewer/Imaging` | WIC decoding with ImageSharp fallback, editing operations, saving |
+| `src/pViewer/Imaging` | WIC decoding with Skia and pViewer's own small decoders as fallback, animations, editing operations, saving |
 | `src/pViewer/Services` | Caching and preloading, settings, undo/redo, batch, Windows integration |
 | `src/pViewer/Controls` | `ImageViewer`: zoom/pan and editing gestures |
 | `src/pViewer/ViewModels` | `MainViewModel` (MVVM with CommunityToolkit.Mvvm) |
@@ -95,7 +95,7 @@ powershell -ExecutionPolicy Bypass -File installer\build.ps1
 
 | Library | License |
 |---|---|
-| [ImageSharp](https://github.com/SixLabors/ImageSharp) 3.1 | Apache 2.0 (granted to open-source projects by the Six Labors Split License; 4.x requires a license key) |
+| [SkiaSharp](https://github.com/mono/SkiaSharp) (with [Skia](https://skia.org)) | MIT (Skia: BSD 3-Clause) |
 | [MetadataExtractor](https://github.com/drewnoakes/metadata-extractor-dotnet) | Apache 2.0 |
 | [XmpCore](https://github.com/drewnoakes/xmp-core-dotnet) (used by MetadataExtractor) | BSD 3-Clause |
 | [SharpCompress](https://github.com/adamhathcock/sharpcompress) | MIT |
@@ -103,7 +103,8 @@ powershell -ExecutionPolicy Bypass -File installer\build.ps1
 | [.NET runtime](https://github.com/dotnet/runtime) (Full edition only) | MIT |
 
 Their copyright notices and license texts are in [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt),
-which is installed next to pViewer and linked from its About window; the Full edition also
+which is installed next to pViewer and linked from its About window, together with
+`skiasharp-THIRD-PARTY-NOTICES.txt` (Skia and the libraries built into it); the Full edition also
 installs the .NET runtime's own `dotnet-LICENSE.txt` and `dotnet-THIRD-PARTY-NOTICES.txt`.
 
 ## License

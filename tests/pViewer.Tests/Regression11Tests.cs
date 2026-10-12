@@ -12,9 +12,9 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace pViewer.Tests;
 
 /// <summary>
-/// The ImageSharp 3.1 advisories of October 2026 (fixed only in 4.1.2, which pViewer cannot use):
-/// what a hostile file can reach is guarded, the rest is shown to be out of reach. The NuGet
-/// warnings are silenced in Directory.Build.props on the strength of these tests.
+/// Written for the ImageSharp 3.1 advisories of October 2026 (BigTIFF directories that kept the
+/// decoder busy for ever, a color profile that made it allocate GBs). pViewer then moved to Skia:
+/// the same hostile files must still cost nothing, and ImageSharp must not come back unnoticed.
 /// </summary>
 public class Regression11Tests
 {
@@ -83,7 +83,6 @@ public class Regression11Tests
         // The count alone, and the same after a first, empty directory.
         foreach (var file in new[] { BigTiff(littleEndian, (count, [], 0))[..24], BigTiff(littleEndian, (0, [], 32), (count, [], 0))[..40] })
         {
-            Assert.True(ImageDecoder.IsUnsafeBigTiff(file));
             var decode = Task.Run(() => Assert.Throws<ImageDecodeException>(() => ImageDecoder.Decode(file, "big.tif", true)));
             Assert.Same(decode, await Task.WhenAny(decode, Task.Delay(5000)));
             await decode;
@@ -91,29 +90,13 @@ public class Regression11Tests
     }
 
     [Fact]
-    public void OrdinaryBigTiffStillOpens()
+    public void BigTiffIsNoLongerRead()
     {
-        var file = SmallBigTiff();
-        Assert.False(ImageDecoder.IsUnsafeBigTiff(file));
-        var loaded = ImageDecoder.Decode(file, "big.tif", true);
-        Assert.Equal((2, 2), (loaded.PixelWidth, loaded.PixelHeight));
-        Assert.Equal(Colors.Red, Pixels.At(loaded.Bitmap, 1, 1));
-
-        // Classic TIFF and other formats are not looked at.
-        Assert.False(ImageDecoder.IsUnsafeBigTiff([0x49, 0x49, 42, 0, 8, 0, 0, 0, 0xFF, 0xFF, 0, 0, 0, 0, 0, 0, 0, 0]));
-        Assert.False(ImageDecoder.IsUnsafeBigTiff(TestImages.Png(4, 4)));
-        Assert.False(ImageDecoder.IsUnsafeBigTiff([]));
-    }
-
-    [Fact]
-    public void BigTiffDirectoryWithThousandsOfEntriesIsRefused()
-    {
-        // All the entries are there, but the decoder compares each one with all the others: seconds
-        // for tens of thousands of them, hours for a million.
+        // Windows does not read BigTIFF and Skia reads no TIFF at all: with ImageSharp gone these
+        // files give the usual "cannot open" message (and quickly, whatever their directories claim).
+        Assert.Throws<ImageDecodeException>(() => ImageDecoder.Decode(SmallBigTiff(), "big.tif", true));
         static byte[] Directory(int entries) =>
             BigTiff(true, ((ulong)entries, Enumerable.Range(0, entries).SelectMany(i => Entry((ushort)(40000 + i), 4, 1, (ulong)i)).ToArray(), 0));
-        Assert.False(ImageDecoder.IsUnsafeBigTiff(Directory(1024)));
-        Assert.True(ImageDecoder.IsUnsafeBigTiff(Directory(1025)));
         var sw = System.Diagnostics.Stopwatch.StartNew();
         Assert.Throws<ImageDecodeException>(() => ImageDecoder.Decode(Directory(60000), "big.tif", true));
         Assert.True(sw.ElapsedMilliseconds < 2000, $"took {sw.ElapsedMilliseconds} ms");
@@ -155,21 +138,20 @@ public class Regression11Tests
     // GHSA-gwg2-r3hj-4w44: in ImageSharp 3.1 only IccProfile.Entries parses the tags of a profile.
     // pViewer never reads them: a profile is carried as bytes, both when opening and when saving.
     [Fact]
-    public async Task HostileColorProfileIsCarriedButNeverParsed()
+    public async Task HostileColorProfileCostsNothing()
     {
         const long Megabyte = 1024 * 1024;
         var profile = HostileProfile();
-        // The control: this is what parsing the profile costs. If this fails ImageSharp was fixed,
-        // and the advisory can leave Directory.Build.props.
+        // The control: this is what parsing the profile cost ImageSharp 3.1 (now used by the tests only).
         Assert.True(AllocatedBy(() => _ = new IccProfile(profile).Entries.Length) > 50 * Megabyte);
 
         using var tmp = new TempFolder();
         var files = new List<byte[]>();
         foreach (var (encoder, frames) in new (SixLabors.ImageSharp.Formats.IImageEncoder, int)[]
         {
-            (new PngEncoder(), 2),                                                      // animated PNG: read by ImageSharp
-            (new PngEncoder(), 1),                                                      // WIC, then ImageSharp if it refuses the profile
-            (new WebpEncoder { FileFormat = WebpFileFormatType.Lossless }, 1),          // WIC, or ImageSharp without the WebP codec
+            (new PngEncoder(), 2),                                                      // animated PNG: put together by pViewer
+            (new PngEncoder(), 1),                                                      // WIC, then Skia if it refuses the profile
+            (new WebpEncoder { FileFormat = WebpFileFormatType.Lossless }, 1),          // WIC, or Skia without the WebP codec
             (new SixLabors.ImageSharp.Formats.Bmp.BmpEncoder(), 1),
         })
         {
@@ -184,48 +166,32 @@ public class Regression11Tests
             img.Save(ms, encoder);
             files.Add(ms.ToArray());
         }
+        ImageDecoder.Decode(TestImages.Png(8, 8), "warm.png", true); // libraries loaded: not counted below
         foreach (var file in files)
         {
-            // The profile is in the file as written, and ImageSharp itself opens the file without parsing it.
-            using (var direct = SixLabors.ImageSharp.Image.Load<Bgra32>(file))
-                Assert.Equal(profile, direct.Metadata.IccProfile?.ToByteArray());
             LoadedImage? loaded = null;
             Assert.True(AllocatedBy(() => loaded = ImageDecoder.Decode(file, "hostile", true)) < 8 * Megabyte);
             Assert.Equal(8, loaded!.PixelWidth);
         }
         Assert.NotNull(ImageDecoder.Decode(files[0], "hostile.png", true).Animation);
 
-        // Saving as WebP is the one place where pViewer hands a profile to ImageSharp.
+        // Saving as WebP hands the profile to Skia, which checks it and leaves an invalid one out.
         string icc = tmp.File("hostile.icc"), output = tmp.File("out.webp");
         File.WriteAllBytes(icc, profile);
         var bitmap = ImageDecoder.Decode(TestImages.Png(8, 8), "a.png", true).Bitmap;
         long saving = await StaTask.Run(() => AllocatedBy(() => ImageSaver.Save(bitmap, output, 90, colorContexts: [new ColorContext(new Uri(icc))])));
         Assert.True(saving < 8 * Megabyte, $"saving allocated {saving / Megabyte} MB");
         using var saved = SixLabors.ImageSharp.Image.Load<Bgra32>(output);
-        Assert.Equal(profile, saved.Metadata.IccProfile?.ToByteArray());
+        Assert.Equal(8, saved.Width);
     }
 
-    // GHSA-j3p4-wp97-rph4 (HistogramEqualization), GHSA-j9gm-c75j-xc9q and GHSA-jjfr-hcj7-qf5w (the
-    // TIFF encoder with CCITT compression) and GHSA-gwg2-r3hj-4w44 (IccProfile.Entries) are out of
-    // reach only as long as pViewer calls none of these. Whoever starts using one meets this test.
     [Fact]
-    public void ImageSharpPartsWithOpenAdvisoriesAreNotUsed()
+    public void ImageSharpIsNoLongerPartOfPViewer()
     {
         using var pe = new PEReader(File.OpenRead(typeof(ImageDecoder).Assembly.Location));
         var md = pe.GetMetadataReader();
-        var types = md.TypeReferences.Select(h => md.GetTypeReference(h))
-            .Select(t => $"{md.GetString(t.Namespace)}.{md.GetString(t.Name)}").ToList();
-        var members = md.MemberReferences.Select(h => md.GetMemberReference(h))
-            .Select(m => (Type: m.Parent.Kind == HandleKind.TypeReference ? md.GetString(md.GetTypeReference((TypeReferenceHandle)m.Parent).Name) : "",
-                          Name: md.GetString(m.Name))).ToList();
-
-        Assert.Contains(types, t => t == "SixLabors.ImageSharp.Image"); // the references are really being read
-        Assert.Contains(members, m => m is { Type: "ImageExtensions", Name: "Save" });
-        // TIFF is written by WIC (ImageSaver.Encode); nothing of ImageSharp's TIFF support is named.
-        Assert.DoesNotContain(types, t => t.StartsWith("SixLabors.ImageSharp.Formats.Tiff", StringComparison.Ordinal));
-        Assert.DoesNotContain(members, m => m.Name.StartsWith("SaveAsTiff", StringComparison.Ordinal));
-        Assert.DoesNotContain(types, t => t.Contains("HistogramEqualization", StringComparison.Ordinal));
-        Assert.DoesNotContain(members, m => m.Name.Contains("HistogramEqualization", StringComparison.Ordinal));
-        Assert.DoesNotContain(members, m => m is { Type: "IccProfile", Name: "get_Entries" });
+        var references = md.AssemblyReferences.Select(h => md.GetString(md.GetAssemblyReference(h).Name)).ToList();
+        Assert.Contains("SkiaSharp", references); // the references are really being read
+        Assert.DoesNotContain(references, r => r.StartsWith("SixLabors", StringComparison.OrdinalIgnoreCase));
     }
 }

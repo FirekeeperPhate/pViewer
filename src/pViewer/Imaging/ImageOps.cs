@@ -2,8 +2,6 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using WColor = System.Windows.Media.Color;
 
 namespace pViewer.Imaging;
@@ -41,14 +39,8 @@ public static class ImageOps
         return ImageBridge.Materialize(new CroppedBitmap(src, rect));
     }
 
-    public static BitmapSource Resize(BitmapSource src, int width, int height)
-    {
-        width = Math.Max(1, width);
-        height = Math.Max(1, height);
-        bool down = (long)width * height < (long)src.PixelWidth * src.PixelHeight;
-        return ImageBridge.Process(src, img => img.Mutate(x => x.Resize(width, height,
-            down ? KnownResamplers.Lanczos3 : KnownResamplers.Bicubic)));
-    }
+    public static BitmapSource Resize(BitmapSource src, int width, int height) =>
+        ImageBridge.Process(src, p => Resampler.Resize(p, width, height));
 
     /// <summary>Scales down proportionally to fit within maxW×maxH (never enlarges).</summary>
     public static BitmapSource FitWithin(BitmapSource src, int maxW, int maxH)
@@ -58,74 +50,142 @@ public static class ImageOps
         return Resize(src, (int)Math.Round(src.PixelWidth * ratio), (int)Math.Round(src.PixelHeight * ratio));
     }
 
-    public static BitmapSource Invert(BitmapSource src) => ImageBridge.Process(src, i => i.Mutate(x => x.Invert()));
-    public static BitmapSource Grayscale(BitmapSource src) => ImageBridge.Process(src, i => i.Mutate(x => x.Grayscale()));
-    public static BitmapSource Sepia(BitmapSource src) => ImageBridge.Process(src, i => i.Mutate(x => x.Sepia()));
+    // ---- Color filters: each new color is a weighted sum of the old red, green and blue ----
+    // (the matrices of the CSS/SVG filters of the same names; alpha is never touched)
+
+    /// <param name="matrices">
+    /// Applied one after the other. Each: three rows (new red, green, blue) of four numbers:
+    /// × red, × green, × blue, + offset (where 1 is full brightness).
+    /// </param>
+    private static BitmapSource Recolor(BitmapSource src, params float[][] matrices) => ImageBridge.Process(src, p =>
+    {
+        byte[] d = p.Data;
+        foreach (var m in matrices)
+        {
+            Parallel.For(0, p.Height, y =>
+            {
+                int end = (y + 1) * p.Stride;
+                for (int i = y * p.Stride; i < end; i += 4)
+                {
+                    float b = d[i], g = d[i + 1], r = d[i + 2];
+                    d[i + 2] = ToByte(m[0] * r + m[1] * g + m[2] * b + m[3] * 255);
+                    d[i + 1] = ToByte(m[4] * r + m[5] * g + m[6] * b + m[7] * 255);
+                    d[i] = ToByte(m[8] * r + m[9] * g + m[10] * b + m[11] * 255);
+                }
+            });
+        }
+        return p;
+    });
+
+    private static byte ToByte(float value) => value <= 0 ? (byte)0 : value >= 255 ? (byte)255 : (byte)(value + 0.5f);
+
+    public static BitmapSource Invert(BitmapSource src) => Recolor(src, [-1, 0, 0, 1, 0, -1, 0, 1, 0, 0, -1, 1]);
+
+    public static BitmapSource Grayscale(BitmapSource src) =>
+        Recolor(src, [.2126f, .7152f, .0722f, 0, .2126f, .7152f, .0722f, 0, .2126f, .7152f, .0722f, 0]);
+
+    public static BitmapSource Sepia(BitmapSource src) =>
+        Recolor(src, [.393f, .769f, .189f, 0, .349f, .686f, .168f, 0, .272f, .534f, .131f, 0]);
 
     /// <summary>Pure black and white (formerly "1 bit").</summary>
-    public static BitmapSource BlackWhite(BitmapSource src) =>
-        ImageBridge.Process(src, img => img.ProcessPixelRows(rows =>
+    public static BitmapSource BlackWhite(BitmapSource src) => ImageBridge.Process(src, p =>
+    {
+        // By luminance, keeping alpha (a threshold on the whole pixel would turn the
+        // transparent areas of a PNG solid black).
+        byte[] d = p.Data;
+        for (int i = 0; i < d.Length; i += 4)
         {
-            // By luminance, keeping alpha (a threshold on the whole pixel would turn the
-            // transparent areas of a PNG solid black).
-            for (int y = 0; y < rows.Height; y++)
-            {
-                foreach (ref Bgra32 p in rows.GetRowSpan(y))
-                {
-                    byte v = 0.299 * p.R + 0.587 * p.G + 0.114 * p.B >= 128 ? (byte)255 : (byte)0;
-                    p = new Bgra32(v, v, v, p.A);
-                }
-            }
-        }));
+            byte v = 0.299 * d[i + 2] + 0.587 * d[i + 1] + 0.114 * d[i] >= 128 ? (byte)255 : (byte)0;
+            d[i] = d[i + 1] = d[i + 2] = v;
+        }
+        return p;
+    });
+
+    private static float[] BrightnessMatrix(float amount) => [amount, 0, 0, 0, 0, amount, 0, 0, 0, 0, amount, 0];
+
+    private static float[] ContrastMatrix(float amount)
+    {
+        float offset = 0.5f - 0.5f * amount; // around middle gray
+        return [amount, 0, 0, offset, 0, amount, 0, offset, 0, 0, amount, offset];
+    }
+
+    private static float[] SaturationMatrix(float amount) =>
+    [
+        .213f + .787f * amount, .715f - .715f * amount, .072f - .072f * amount, 0,
+        .213f - .213f * amount, .715f + .285f * amount, .072f - .072f * amount, 0,
+        .213f - .213f * amount, .715f - .715f * amount, .072f + .928f * amount, 0,
+    ];
+
+    private static float[] HueMatrix(float degrees)
+    {
+        float cos = MathF.Cos(degrees * MathF.PI / 180), sin = MathF.Sin(degrees * MathF.PI / 180);
+        return
+        [
+            .213f + cos * .787f - sin * .213f, .715f - cos * .715f - sin * .715f, .072f - cos * .072f + sin * .928f, 0,
+            .213f - cos * .213f + sin * .143f, .715f + cos * .285f + sin * .140f, .072f - cos * .072f - sin * .283f, 0,
+            .213f - cos * .213f - sin * .787f, .715f - cos * .715f + sin * .715f, .072f + cos * .928f + sin * .072f, 0,
+        ];
+    }
 
     /// <param name="brightness">-100..100</param>
     /// <param name="contrast">-100..100</param>
-    public static BitmapSource BrightnessContrast(BitmapSource src, double brightness, double contrast) =>
-        brightness == 0 && contrast == 0 ? src :
-        ImageBridge.Process(src, i => i.Mutate(x =>
-        {
-            if (brightness != 0) x.Brightness((float)(1 + brightness / 100));
-            if (contrast != 0) x.Contrast((float)(1 + contrast / 100));
-        }));
+    public static BitmapSource BrightnessContrast(BitmapSource src, double brightness, double contrast)
+    {
+        if (brightness == 0 && contrast == 0) return src;
+        var steps = new List<float[]>();
+        if (brightness != 0) steps.Add(BrightnessMatrix((float)(1 + brightness / 100)));
+        if (contrast != 0) steps.Add(ContrastMatrix((float)(1 + contrast / 100)));
+        return Recolor(src, [.. steps]);
+    }
 
     public static BitmapSource Sharpen(BitmapSource src, double sigma) => sigma <= 0 ? src
-        : ImageBridge.Process(src, i => i.Mutate(x => x.GaussianSharpen((float)sigma)));
+        : ImageBridge.Process(src, p => SkiaImaging.Sharpen(p, (float)sigma));
 
     public static BitmapSource Blur(BitmapSource src, double sigma) => sigma <= 0 ? src
-        : ImageBridge.Process(src, i => i.Mutate(x => x.GaussianBlur((float)sigma)));
+        : ImageBridge.Process(src, p => SkiaImaging.Blur(p, (float)sigma));
 
     /// <param name="hue">-180..180 degrees</param>
     /// <param name="saturation">-100..100</param>
-    public static BitmapSource HueSaturation(BitmapSource src, double hue, double saturation) =>
-        hue == 0 && saturation == 0 ? src :
-        ImageBridge.Process(src, i => i.Mutate(x =>
-        {
-            if (hue != 0) x.Hue((float)hue);
-            if (saturation != 0) x.Saturate((float)(1 + saturation / 100));
-        }));
+    public static BitmapSource HueSaturation(BitmapSource src, double hue, double saturation)
+    {
+        if (hue == 0 && saturation == 0) return src;
+        var steps = new List<float[]>();
+        if (hue != 0) steps.Add(HueMatrix((float)hue));
+        if (saturation != 0) steps.Add(SaturationMatrix((float)(1 + saturation / 100)));
+        return Recolor(src, [.. steps]);
+    }
 
-    public static BitmapSource AddBorder(BitmapSource src, int thickness, WColor color) =>
-        ImageBridge.Process(src, i => i.Mutate(x => x.Pad(i.Width + thickness * 2, i.Height + thickness * 2,
-            SixLabors.ImageSharp.Color.FromRgba(color.R, color.G, color.B, color.A))));
+    public static BitmapSource AddBorder(BitmapSource src, int thickness, WColor color) => ImageBridge.Process(src, p =>
+    {
+        var framed = new PixelBuffer(p.Width + thickness * 2, p.Height + thickness * 2);
+        byte[] d = framed.Data;
+        for (int i = 0; i < d.Length; i += 4)
+        {
+            d[i] = color.B; d[i + 1] = color.G; d[i + 2] = color.R; d[i + 3] = color.A;
+        }
+        for (int y = 0; y < p.Height; y++)
+            Buffer.BlockCopy(p.Data, y * p.Stride, d, ((y + thickness) * framed.Width + thickness) * 4, p.Stride);
+        return framed;
+    });
 
     /// <summary>Reduces red where it clearly dominates green and blue (red eyes).</summary>
     public static BitmapSource RedEye(BitmapSource src, Int32Rect area)
     {
         area = ClampRect(src, area);
         if (area.Width < 1 || area.Height < 1) return src;
-        return ImageBridge.Process(src, img => img.ProcessPixelRows(rows =>
+        return ImageBridge.Process(src, p =>
         {
+            byte[] d = p.Data;
             for (int y = area.Y; y < area.Y + area.Height; y++)
             {
-                Span<Bgra32> row = rows.GetRowSpan(y);
-                for (int x = area.X; x < area.X + area.Width; x++)
+                for (int x = area.X, i = (y * p.Width + x) * 4; x < area.X + area.Width; x++, i += 4)
                 {
-                    ref Bgra32 p = ref row[x];
-                    int avg = (p.G + p.B) / 2;
-                    if (p.R > 60 && p.R > avg * 1.5) p.R = (byte)avg;
+                    int red = d[i + 2], avg = (d[i + 1] + d[i]) / 2;
+                    if (red > 60 && red > avg * 1.5) d[i + 2] = (byte)avg;
                 }
             }
-        }));
+            return p;
+        });
     }
 
     // ---- Operations that draw with WPF (STA thread) ----
@@ -224,8 +284,20 @@ public static class ImageOps
     public static BitmapSource FlattenAlpha(BitmapSource src, WColor background)
     {
         if (!ImageBridge.MayHaveAlpha(src.Format)) return src;
-        var bg = SixLabors.ImageSharp.Color.FromRgb(background.R, background.G, background.B);
-        var flat = ImageBridge.Process(src, i => i.Mutate(x => x.BackgroundColor(bg)));
+        var flat = ImageBridge.Process(src, p =>
+        {
+            byte[] d = p.Data;
+            for (int i = 0; i < d.Length; i += 4)
+            {
+                int a = d[i + 3];
+                if (a == 255) continue;
+                d[i] = (byte)((d[i] * a + background.B * (255 - a) + 127) / 255);
+                d[i + 1] = (byte)((d[i + 1] * a + background.G * (255 - a) + 127) / 255);
+                d[i + 2] = (byte)((d[i + 2] * a + background.R * (255 - a) + 127) / 255);
+                d[i + 3] = 255;
+            }
+            return p;
+        });
         var bgr = new FormatConvertedBitmap(flat, PixelFormats.Bgr24, null, 0);
         bgr.Freeze();
         return bgr;

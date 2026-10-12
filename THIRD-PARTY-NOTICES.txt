@@ -5,7 +5,7 @@ pViewer is free software released under the GNU General Public License v3 (see L
 It uses the open-source components listed below. Their copyright notices and licenses are
 reproduced here, as those licenses require.
 
-  1. SixLabors.ImageSharp 3.1.12  - Apache License 2.0
+  1. SkiaSharp 4.153.1 (with Skia) - MIT License (Skia: BSD 3-Clause)
   2. MetadataExtractor 2.9.3      - Apache License 2.0
   3. XmpCore 6.1.10.1             - BSD 3-Clause License
   4. SharpCompress 0.50.4         - MIT License
@@ -13,13 +13,37 @@ reproduced here, as those licenses require.
   6. .NET runtime (Full edition only) - MIT License
 
 ================================================================================
-1. SixLabors.ImageSharp 3.1.12
-   https://github.com/SixLabors/ImageSharp
-   Copyright (c) Six Labors
+1. SkiaSharp 4.153.1
+   https://github.com/mono/SkiaSharp
+   .NET binding of Skia, the 2D graphics library of Google (https://skia.org).
 
-   Licensed under the Apache License, Version 2.0, which the Six Labors Split License grants
-   for use in software released under an open-source license. The full text of the Apache
-   License 2.0 is at the end of this file.
+   MIT License
+
+   Copyright (c) 2015-2016 Xamarin, Inc.
+   Copyright (c) 2017-2018 Microsoft Corporation.
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy of
+   this software and associated documentation files (the "Software"), to deal in
+   the Software without restriction, including without limitation the rights to
+   use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+   the Software, and to permit persons to whom the Software is furnished to do so,
+   subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+   FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+   COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+   IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+   The native library shipped with it (libSkiaSharp.dll) contains Skia itself
+   (BSD 3-Clause License, Copyright (c) 2011 Google Inc.) and the libraries Skia is
+   built with, among them libjpeg-turbo, libpng, libwebp, zlib, FreeType and
+   expat. Their copyright notices and licenses are in
+   skiasharp-THIRD-PARTY-NOTICES.txt, installed next to this file.
 
 ================================================================================
 2. MetadataExtractor 2.9.3

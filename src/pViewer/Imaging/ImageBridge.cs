@@ -1,14 +1,33 @@
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using SixLabors.ImageSharp.PixelFormats;
-using ISImage = SixLabors.ImageSharp.Image;
 
 namespace pViewer.Imaging;
 
-/// <summary>Conversions between BitmapSource (WPF/WIC) and Image&lt;Bgra32&gt; (ImageSharp).</summary>
+/// <summary>
+/// 8-bit pixels in memory, four bytes each (blue, green, red, alpha; not premultiplied), top row
+/// first: what the editing code and the decoders of pViewer itself work on.
+/// </summary>
+public sealed class PixelBuffer
+{
+    public PixelBuffer(int width, int height) : this(new byte[ImageBridge.BufferSize(width, height)], width, height) { }
+
+    public PixelBuffer(byte[] data, int width, int height)
+    {
+        if (width < 1 || height < 1 || data.LongLength < (long)width * height * 4)
+            throw new ArgumentException("Pixel data smaller than the image.");
+        (Data, Width, Height) = (data, width, height);
+    }
+
+    public byte[] Data { get; }
+    public int Width { get; }
+    public int Height { get; }
+    public int Stride => Width * 4;
+}
+
+/// <summary>Conversions between BitmapSource (WPF/WIC) and <see cref="PixelBuffer"/>.</summary>
 public static class ImageBridge
 {
-    public static SixLabors.ImageSharp.Image<Bgra32> ToImageSharp(BitmapSource source)
+    public static PixelBuffer ToPixels(BitmapSource source)
     {
         BitmapSource bgra = source.Format == PixelFormats.Bgra32
             ? source
@@ -16,21 +35,18 @@ public static class ImageBridge
         int w = bgra.PixelWidth, h = bgra.PixelHeight, stride = w * 4;
         var buffer = GC.AllocateUninitializedArray<byte>(BufferSize(w, h));
         bgra.CopyPixels(buffer, stride, 0);
-        return ISImage.LoadPixelData<Bgra32>(buffer, w, h);
+        return new PixelBuffer(buffer, w, h);
     }
 
-    public static BitmapSource ToBitmapSource(SixLabors.ImageSharp.Image<Bgra32> image, double dpiX = 96, double dpiY = 96)
+    public static BitmapSource ToBitmapSource(PixelBuffer pixels, double dpiX = 96, double dpiY = 96)
     {
-        int w = image.Width, h = image.Height;
-        var buffer = GC.AllocateUninitializedArray<byte>(BufferSize(w, h));
-        image.CopyPixelDataTo(buffer);
-        var bmp = BitmapSource.Create(w, h, dpiX, dpiY, PixelFormats.Bgra32, null, buffer, w * 4);
+        var bmp = BitmapSource.Create(pixels.Width, pixels.Height, dpiX, dpiY, PixelFormats.Bgra32, null, pixels.Data, pixels.Stride);
         bmp.Freeze();
         return bmp;
     }
 
     /// <summary>32-bit buffer size; beyond ~536 MP it would overflow an int (and a .NET array).</summary>
-    private static int BufferSize(int width, int height) => BufferSize((long)width * height * 4, width, height);
+    internal static int BufferSize(int width, int height) => BufferSize((long)width * height * 4, width, height);
 
     private static int BufferSize(long size, int width, int height)
     {
@@ -39,13 +55,12 @@ public static class ImageBridge
         return (int)size;
     }
 
-    /// <summary>Applies an ImageSharp transformation to a BitmapSource (keeping its resolution).</summary>
-    public static BitmapSource Process(BitmapSource source, Action<SixLabors.ImageSharp.Image<Bgra32>> process)
-    {
-        using var img = ToImageSharp(source);
-        process(img);
-        return ToBitmapSource(img, source.DpiX, source.DpiY);
-    }
+    /// <summary>
+    /// Applies a transformation to the pixels of a BitmapSource (keeping its resolution). The
+    /// transformation may change the buffer it is given and return it, or return a new one.
+    /// </summary>
+    public static BitmapSource Process(BitmapSource source, Func<PixelBuffer, PixelBuffer> process) =>
+        ToBitmapSource(process(ToPixels(source)), source.DpiX, source.DpiY);
 
     /// <summary>
     /// Forces decoding and freezes: safe to pass between threads. Copies the pixels as they are

@@ -22,9 +22,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- ImageSharp 4 requires a license key at build time: stay on 3.1 (Six Labors Split License).
-         Its open advisories, and why each one is silenced, are in Directory.Build.props -->
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <!-- WIC decodes; Skia does the animations, a second decoder, WebP saving, blur and sharpen
+         (Imaging/SkiaImaging.cs). Its native part is named here only for the path of its notices. -->
+    <PackageReference Include="SkiaSharp" Version="4.153.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="4.153.1" GeneratePathProperty="true" />
     <PackageReference Include="SharpCompress" Version="0.50.4" />
     <PackageReference Include="MetadataExtractor" Version="2.9.3" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
@@ -37,10 +38,19 @@
   <ItemGroup>
     <!-- Licenses of the bundled components: next to the exe (About links to it), in every install -->
     <None Include="..\..\THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The notices of Skia and of the libraries inside libSkiaSharp.dll, as shipped with the package -->
+    <None Include="$(PkgSkiaSharp_NativeAssets_Win32)\THIRD-PARTY-NOTICES.txt" Link="skiasharp-THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="pViewer.Tests" />
   </ItemGroup>
+
+  <!-- The debug symbols of Skia (90 MB) come with its package: not into the published folder -->
+  <Target Name="LeaveOutNativeSymbols" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Filename)%(Extension)' == 'libSkiaSharp.pdb'" />
+    </ItemGroup>
+  </Target>
 
 </Project>

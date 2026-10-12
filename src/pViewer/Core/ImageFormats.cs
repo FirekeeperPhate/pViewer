@@ -4,7 +4,7 @@ namespace pViewer.Core;
 public static class ImageFormats
 {
     // Decoded by WIC (modern/RAW formats need the Windows codecs),
-    // with ImageSharp as a fallback for webp/tga/qoi/pbm when the codec is missing.
+    // with Skia as a fallback (webp, also when the codec is missing) and pViewer's own decoders for tga/qoi/pbm.
     private static readonly HashSet<string> Images = new(StringComparer.OrdinalIgnoreCase)
     {
         ".jpg", ".jpeg", ".jpe", ".jfif", ".png", ".gif", ".bmp", ".dib", ".tif", ".tiff",
