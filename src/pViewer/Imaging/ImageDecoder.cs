@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -337,6 +338,45 @@ public static class ImageDecoder
         return copy.ToArray();
     }
 
+    /// <summary>Real BigTIFF directories hold a few dozen entries.</summary>
+    private const int MaxBigTiffEntries = 1024;
+
+    /// <summary>
+    /// A BigTIFF that must not reach ImageSharp 3.1 (GHSA-wmxv-xphr-5c9g, fixed only in 4.1.2).
+    /// Its reader counts up to the 64-bit number of entries a directory declares even when the
+    /// file has no bytes left for them: 24 bytes are enough to keep the decoding thread busy
+    /// forever. It also compares each entry with all the ones before it, seconds for tens of
+    /// thousands of them, so a directory beyond <see cref="MaxBigTiffEntries"/> is refused as well.
+    /// The directories are followed the way that reader follows them. Classic TIFF counts its
+    /// entries in 16 bits and is not looked at.
+    /// </summary>
+    internal static bool IsUnsafeBigTiff(byte[] d)
+    {
+        if (d.Length < 16) return false; // no room for the offset of a directory: none is read
+        bool little = d[0] == 'I' && d[1] == 'I' && d[2] == 43 && d[3] == 0 && d[4] == 8 && d[5] == 0;
+        bool big = d[0] == 'M' && d[1] == 'M' && d[2] == 0 && d[3] == 43 && d[4] == 0 && d[5] == 8;
+        if ((!little && !big) || d[6] != 0 || d[7] != 0) return false;
+        ulong length = (ulong)d.LongLength;
+        ulong U64(ulong at) => little
+            ? BinaryPrimitives.ReadUInt64LittleEndian(d.AsSpan((int)at, 8))
+            : BinaryPrimitives.ReadUInt64BigEndian(d.AsSpan((int)at, 8));
+
+        ulong directory = U64(8);
+        // 65534: the reader gives up after that many directories.
+        for (int read = 0; read < 65534 && directory != 0 && directory < length; read++)
+        {
+            if (length - directory < 8) return false; // no room for a count: read as an empty, last directory
+            ulong count = U64(directory), entries = directory + 8;
+            // 20 bytes per entry; with fewer left the reader moves on to the next entry without reading.
+            if (count > MaxBigTiffEntries || count > (length - entries) / 20) return true;
+            ulong link = entries + count * 20;
+            ulong next = length - link < 8 ? 0 : U64(link);
+            if (next <= directory) return false; // the last one, or a loop the reader refuses by itself
+            directory = next;
+        }
+        return false;
+    }
+
     /// <returns>The inflated size, or cap + 1 as soon as it goes beyond cap.</returns>
     private static long InflatedSize(byte[] d, int offset, int count, long cap)
     {
@@ -458,6 +498,8 @@ public static class ImageDecoder
 
     private static LoadedImage DecodeImageSharp(byte[] data, bool autoOrient, bool firstFrameOnly = false)
     {
+        // WIC does not read BigTIFF, so every such file ends up here: some never come back.
+        if (IsUnsafeBigTiff(data)) throw new InvalidDataException("The BigTIFF directory is not valid.");
         var options = new SixLabors.ImageSharp.Formats.DecoderOptions { MaxFrames = firstFrameOnly ? 1u : uint.MaxValue };
         // The size first: a 70-byte TGA may claim 30000 × 30000 pixels.
         var info = ISImage.Identify(options, data);
