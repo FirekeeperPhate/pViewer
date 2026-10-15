@@ -48,6 +48,7 @@ public partial class MainWindow : Window, IMainView
     private WindowState _restoreState;
     private bool _closeConfirmed;
     private bool _closeWhenIdle;
+    private bool _closed;
 
     /// <summary>
     /// The window that the copy kept in the background opens off-screen to get ready (see App.Standby.cs):
@@ -81,8 +82,13 @@ public partial class MainWindow : Window, IMainView
         DataContext = _vm;
         _keyActions = CreateKeyActions();
 
-        // The big image menu is built once the first image is on screen, not before.
-        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () => Viewer.ContextMenu = MainMenu);
+        // The big image menu is built once the first image is on screen, not before; and not at all if
+        // the window was closed first: the application is ending and its resources are gone.
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () =>
+        {
+            if (!_closed) Viewer.ContextMenu = MainMenu;
+        });
+        Closed += (_, _) => _closed = true;
 
         Viewer.SelectionCompleted += async (_, e) => await _vm.OnSelectionAsync(e.Kind, e.Rect);
         Viewer.TextRequested += (_, p) =>

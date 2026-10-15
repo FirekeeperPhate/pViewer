@@ -88,6 +88,7 @@ public partial class App : Application
                 Standby.EnsureRunning(settings);
             };
         }
+        window.Closed += (_, _) => _windowClosed = true;
         MainWindow = window;
         window.Show();
         StartupTrace.Mark("window shown");
@@ -117,10 +118,15 @@ public partial class App : Application
 
     private static bool _showingError;
 
+    /// <summary>The main window has been closed: what is still running is the end of the application.</summary>
+    private static bool _windowClosed;
+
     private static void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         // An unexpected error must not close the app (and lose unsaved changes)…
         e.Handled = true;
+        // After the window was closed the application is only ending: nothing to tell, nobody to tell it to.
+        if (_windowClosed || Current is null) return;
         // The copy that waits in the background has no window to show an error in: it just ends.
         if (Current is App { _standby: true })
         {

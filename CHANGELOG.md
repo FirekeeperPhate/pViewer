@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+**Fixed**
+- Closing pViewer right after it opened an image showed "An unexpected error occurred": the image
+  menu, built once the window is idle, was being built after the window had closed. Errors that
+  happen while pViewer is ending are no longer shown at all.
+
 ## 2.1.0
 
 **New**
