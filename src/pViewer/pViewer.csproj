@@ -12,7 +12,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Program.Main runs before the Main that WPF generates for App.xaml (see Program.cs) -->
     <StartupObject>pViewer.Program</StartupObject>
-    <Version>2.1.0</Version>
+    <Version>2.1.1</Version>
     <Product>pViewer</Product>
     <Authors>Phate</Authors>
     <Copyright>Copyright (C) 2013-2026 Phate</Copyright>

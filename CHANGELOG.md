@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.1.1
 
 **Fixed**
 - Closing pViewer right after it opened an image showed "An unexpected error occurred": the image
