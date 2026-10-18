@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.2.0
 
 **New**
 - Effects › Remove background: the subject stays and the background becomes transparent (to
@@ -8,7 +8,7 @@
   about 2 seconds for a photo; the model (170 MB) is downloaded once, after asking, checked,
   and kept in %LocalAppData%\pViewer (removed by the uninstaller). No picture leaves the PC.
   Works best with a clear subject (people, animals, objects); a key can be given to it in
-  Settings › Keyboard shortcuts. The installers are about 7 MB larger.
+  Settings › Keyboard shortcuts. The installers are about 4 MB larger.
 
 ## 2.1.1
 

@@ -12,7 +12,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Program.Main runs before the Main that WPF generates for App.xaml (see Program.cs) -->
     <StartupObject>pViewer.Program</StartupObject>
-    <Version>2.1.1</Version>
+    <Version>2.2.0</Version>
     <Product>pViewer</Product>
     <Authors>Phate</Authors>
     <Copyright>Copyright (C) 2013-2026 Phate</Copyright>
@@ -54,6 +54,8 @@
   <Target Name="LeaveOutNativeSymbols" AfterTargets="ComputeResolvedFilesToPublishList">
     <ItemGroup>
       <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Filename)%(Extension)' == 'libSkiaSharp.pdb'" />
+      <!-- ONNX Runtime's import libraries are for C++ builds only -->
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.lib'" />
     </ItemGroup>
   </Target>
 
