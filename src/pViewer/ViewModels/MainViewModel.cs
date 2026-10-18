@@ -800,6 +800,45 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand(AllowConcurrentExecutions = true)] private Task Sepia() => ApplyEditAsync(ImageOps.Sepia);
     [RelayCommand(AllowConcurrentExecutions = true)] private Task BlackWhite() => ApplyEditAsync(ImageOps.BlackWhite);
 
+    private bool _downloadingModel;
+
+    /// <summary>Makes the background transparent (see BackgroundRemover); the model is downloaded the first time.</summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task RemoveBackground()
+    {
+        if (!HasImage || _downloadingModel || WaitingForWork()) return;
+        if (!BackgroundRemover.ModelReady)
+        {
+            if (_view.Ask("Removing the background needs a model (170 MB), downloaded once from GitHub and kept on this PC. " +
+                          "Download it now?\n\nThe pictures never leave this PC.",
+                    "Remove background", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+            _downloadingModel = true;
+            try
+            {
+                var progress = new Progress<double>(p => Toast($"Downloading the model… {p:P0}"));
+                await BackgroundRemover.DownloadModelAsync(progress);
+            }
+            catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or TaskCanceledException
+                                           or IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                _view.ShowError($"Could not download the model.\n{ex.Message}");
+                return;
+            }
+            finally
+            {
+                _downloadingModel = false;
+            }
+        }
+        Toast("Removing the background…");
+        if (!await ApplyEditAsync(b => ImageBridge.Process(b, BackgroundRemover.Remove))) return;
+        // A JPEG or BMP cannot hold transparency: saving over it would put a white background back.
+        string? path = CurrentFilePath;
+        Toast(path is not null && Path.GetExtension(path).ToLowerInvariant() is ".png" or ".webp" or ".tif" or ".tiff" or ".gif"
+            ? "Background removed"
+            : "Background removed: to keep it transparent, save as PNG or WebP (Save as)");
+    }
+
     [RelayCommand(AllowConcurrentExecutions = true)]
     private Task AddBorder(string color) => ApplyEditAsync(b =>
         ImageOps.AddBorder(b, Math.Max(1, Settings.BorderThickness), color == "White" ? Colors.White : Colors.Black), movesPixels: true);

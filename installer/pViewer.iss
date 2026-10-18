@@ -119,6 +119,11 @@ Root: HKA; Subkey: "Software\RegisteredApplications"; ValueType: string; ValueNa
 {#OpenWith(".cbr", "pViewer.Comic")}
 {#OpenWith(".cb7", "pViewer.Comic")}
 
+[UninstallDelete]
+; The background removal model, downloaded on first use (Imaging\BackgroundRemover.cs)
+Type: filesandordirs; Name: "{localappdata}\pViewer\models"
+Type: dirifempty; Name: "{localappdata}\pViewer"
+
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
 ; Update started by pViewer itself (/SILENT /RELAUNCH=1 /OPEN="file"): start it again on that file,

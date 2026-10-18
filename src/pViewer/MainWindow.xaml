@@ -133,6 +133,7 @@
                 <MenuItem Header="Hue and saturation…" Command="{Binding EffectCommand}" CommandParameter="HueSaturation" />
                 <MenuItem Header="Sharpen…" Command="{Binding EffectCommand}" CommandParameter="Sharpen" />
                 <MenuItem Header="Blur…" Command="{Binding EffectCommand}" CommandParameter="Blur" />
+                <MenuItem Header="Remove background" controls:HotkeyText.Command="RemoveBackground" Command="{Binding RemoveBackgroundCommand}" />
                 <Separator />
                 <MenuItem Header="Invert" controls:HotkeyText.Command="Invert" Command="{Binding InvertCommand}" />
                 <MenuItem Header="Grayscale" controls:HotkeyText.Command="Grayscale" Command="{Binding GrayscaleCommand}" />

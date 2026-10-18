@@ -138,6 +138,7 @@ public static class Hotkeys
         new("Resize", "Edit", "Resize", ["Ctrl+R"]),
         new("Invert", "Edit", "Invert colors", ["Ctrl+I"]),
         new("Grayscale", "Edit", "Grayscale", ["Ctrl+G"]),
+        new("RemoveBackground", "Edit", "Remove background", []),
         new("Undo", "Edit", "Undo", ["Ctrl+Z"]),
         new("Redo", "Edit", "Redo", ["Ctrl+Y", "Ctrl+Shift+Z"]),
         new("Reload", "Edit", "Reload the original (discards changes)", ["F5"]),

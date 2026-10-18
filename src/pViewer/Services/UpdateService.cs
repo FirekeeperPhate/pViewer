@@ -176,10 +176,22 @@ public static class UpdateService
         string folder = DownloadFolder;
         Directory.CreateDirectory(folder);
         string path = Path.Combine(folder, update.InstallerName);
+        await DownloadVerifiedAsync(update.InstallerUrl, path, update.InstallerSize, update.Sha256, progress, ct);
+        return path;
+    }
+
+    /// <summary>
+    /// Downloads a file from GitHub to <paramref name="path"/> (through a ".part" file, moved in
+    /// place only once it is complete and checked): exactly <paramref name="size"/> bytes and, when
+    /// given, that SHA-256. Also used for the background removal model.
+    /// </summary>
+    internal static async Task DownloadVerifiedAsync(string url, string path, long size, string? sha256,
+        IProgress<double>? progress, CancellationToken ct = default)
+    {
         string partial = path + ".part";
         try
         {
-            using (var response = await Http.GetAsync(update.InstallerUrl, HttpCompletionOption.ResponseHeadersRead, ct))
+            using (var response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct))
             {
                 response.EnsureSuccessStatusCode();
                 if (response.RequestMessage?.RequestUri is { } final && !IsGitHubUrl(final.AbsoluteUri))
@@ -205,18 +217,17 @@ public static class UpdateService
                     }
                     if (read == 0) break;
                     total += read;
-                    if (total > update.InstallerSize) throw new InvalidDataException("The download is larger than announced.");
+                    if (total > size) throw new InvalidDataException("The download is larger than announced.");
                     await target.WriteAsync(buffer.AsMemory(0, read), ct);
                     sha.TransformBlock(buffer, 0, read, null, 0);
-                    progress?.Report((double)total / update.InstallerSize);
+                    progress?.Report((double)total / size);
                 }
                 sha.TransformFinalBlock([], 0, 0);
-                if (total != update.InstallerSize) throw new InvalidDataException("The download is incomplete.");
-                if (update.Sha256 is { } expected && !string.Equals(Convert.ToHexString(sha.Hash!), expected, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException("The downloaded installer does not match the release (checksum).");
+                if (total != size) throw new InvalidDataException("The download is incomplete.");
+                if (sha256 is { } expected && !string.Equals(Convert.ToHexString(sha.Hash!), expected, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("The downloaded file is not the expected one (checksum).");
             }
             File.Move(partial, path, overwrite: true);
-            return path;
         }
         finally
         {

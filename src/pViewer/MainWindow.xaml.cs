@@ -306,6 +306,7 @@ public partial class MainWindow : Window, IMainView
         ["Resize"] = () => _vm.ResizeCommand.Execute("0"),
         ["Invert"] = () => _vm.InvertCommand.Execute(null),
         ["Grayscale"] = () => _vm.GrayscaleCommand.Execute(null),
+        ["RemoveBackground"] = () => _vm.RemoveBackgroundCommand.Execute(null),
         ["Undo"] = () => _vm.UndoCommand.Execute(null),
         ["Redo"] = () => _vm.RedoCommand.Execute(null),
         ["Reload"] = () => _vm.ReloadCommand.Execute(null),

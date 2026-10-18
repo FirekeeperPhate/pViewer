@@ -37,6 +37,9 @@ Version 2 is a complete rewrite in **.NET 10 + WPF** of pViewer 1.x (WinForms, .
   data), text written directly on the image (Shift+click), red-eye, rotate/flip, resize,
   borders, invert, grayscale, sepia, black and white, brightness/contrast, hue/saturation,
   sharpen, blur with live preview.
+- **Background removal** (Effects › Remove background): the subject stays, the background
+  becomes transparent. It runs on the PC with the ISNet network; the model (170 MB) is
+  downloaded once, when first asked for, and no picture ever leaves the PC.
 - **Safe saving** (temporary file, then replace) that keeps the EXIF metadata of JPEG photos.
 - **Batch processing** of a folder or an archive (resize, rotate, flip, convert, borders,
   grayscale, invert) into a separate folder, and **batch rename**.
@@ -101,10 +104,13 @@ powershell -ExecutionPolicy Bypass -File installer\build.ps1
 | [SharpCompress](https://github.com/adamhathcock/sharpcompress) | MIT |
 | [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | MIT |
 | [.NET runtime](https://github.com/dotnet/runtime) (Full edition only) | MIT |
+| [ONNX Runtime](https://github.com/microsoft/onnxruntime) | MIT |
+| [ISNet](https://github.com/xuebinqin/DIS) model, as converted by [rembg](https://github.com/danielgatis/rembg) (downloaded on first use) | Apache 2.0 (ONNX file: MIT) |
 
 Their copyright notices and license texts are in [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt),
 which is installed next to pViewer and linked from its About window, together with
-`skiasharp-THIRD-PARTY-NOTICES.txt` (Skia and the libraries built into it); the Full edition also
+`skiasharp-THIRD-PARTY-NOTICES.txt` (Skia and the libraries built into it) and
+`onnxruntime-THIRD-PARTY-NOTICES.txt`; the Full edition also
 installs the .NET runtime's own `dotnet-LICENSE.txt` and `dotnet-THIRD-PARTY-NOTICES.txt`.
 
 ## License

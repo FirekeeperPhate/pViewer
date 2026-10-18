@@ -50,7 +50,11 @@ public sealed class AboutWindow : Window
         AddLink(credits, "XmpCore", "https://github.com/drewnoakes/xmp-core-dotnet");
         credits.Inlines.Add(new Run(" (BSD), "));
         AddLink(credits, "CommunityToolkit.Mvvm", "https://github.com/CommunityToolkit/dotnet");
-        credits.Inlines.Add(new Run(" (MIT)."));
+        credits.Inlines.Add(new Run(" (MIT), "));
+        AddLink(credits, "ONNX Runtime", "https://github.com/microsoft/onnxruntime");
+        credits.Inlines.Add(new Run(" (MIT); background removal model "));
+        AddLink(credits, "ISNet", "https://github.com/xuebinqin/DIS");
+        credits.Inlines.Add(new Run(" (Apache 2.0)."));
         // Installed next to the program: the licenses these components require to be shown.
         string notices = Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.txt");
         if (File.Exists(notices))

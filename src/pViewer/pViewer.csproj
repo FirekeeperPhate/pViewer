@@ -26,6 +26,8 @@
          (Imaging/SkiaImaging.cs). Its native part is named here only for the path of its notices. -->
     <PackageReference Include="SkiaSharp" Version="4.153.1" />
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="4.153.1" GeneratePathProperty="true" />
+    <!-- Background removal (Imaging/BackgroundRemover.cs): runs the ISNet network on the processor -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.31.0" GeneratePathProperty="true" />
     <PackageReference Include="SharpCompress" Version="0.50.4" />
     <PackageReference Include="MetadataExtractor" Version="2.9.3" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
@@ -40,6 +42,8 @@
     <None Include="..\..\THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- The notices of Skia and of the libraries inside libSkiaSharp.dll, as shipped with the package -->
     <None Include="$(PkgSkiaSharp_NativeAssets_Win32)\THIRD-PARTY-NOTICES.txt" Link="skiasharp-THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+    <!-- The same for ONNX Runtime -->
+    <None Include="$(PkgMicrosoft_ML_OnnxRuntime)\ThirdPartyNotices.txt" Link="onnxruntime-THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>
