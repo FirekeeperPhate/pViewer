@@ -9,7 +9,10 @@
   screen too, where the toolbar is hidden, and fades out by itself a moment after the pointer
   moves away. Settings › Appearance chooses where it appears: in the window and in full screen,
   only in full screen, or never. Requested in
-  [issue 1](https://github.com/FirekeeperPhate/pViewer/issues/1).
+  [issue 1](https://github.com/FirekeeperPhate/pViewer/issues/1). The wheel over the bar zooms
+  as over the image; the bar gets out of the way while Ctrl, Alt or Shift is held (crop,
+  rectangle, text) and shrinks to fit a narrow window.
+- The back and forward buttons on the side of the mouse go to the previous and next image.
 
 ## 2.2.0
 

@@ -26,6 +26,7 @@ public partial class MainWindow
     private void SetUpControlBar()
     {
         ImageArea.PreviewMouseMove += ImageArea_PreviewMouseMove;
+        PreviewMouseDown += Window_PreviewMouseDown;
         _barTimer.Tick += (_, _) =>
         {
             // Still in use: the pointer is on it.
@@ -51,6 +52,21 @@ public partial class MainWindow
             if ((e.Key == Key.System ? e.SystemKey : e.Key) is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftShift or Key.RightShift)
                 HideControlBar();
         };
+    }
+
+    /// <summary>
+    /// The back and forward buttons on the side of many mice: previous and next image. Handled here,
+    /// so Windows does not also turn them into a "browser back/forward" command.
+    /// </summary>
+    private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton is not (MouseButton.XButton1 or MouseButton.XButton2)) return;
+        e.Handled = true;
+        // While typing on the image the keys do nothing either (see Window_PreviewKeyDown).
+        if (Viewer.IsEditingText || HasModalDialog) return;
+        _vm.StopSlideshow();
+        if (e.ChangedButton == MouseButton.XButton1) _vm.PreviousCommand.Execute(null);
+        else _vm.NextCommand.Execute(null);
     }
 
     /// <summary>A modifier held (crop, rectangle, text), the red-eye tool or text being typed on the image.</summary>

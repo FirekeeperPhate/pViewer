@@ -11,7 +11,12 @@ public sealed class HelpWindow : Window
     /// <summary>Mouse gestures, not configurable: shown after the keys of each section.</summary>
     private static readonly Dictionary<string, (string Keys, string Action)[]> MouseGestures = new()
     {
-        ["Navigation"] = [("Drop a file", "Opens images, folders and archives")],
+        ["Navigation"] =
+        [
+            ("Mouse back / forward button", "Previous / next image"),
+            ("Pointer at the bottom edge", "Control bar (Settings › Appearance)"),
+            ("Drop a file", "Opens images, folders and archives"),
+        ],
         ["View"] =
         [
             ("Wheel", "Zoom towards the pointer (scrolls instead in “Fit width” until you zoom)"),

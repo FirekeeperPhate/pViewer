@@ -35,7 +35,8 @@ Version 2 is a complete rewrite in **.NET 10 + WPF** of pViewer 1.x (WinForms, .
   pan, full screen, slideshow, white background.
 - **Control bar for the mouse**: moving the pointer near the bottom edge brings up buttons for
   previous/next, first/last, zoom, rotate, slideshow and full screen, in full screen too; the
-  bar hides by itself. Settings › Appearance can limit it to full screen or turn it off.
+  bar hides by itself. Settings › Appearance can limit it to full screen or turn it off. The
+  back/forward buttons on the side of the mouse go to the previous/next image.
 - **Editing** with undo/redo: crop (Ctrl+drag), rectangle (Alt+drag, Tab fills it to hide
   data), text written directly on the image (Shift+click), red-eye, rotate/flip, resize,
   borders, invert, grayscale, sepia, black and white, brightness/contrast, hue/saturation,
