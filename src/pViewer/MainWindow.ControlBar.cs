@@ -3,6 +3,7 @@ using System.Windows.Input;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using pViewer.Controls;
+using pViewer.Services;
 
 namespace pViewer;
 
@@ -48,7 +49,7 @@ public partial class MainWindow
     /// <param name="buttonDown">A mouse button is held.</param>
     internal void PointerMoved(Point screen, double y, bool buttonDown)
     {
-        if (!_settings.ShowControlBar || !_vm.HasImage) return;
+        if (!ControlBarAllowed || !_vm.HasImage) return;
         // A pan or a selection being dragged: the bar would only get in the way.
         if (buttonDown) return;
         // WPF also raises MouseMove when what lies under a still pointer changes (a new image in
@@ -96,14 +97,23 @@ public partial class MainWindow
     /// <summary>The bar's full screen button shows what it will do: enter or leave full screen.</summary>
     private void UpdateBarFullscreenButton()
     {
-        BarFullscreenButton.Content = _fullscreen ? "" : "";
+        BarFullscreenButton.Content = _fullscreen ? "\xE73F" : "\xE740"; // BackToWindow, FullScreen
         HotkeyText.SetLabel(BarFullscreenButton, _fullscreen ? "Leave full screen" : "Full screen");
         HotkeyText.Apply(BarFullscreenButton, _settings.Hotkeys);
     }
 
+    /// <summary>Settings › Appearance: in the window and in full screen, only in full screen, or never.</summary>
+    private bool ControlBarAllowed => _settings.ControlBar switch
+    {
+        ControlBarMode.Always => true,
+        ControlBarMode.FullScreenOnly => _fullscreen,
+        _ => false,
+    };
+
+    /// <summary>After a change of the setting, and on entering or leaving full screen.</summary>
     private void ApplyControlBarSetting()
     {
-        if (!_settings.ShowControlBar) HideControlBar();
+        if (!ControlBarAllowed) HideControlBar();
         else if (_barShown) HotkeyText.Apply(ControlBar, _settings.Hotkeys);
     }
 

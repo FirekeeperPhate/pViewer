@@ -7,7 +7,8 @@
   up with first, previous, next and last image, the position in the folder ("3 / 120"), zoom,
   reset view, rotate, slideshow start/stop and full screen (enter or leave). It works in full
   screen too, where the toolbar is hidden, and fades out by itself a moment after the pointer
-  moves away. Settings › Appearance turns it off. Requested in
+  moves away. Settings › Appearance chooses where it appears: in the window and in full screen,
+  only in full screen, or never. Requested in
   [issue 1](https://github.com/FirekeeperPhate/pViewer/issues/1).
 
 ## 2.2.0

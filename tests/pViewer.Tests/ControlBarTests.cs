@@ -12,19 +12,23 @@ public class ControlBarTests
         Directory.CreateDirectory(dir);
         try
         {
-            Assert.True(new AppSettings().ShowControlBar);
+            Assert.Equal(ControlBarMode.Always, new AppSettings().ControlBar);
 
             // A settings.json of 2.2 has no such key: the bar is on.
             string old = Path.Combine(dir, "old.json");
             File.WriteAllText(old, "{ \"ShowToolbar\": false }");
             var loaded = SettingsStore.Load(old);
             Assert.False(loaded.ShowToolbar);
-            Assert.True(loaded.ShowControlBar);
+            Assert.Equal(ControlBarMode.Always, loaded.ControlBar);
 
-            // Turned off, it stays off.
+            // The choice is kept.
             string path = Path.Combine(dir, "settings.json");
-            SettingsStore.Save(new AppSettings { ShowControlBar = false }, path);
-            Assert.False(SettingsStore.Load(path).ShowControlBar);
+            SettingsStore.Save(new AppSettings { ControlBar = ControlBarMode.FullScreenOnly }, path);
+            Assert.Equal(ControlBarMode.FullScreenOnly, SettingsStore.Load(path).ControlBar);
+
+            // A hand-edited value that does not exist: back to the default.
+            File.WriteAllText(path, "{ \"ControlBar\": 7 }");
+            Assert.Equal(ControlBarMode.Always, SettingsStore.Load(path).ControlBar);
         }
         finally
         {

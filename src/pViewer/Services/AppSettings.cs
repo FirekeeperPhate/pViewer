@@ -20,6 +20,9 @@ public enum ViewMode
 
 public enum AppTheme { Dark, Light, System }
 
+/// <summary>When the control bar (buttons over the image) comes up as the pointer nears the bottom edge.</summary>
+public enum ControlBarMode { Always, FullScreenOnly, Never }
+
 public sealed class WindowPlacement
 {
     public double Left { get; set; }
@@ -46,8 +49,8 @@ public sealed class AppSettings
     public PageLayout ArchiveLayout { get; set; } = PageLayout.Single;
     public bool ShowToolbar { get; set; } = true;
     public bool ShowStatusBar { get; set; } = true;
-    /// <summary>Buttons over the image (previous, next, full screen…) when the pointer nears the bottom edge.</summary>
-    public bool ShowControlBar { get; set; } = true;
+    /// <summary>Buttons over the image (previous, next, full screen…) when the pointer nears the bottom edge: in the window and in full screen, only in full screen, or never.</summary>
+    public ControlBarMode ControlBar { get; set; } = ControlBarMode.Always;
     public bool PixelatedZoom { get; set; } = true;
     public string CropColor { get; set; } = "#FFFF3B30";
     public string RectangleColor { get; set; } = "#FFFF3B30";
@@ -143,6 +146,7 @@ public static class SettingsStore
         // Actual size is a toggle (A), never the default mode: the toggle would have nothing to go back to.
         if (!Enum.IsDefined(s.ViewMode) || s.ViewMode == ViewMode.ActualSize) s.ViewMode = d.ViewMode;
         if (!Enum.IsDefined(s.ArchiveLayout)) s.ArchiveLayout = d.ArchiveLayout;
+        if (!Enum.IsDefined(s.ControlBar)) s.ControlBar = d.ControlBar;
         s.JpegQuality = Math.Clamp(s.JpegQuality, 10, 100);
         s.RectangleThickness = Math.Clamp(s.RectangleThickness, 1, 500);
         s.BorderThickness = Math.Clamp(s.BorderThickness, 1, 2000);

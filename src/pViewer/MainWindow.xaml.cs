@@ -374,6 +374,7 @@ public partial class MainWindow : Window, IMainView
         UpdateBars();
         UpdateBackground();
         UpdateBarFullscreenButton();
+        ApplyControlBarSetting();
     }
 
     public IntPtr WindowHandle => new WindowInteropHelper(this).Handle;
