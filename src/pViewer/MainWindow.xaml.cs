@@ -131,6 +131,7 @@ public partial class MainWindow : Window, IMainView
             await _vm.CheckForUpdatesAsync(manual: false);
         };
 
+        SetUpControlBar();
         ApplySettingsToView();
     }
 
@@ -178,6 +179,7 @@ public partial class MainWindow : Window, IMainView
         UpdateBackground();
         _keyMap = Hotkeys.BuildMap(_settings.Hotkeys);
         HotkeyText.Apply(Toolbar, _settings.Hotkeys);
+        ApplyControlBarSetting();
         WelcomeHint.Text = string.Join(" · ", new[]
         {
             "Double-click" + KeyHint("Open", " or {0}") + " to open",
@@ -371,6 +373,7 @@ public partial class MainWindow : Window, IMainView
         }
         UpdateBars();
         UpdateBackground();
+        UpdateBarFullscreenButton();
     }
 
     public IntPtr WindowHandle => new WindowInteropHelper(this).Handle;

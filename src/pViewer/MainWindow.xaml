@@ -223,7 +223,7 @@
         </Border>
 
         <!-- Image area -->
-        <Grid Grid.Row="1">
+        <Grid x:Name="ImageArea" Grid.Row="1">
             <controls:ImageViewer x:Name="Viewer" ViewMode="{Binding ViewMode}" Background="#FF1C1C1C" />
 
             <!-- Welcome -->
@@ -247,11 +247,58 @@
             <ProgressBar VerticalAlignment="Top" Height="3" IsIndeterminate="True" IsHitTestVisible="False" x:Name="Progress" Visibility="Collapsed" />
 
             <!-- Short notifications -->
-            <Border VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,28" Padding="16,9" CornerRadius="6"
+            <Border x:Name="ToastBox" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,28" Padding="16,9" CornerRadius="6"
                     Background="#E0303030" IsHitTestVisible="False"
                     Visibility="{Binding ToastText, Converter={StaticResource NullToVisibility}}">
                 <TextBlock Text="{Binding ToastText}" Foreground="White" TextWrapping="Wrap" MaxWidth="700" />
             </Border>
+
+            <!-- Buttons for the mouse: shown when the pointer nears the bottom edge, hidden again by
+                 themselves (MainWindow.ControlBar.cs). Settings › Appearance turns them off. -->
+            <Grid x:Name="ControlBar" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="16,0,16,20"
+                  Opacity="0" Visibility="Collapsed" Cursor="Arrow">
+                <!-- The theme's background (the window's own is transparent), slightly see-through -->
+                <Border CornerRadius="8" Opacity="0.94" BorderThickness="1" BorderBrush="#40808080"
+                        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.4" />
+                    </Border.Effect>
+                </Border>
+                <StackPanel Orientation="Horizontal" Margin="6,4">
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE892;" controls:HotkeyText.Label="First image" controls:HotkeyText.Command="First" Command="{Binding FirstCommand}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE76B;" controls:HotkeyText.Label="Previous" controls:HotkeyText.Command="Previous" Command="{Binding PreviousCommand}" />
+                    <TextBlock Text="{Binding PositionText}" FontSize="12" MinWidth="56" TextAlignment="Center" VerticalAlignment="Center" Opacity="0.8" Margin="4,0" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE76C;" controls:HotkeyText.Label="Next" controls:HotkeyText.Command="Next" Command="{Binding NextCommand}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE893;" controls:HotkeyText.Label="Last image" controls:HotkeyText.Command="Last" Command="{Binding LastCommand}" />
+                    <Border Style="{StaticResource ToolSeparator}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE71F;" controls:HotkeyText.Label="Zoom out" controls:HotkeyText.Command="ZoomOut" Click="ZoomOut_Click" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE9A6;" controls:HotkeyText.Label="Reset the view" controls:HotkeyText.Command="ResetView" Click="ResetView_Click" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE8A3;" controls:HotkeyText.Label="Zoom in" controls:HotkeyText.Command="ZoomIn" Click="ZoomIn_Click" />
+                    <Border Style="{StaticResource ToolSeparator}" />
+                    <Button Style="{StaticResource ToolButton}" controls:HotkeyText.Label="Rotate left" controls:HotkeyText.Command="RotateLeft" Command="{Binding RotateCommand}" CommandParameter="-90">
+                        <TextBlock Text="&#xE7AD;" RenderTransformOrigin="0.5,0.5">
+                            <TextBlock.RenderTransform><ScaleTransform ScaleX="-1" /></TextBlock.RenderTransform>
+                        </TextBlock>
+                    </Button>
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE7AD;" controls:HotkeyText.Label="Rotate right" controls:HotkeyText.Command="RotateRight" Command="{Binding RotateCommand}" CommandParameter="90" />
+                    <Border Style="{StaticResource ToolSeparator}" />
+                    <Button Click="BarSlideshow_Click">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ToolButton}">
+                                <Setter Property="Content" Value="&#xE768;" />
+                                <Setter Property="ToolTip" Value="Start the slideshow" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSlideshowRunning}" Value="True">
+                                        <Setter Property="Content" Value="&#xE769;" />
+                                        <Setter Property="ToolTip" Value="Stop the slideshow" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button x:Name="BarFullscreenButton" Style="{StaticResource ToolButton}" Content="&#xE740;" controls:HotkeyText.Label="Full screen" controls:HotkeyText.Command="FullScreen" Click="Fullscreen_Click" />
+                </StackPanel>
+            </Grid>
         </Grid>
 
         <!-- Status bar -->

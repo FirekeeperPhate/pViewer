@@ -69,6 +69,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _statusName = "";
     [ObservableProperty] private string _statusInfo = "";
     [ObservableProperty] private string _zoomText = "";
+    /// <summary>"3 / 120": where the current image is in its folder or archive (shown on the control bar).</summary>
+    [ObservableProperty] private string _positionText = "";
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string? _errorText;
@@ -460,6 +462,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             StatusName = _detachedName;
             var bmp = _edit?.Current;
             StatusInfo = bmp is null ? "" : $"{bmp.PixelWidth} × {bmp.PixelHeight}";
+            PositionText = "";
             return;
         }
         if (_source is null || _nav.Count == 0)
@@ -467,6 +470,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             Title = "pViewer";
             StatusName = _source is null ? "" : "No images";
             StatusInfo = "";
+            PositionText = "";
             return;
         }
 
@@ -490,7 +494,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             parts.Add(FormatSize(v[0].FileSize));
         }
         int first = indices.Min() + 1, last = indices.Max() + 1;
-        parts.Add(first == last ? $"{first} / {_nav.Count}" : $"{first}-{last} / {_nav.Count}");
+        PositionText = first == last ? $"{first} / {_nav.Count}" : $"{first}-{last} / {_nav.Count}";
+        parts.Add(PositionText);
         if (Layout != PageLayout.Single) parts.Add(Layout == PageLayout.Manga ? "Manga" : "Comic");
         StatusInfo = string.Join("   ·   ", parts);
     }

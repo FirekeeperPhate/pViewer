@@ -17,6 +17,8 @@
     <!-- TIFF encoder with CCITT T4 / T6 compression -->
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j9gm-c75j-xc9q" />
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-jjfr-hcj7-qf5w" />
+    <!-- Tiled fax TIFF (November 2026) -->
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-v76p-62qx-wwq2" />
   </ItemGroup>
 
 </Project>

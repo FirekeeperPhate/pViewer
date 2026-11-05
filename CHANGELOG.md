@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.3.0
+
+**New**
+- Control bar for the mouse: move the pointer near the bottom edge of the image and a bar comes
+  up with first, previous, next and last image, the position in the folder ("3 / 120"), zoom,
+  reset view, rotate, slideshow start/stop and full screen (enter or leave). It works in full
+  screen too, where the toolbar is hidden, and fades out by itself a moment after the pointer
+  moves away. Settings › Appearance turns it off. Requested in
+  [issue 1](https://github.com/FirekeeperPhate/pViewer/issues/1).
+
 ## 2.2.0
 
 **New**

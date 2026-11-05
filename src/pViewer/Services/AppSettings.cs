@@ -46,6 +46,8 @@ public sealed class AppSettings
     public PageLayout ArchiveLayout { get; set; } = PageLayout.Single;
     public bool ShowToolbar { get; set; } = true;
     public bool ShowStatusBar { get; set; } = true;
+    /// <summary>Buttons over the image (previous, next, full screen…) when the pointer nears the bottom edge.</summary>
+    public bool ShowControlBar { get; set; } = true;
     public bool PixelatedZoom { get; set; } = true;
     public string CropColor { get; set; } = "#FFFF3B30";
     public string RectangleColor { get; set; } = "#FFFF3B30";
@@ -60,9 +62,9 @@ public sealed class AppSettings
     public string? LastFolder { get; set; }
     public WindowPlacement? Window { get; set; }
 
-    /// <summary>Look for a newer version on GitHub once a day (after startup, in the background).</summary>
     /// <summary>A hidden pViewer waits in the background, so that the next one opens at once (see Standby).</summary>
     public bool KeepReady { get; set; } = true;
+    /// <summary>Look for a newer version on GitHub once a day (after startup, in the background).</summary>
     public bool CheckForUpdates { get; set; } = true;
     public DateTime? LastUpdateCheck { get; set; }
     /// <summary>A version the user chose to skip: not offered again automatically.</summary>

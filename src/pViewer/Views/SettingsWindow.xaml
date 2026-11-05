@@ -58,6 +58,8 @@
                 <CheckBox x:Name="PixelatedBox" Content="Show sharp pixels when zoomed beyond 250%" Margin="0,10,0,0" />
                 <CheckBox x:Name="ToolbarBox" Content="Show the toolbar (T)" />
                 <CheckBox x:Name="StatusBarBox" Content="Show the status bar" />
+                <CheckBox x:Name="ControlBarBox" Content="Show buttons over the image when the mouse nears the bottom edge" />
+                <TextBlock Text="Previous, next, zoom, slideshow and full screen, in full screen too. The bar hides by itself." Opacity="0.65" TextWrapping="Wrap" Margin="28,0,0,0" />
 
                 <TextBlock Text="Opening" Style="{StaticResource Section}" />
                 <CheckBox x:Name="AutoRotateBox" Content="Auto-rotate photos (EXIF orientation)" />
