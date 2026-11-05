@@ -38,7 +38,24 @@ public partial class MainWindow
             if (e.PropertyName == nameof(ViewModels.MainViewModel.HasImage) && !_vm.HasImage) HideControlBar();
         };
         Closed += (_, _) => _barTimer.Stop();
+        // The wheel over the bar does what it does over the image (zoom, or scroll in fit width).
+        ControlBar.MouseWheel += (_, e) =>
+        {
+            Viewer.RaiseEvent(new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta) { RoutedEvent = MouseWheelEvent });
+            e.Handled = true;
+        };
+        // Ctrl, Alt and Shift start crop, rectangle and text: the bar must not be in the way of a
+        // selection that starts at the bottom of the image.
+        PreviewKeyDown += (_, e) =>
+        {
+            if ((e.Key == Key.System ? e.SystemKey : e.Key) is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftShift or Key.RightShift)
+                HideControlBar();
+        };
     }
+
+    /// <summary>A modifier held (crop, rectangle, text), the red-eye tool or text being typed on the image.</summary>
+    private bool EditingOnImage =>
+        Keyboard.Modifiers != ModifierKeys.None || _vm.Tool != ViewerTool.None || Viewer.IsEditingText;
 
     private void ImageArea_PreviewMouseMove(object sender, MouseEventArgs e) =>
         PointerMoved(PointToScreen(e.GetPosition(this)), e.GetPosition(ImageArea).Y,
@@ -57,7 +74,9 @@ public partial class MainWindow
         if (screen == _lastPointer) return;
         _lastPointer = screen;
 
-        if (y < ImageArea.ActualHeight - BarZone && !ControlBar.IsMouseOver) return;
+        if (EditingOnImage) { HideControlBar(); return; }
+        // In a small window the zone stays in the lower third of the image.
+        if (y < ImageArea.ActualHeight - Math.Min(BarZone, ImageArea.ActualHeight / 3) && !ControlBar.IsMouseOver) return;
         ShowControlBar();
         _barTimer.Stop();
         _barTimer.Start();

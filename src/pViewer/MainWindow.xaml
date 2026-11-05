@@ -254,9 +254,11 @@
             </Border>
 
             <!-- Buttons for the mouse: shown when the pointer nears the bottom edge, hidden again by
-                 themselves (MainWindow.ControlBar.cs). Settings › Appearance turns them off. -->
-            <Grid x:Name="ControlBar" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="16,0,16,20"
-                  Opacity="0" Visibility="Collapsed" Cursor="Arrow">
+                 themselves (MainWindow.ControlBar.cs). Settings › Appearance chooses where they appear. -->
+            <!-- In a narrow window the whole bar gets smaller instead of losing buttons at the sides -->
+            <Viewbox x:Name="ControlBar" StretchDirection="DownOnly" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="16,0,16,20"
+                     Opacity="0" Visibility="Collapsed" Cursor="Arrow">
+            <Grid>
                 <!-- The theme's background (the window's own is transparent), slightly see-through -->
                 <Border CornerRadius="8" Opacity="0.94" BorderThickness="1" BorderBrush="#40808080"
                         Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
@@ -299,6 +301,7 @@
                     <Button x:Name="BarFullscreenButton" Style="{StaticResource ToolButton}" Content="&#xE740;" controls:HotkeyText.Label="Full screen" controls:HotkeyText.Command="FullScreen" Click="Fullscreen_Click" />
                 </StackPanel>
             </Grid>
+            </Viewbox>
         </Grid>
 
         <!-- Status bar -->
