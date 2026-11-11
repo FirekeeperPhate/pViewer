@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.3.1
+
+**Fixed**
+- Closing pViewer (Ctrl+W) right after it opened could still show "An unexpected error occurred":
+  errors that come while the window is closing are no longer shown, from the moment the closing
+  starts instead of once it has ended, and the control bar ignores the mouse while the window
+  goes away.
+
+**New**
+- Unexpected errors are written, with their details, to %LocalAppData%\pViewer\errors.log (kept
+  small, removed by the uninstaller); the error message says where it is.
+
 ## 2.3.0
 
 **New**

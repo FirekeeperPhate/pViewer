@@ -122,6 +122,9 @@ Root: HKA; Subkey: "Software\RegisteredApplications"; ValueType: string; ValueNa
 [UninstallDelete]
 ; The background removal model, downloaded on first use (Imaging\BackgroundRemover.cs)
 Type: filesandordirs; Name: "{localappdata}\pViewer\models"
+; Unexpected errors (Services\ErrorLog.cs)
+Type: files; Name: "{localappdata}\pViewer\errors.log"
+Type: files; Name: "{localappdata}\pViewer\errors.old.log"
 Type: dirifempty; Name: "{localappdata}\pViewer"
 
 [Run]

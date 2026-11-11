@@ -490,8 +490,14 @@ public partial class MainWindow : Window, IMainView
             SavePlacement();
             SettingsStore.Save(_settings);
         }
+        // From here the window is going away for good: what still arrives (mouse events while it is
+        // destroyed, idle work) must leave it alone, and an error in it is nobody's business.
+        _closed = true;
         _vm.Dispose();
     }
+
+    /// <summary>The window is closing (not cancelled) or closed.</summary>
+    internal bool Ending => _closed;
 
     // ---- Drag and drop ----
 

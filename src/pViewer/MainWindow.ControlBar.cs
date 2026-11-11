@@ -62,6 +62,7 @@ public partial class MainWindow
     {
         if (e.ChangedButton is not (MouseButton.XButton1 or MouseButton.XButton2)) return;
         e.Handled = true;
+        if (_closed) return;
         // While typing on the image the keys do nothing either (see Window_PreviewKeyDown).
         if (Viewer.IsEditingText || HasModalDialog) return;
         _vm.StopSlideshow();
@@ -73,11 +74,17 @@ public partial class MainWindow
     private bool EditingOnImage =>
         Keyboard.Modifiers != ModifierKeys.None || _vm.Tool != ViewerTool.None || Viewer.IsEditingText;
 
-    private void ImageArea_PreviewMouseMove(object sender, MouseEventArgs e) =>
-        PointerMoved(PointToScreen(e.GetPosition(this)), e.GetPosition(ImageArea).Y,
+    private void ImageArea_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        // WPF still sends mouse events while the window is being destroyed (Ctrl+W right after
+        // opening, with the pointer over the image): nothing to show any more. No PointToScreen here:
+        // it throws once the window has no screen, before Closed silences the error handler.
+        if (_closed || PresentationSource.FromVisual(this) is null) return;
+        PointerMoved(e.GetPosition(this), e.GetPosition(ImageArea).Y,
             e.LeftButton == MouseButtonState.Pressed || e.RightButton == MouseButtonState.Pressed || e.MiddleButton == MouseButtonState.Pressed);
+    }
 
-    /// <param name="screen">Where the pointer is on the screen.</param>
+    /// <param name="screen">Where the pointer is (in the window: it only tells a real movement from a repeated one).</param>
     /// <param name="y">Its height inside the image area.</param>
     /// <param name="buttonDown">A mouse button is held.</param>
     internal void PointerMoved(Point screen, double y, bool buttonDown)

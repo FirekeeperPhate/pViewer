@@ -125,12 +125,14 @@ public partial class App : Application
     {
         // An unexpected error must not close the app (and lose unsaved changes)…
         e.Handled = true;
-        // After the window was closed the application is only ending: nothing to tell, nobody to tell it to.
-        if (_windowClosed || Current is null) return;
+        bool ending = _windowClosed || Current is null || Current.MainWindow is MainWindow { Ending: true };
+        ErrorLog.Write(e.Exception, ending ? "while closing (not shown)" : "");
+        // Once the window is closing the application is only ending: nothing to tell, nobody to tell it to.
+        if (ending || Current is not App app) return;
         // The copy that waits in the background has no window to show an error in: it just ends.
-        if (Current is App { _standby: true })
+        if (app._standby)
         {
-            Current.Shutdown(1);
+            app.Shutdown(1);
             return;
         }
         // …and an error that repeats on every layout pass must not stack dialogs.
@@ -138,12 +140,12 @@ public partial class App : Application
         _showingError = true;
         try
         {
-            var main = Current.MainWindow;
+            var main = app.MainWindow;
             bool started = main is { IsLoaded: true };
-            pViewer.Views.MessageDialog.Show(main, $"An unexpected error occurred:\n\n{e.Exception.Message}",
+            pViewer.Views.MessageDialog.Show(main, $"An unexpected error occurred:\n\n{e.Exception.Message}\n\nThe details are in {ErrorLog.FilePath}",
                 "pViewer", MessageBoxButton.OK, MessageBoxImage.Error);
             // Failed while starting: there is no usable window, so exit instead of lingering.
-            if (!started) Current.Shutdown(1);
+            if (!started) app.Shutdown(1);
         }
         finally
         {
