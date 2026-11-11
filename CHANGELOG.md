@@ -3,10 +3,11 @@
 ## 2.3.1
 
 **Fixed**
-- Closing pViewer (Ctrl+W) right after it opened could still show "An unexpected error occurred":
-  errors that come while the window is closing are no longer shown, from the moment the closing
-  starts instead of once it has ended, and the control bar ignores the mouse while the window
-  goes away.
+- Closing pViewer (Ctrl+W) while moving the image with the mouse, or moving the pointer over it,
+  could show "An unexpected error occurred" (a 2.3.0 regression: the control bar asked where the
+  pointer was on a window already going away). The control bar now ignores the mouse while the
+  window closes, and errors that come while the window is closing are no longer shown, from the
+  moment the closing starts instead of once it has ended.
 
 **New**
 - Unexpected errors are written, with their details, to %LocalAppData%\pViewer\errors.log (kept
